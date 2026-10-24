@@ -28,11 +28,19 @@ npm run preview
 
 ## Room layouts
 
-Layouts save automatically in this browser, including names, room dimensions, source links, product metadata, each piece’s selected finish, positions, and rotations. Create, reopen, rename, duplicate, or delete layouts. Deletion offers Undo. Editing supports undo, pointer/touch dragging, arrow-key nudges (Shift for larger steps), and R to rotate. Selected pieces also have finish choices, position sliders, rotation, duplicate, and remove controls. Finish changes participate in layout Undo. Room dimensions can be changed after creation.
+Layouts save automatically in this browser, including names, room dimensions, source links, product metadata, each piece’s selected finish, positions, and rotations. Create, reopen, rename, duplicate, or delete layouts. Deletion offers Undo. Editing supports undo, pointer/touch dragging, arrow-key nudges (Shift for larger steps), and R to rotate. Selected pieces also have finish choices, position sliders, rotation, duplicate, and remove controls. Finish changes participate in layout Undo. Room dimensions can be changed after creation for manually measured rooms. Scanned layouts preserve their measured outline.
 
-A room supports up to 30 pieces. Floor-plan units are meters. The editor keeps rotated footprints within room bounds when the item fits. The layout is a planning surface, not a scan of the physical room: enter its dimensions yourself. Real AR alignment is performed on the phone.
+A room supports up to 30 pieces. Floor-plan units are meters. The editor keeps rotated footprints within room bounds when the item fits. Enter dimensions manually, or import a LiDAR room scan with walls, openings, and existing furniture. Real AR alignment is performed on the phone.
 
 Saved individual products form a separate library and can be reused across layouts when they have models. Saving or adding a product keeps its selected finish; duplicated pieces and layouts retain their choices and can then be changed independently. Persistence is **local to the current browser/device**, with no cross-device or account sync. Existing v1 favorites remain untouched in their original storage key; the new workspace uses `furniture-ar:workspace:v2`. Previously saved Little Tree placeholders still reopen with their approximate finish palette.
+
+## Scan your room
+
+Use the native [Furniture AR Scan companion](./ios/FurnitureARScan/README.md) on a LiDAR iPhone or iPad (including iPhone 16 Pro). It uses Apple RoomPlan, then opens the website or shares a room JSON file. Import it from the overview, layout list, or editor. Review the measured outline before creating the layout.
+
+Existing objects appear as fixed, hatched footprints. Select one to correct its measurements, name, position, or rotation; add missed objects or remove false detections. New furniture remains movable. Overlaps with existing furniture, wall crossings, and doorway access warnings appear in the editor. Corrections and scans persist with the layout and participate in Undo and duplication. Incomplete wall geometry requires rescanning. All measurements and overlap warnings are estimates.
+
+The companion is an Xcode development project, not an App Store release. See [setup instructions](./public/room-scanner.html) or the companion README for signing and installing it. Camera images remain on the phone; the export contains only measurements and labels. The optional web handoff uses a URL fragment, with a file-sharing fallback for larger scans. The website does not directly access LiDAR, sync layouts, or automatically anchor later AR previews to the scan.
 
 ## Finish previews
 
@@ -50,13 +58,15 @@ Open the HTTPS deployment in Safari on iPhone or Chrome on an ARCore-compatible 
 
 - Single products use the selected finish’s GLB and material colors at actual scale.
 - Layouts load each selected variant and export one combined GLB with independent per-piece materials, preserving colors, positions, and rotations in meters. Its floor stays at y=0.
-- The phone places the **whole arrangement as one group**. Edit relative positions in the floor plan, then reopen AR. Individual object movement inside the AR session and scanned-room persistence are not implemented.
+- The phone places the **whole arrangement as one group**. Edit relative positions in the floor plan, then reopen AR. Individual object movement inside the AR session and automatic alignment to a previously scanned room are not implemented.
 - `<model-viewer>` uses WebXR and iOS Quick Look. Single-product WebXR has live finish controls for finishes that share the currently selected GLB; choose finishes with a different GLB before opening AR. On iPhone, choose the finish before opening Quick Look; native Quick Look cannot display the app’s buttons. To change it, return to the app and reopen AR.
 - Runtime material overrides use automatically generated USDZ, ignoring any supplied `iosSrc`, so the exported solid colors follow the selection. Dedicated unmodified variants can use their matching prebuilt USDZ. The implemented AR paths are WebXR and Quick Look; Scene Viewer remains disabled.
 - AR scale is locked. The app checks GLB bounds against product dimensions before enabling AR. For layouts it validates each constituent model too.
 - Material changes and GLB/USDZ export are covered by automated tests. Live WebXR placement and iPhone Quick Look remain **untested on a physical device**. A compatible phone is required to verify camera tracking. AR is a visual guide; confirm purchase-critical measurements with a tape measure.
 
 ## Supplied models
+
+The [30-model catalog](public/models/catalog/README.md) organizes the supplied 10-model and 20-model bundles into seating, tables/desks, storage, and beds. Its [JSON inventory](public/models/catalog/catalog.json) preserves the embedded product metadata, original filenames, archive provenance, dimensions, and SHA-256 checksums. GLB contents are unchanged. These additional assets are inventoried for integration; they are not yet registered with the live Amazon importer.
 
 `public/models/little-tree-oak-table.glb` is the user-supplied file, preserved without rescaling or changing its textures. Its embedded metadata specifies a 1.199896 m diameter and 0.750062 m height (displayed as 120 × 120 × 75 cm). Geometry is centered on X/Z with its base at Y=0. The model describes itself as a photo-based reconstruction: overall dimensions follow the listing, with some hidden construction details estimated. These measurements come from the supplied file, not a new independent product verification.
 

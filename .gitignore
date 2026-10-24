@@ -14,3 +14,9 @@ dist/
 
 .sites-runtime/
 *.zip
+
+# Local iPhone builds and developer signing state
+ios/**/build/
+ios/**/DerivedData/
+ios/**/xcuserdata/
+*.xcuserstate

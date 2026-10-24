@@ -1,0 +1,2318 @@
+{
+  "schemaVersion": 1,
+  "modelCount": 30,
+  "metadataSource": "Names, ASINs, product links, dimensions, and sourceMetadata were copied from the supplied GLBs. They are author-provided information, not independently verified Amazon listing data.",
+  "integrationStatus": "Asset inventory only. These models are not registered with the live Amazon importer.",
+  "archives": [
+    {
+      "filename": "amazon-furniture-10-glb-only.zip",
+      "modelCount": 10,
+      "sizeBytes": 5965404,
+      "sha256": "777a58d57e25578ce8315c06058c3d11d73b96a49331cddf10a51a710bdad4da"
+    },
+    {
+      "filename": "amazon-furniture-20-glb-only.zip",
+      "modelCount": 20,
+      "sizeBytes": 11429204,
+      "sha256": "6f0ff3257130f30ba00da2dbcb2d08ef0194789bb6610370a4dfaa736e8eb291"
+    }
+  ],
+  "models": [
+    {
+      "id": "zinus-suzanne-queen-bed",
+      "name": "ZINUS Suzanne 37 Inch Metal and Wood Queen Platform Bed, Chestnut Brown",
+      "category": "beds",
+      "modelSrc": "/models/catalog/beds/zinus-suzanne-queen-bed.glb",
+      "asin": "B075FGY7G2",
+      "sourceUrl": "https://www.amazon.com/dp/B075FGY7G2",
+      "dimensionsMeters": {
+        "width": 1.511299967765808,
+        "depth": 2.0319998264312744,
+        "height": 0.9398000240325928
+      },
+      "sizeBytes": 1606368,
+      "sha256": "b05caeca9e8c752783d2c28f09f939c0f59fbd3f06342c97496f5600fc7a6bcb",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "zinus-suzanne-queen-bed.glb",
+      "sourceMetadata": {
+        "slug": "zinus-suzanne-queen-bed",
+        "provenance": {
+          "product": "ZINUS Suzanne 37 Inch Metal and Wood Queen Platform Bed, Chestnut Brown",
+          "source_url": "https://www.amazon.com/dp/B075FGY7G2",
+          "asin": "B075FGY7G2",
+          "dimension_source": "Amazon directly inspected: 80 L x 59.5 W x 37 H inches. Long L mapped to model depth.",
+          "reference_image_url": "https://m.media-amazon.com/images/I/61YkWI6YnDL._AC_SL1500_.jpg",
+          "sources": [
+            "https://www.amazon.com/dp/B075FGY7G2",
+            "https://manuals.plus/asin/B075FGY7G2"
+          ],
+          "notes": "Photo-based approximation, internal slat count/thickness visually estimated. Older manual summary says 82 inches long; current Amazon 80 inch dimension used. No mattress included."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          1.511299967765808,
+          2.0319998264312744,
+          0.9398000240325928
+        ],
+        "requested_dimensions_m": [
+          1.5113,
+          2.032,
+          0.9398
+        ],
+        "bounds_min_m": [
+          -0.755649983882904,
+          -1.0159999132156372,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.755649983882904,
+          1.0159999132156372,
+          0.9398000240325928
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 33,
+        "triangles": 19404,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "zinus-suzanne-queen-bed.blend",
+          "glb": "zinus-suzanne-queen-bed.glb",
+          "preview": "zinus-suzanne-queen-bed-preview.png",
+          "metadata": "zinus-suzanne-queen-bed-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "blue-granite-hand-chair",
+      "name": "Blue and Black Faux Granite Right Hand Chair",
+      "category": "seating",
+      "modelSrc": "/models/catalog/seating/blue-granite-hand-chair.glb",
+      "asin": "B0DVLMS1Z2",
+      "sourceUrl": "https://www.amazon.com/dp/B0DVLMS1Z2",
+      "dimensionsMeters": {
+        "width": 0.6095999777317047,
+        "depth": 0.5714999437332153,
+        "height": 0.8001000285148621
+      },
+      "sizeBytes": 2476476,
+      "sha256": "a63f797d7b33598096084e94f68c81b4015f72746d5a661be2ec0f1de1142977",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "blue-granite-hand-chair.glb",
+      "sourceMetadata": {
+        "slug": "blue-granite-hand-chair",
+        "provenance": {
+          "slug": "blue-granite-hand-chair",
+          "name": "Blue and Black Faux Granite Right Hand Chair",
+          "brand": "Unconfirmed listing brand",
+          "category": "sculptural chair",
+          "unusual": true,
+          "asin": "B0DVLMS1Z2",
+          "amazon_url": "https://www.amazon.com/dp/B0DVLMS1Z2",
+          "source_url": "https://www.amazon.com/dp/B0DVLMS1Z2",
+          "variant": "Right hand, blue and black faux granite LDPE",
+          "dimensions_inches": {
+            "width": 24,
+            "depth": 22.5,
+            "height": 31.5
+          },
+          "dimensions_m": [
+            0.6096,
+            0.5715,
+            0.8001
+          ],
+          "dimension_source": "Published product description at projectswithjason.com tied to exact Amazon ASIN link; direct Amazon page unavailable.",
+          "source_urls": [
+            "https://www.amazon.com/dp/B0DVLMS1Z2",
+            "https://projectswithjason.com/hand-chair-with-fingers/"
+          ],
+          "reference_image": "work/amazon-batch-20/references/hand-blue.jpg",
+          "appearance": "Giant open palm seat, four upright rounded fingers, inward curved thumb, tapered wrist pedestal and square rounded foot.",
+          "uncertainty": "Amazon page returned HTTP500; ASIN, variant and dimensions from published exact Amazon affiliate link and description. Brand unavailable; availability not verified. Finger/palm contours and blue-black speckle are approximate.",
+          "notes": "Original procedural visual model; no manufacturer CAD or listing photographs embedded. Amazon page returned HTTP500; ASIN, variant and dimensions from published exact Amazon affiliate link and description. Brand unavailable; availability not verified. Finger/palm contours and blue-black speckle are approximate."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.6095999777317047,
+          0.5714999437332153,
+          0.8001000285148621
+        ],
+        "requested_dimensions_m": [
+          0.6096,
+          0.5715,
+          0.8001
+        ],
+        "bounds_min_m": [
+          -0.30480000376701355,
+          -0.28574997186660767,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.30479997396469116,
+          0.28574997186660767,
+          0.8001000285148621
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 1,
+        "triangles": 84998,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "blue-granite-hand-chair.blend",
+          "glb": "blue-granite-hand-chair.glb",
+          "preview": "blue-granite-hand-chair-preview.png",
+          "metadata": "blue-granite-hand-chair-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "chita-swivel-accent-chair",
+      "name": "CHITA Faux Leather Swivel Accent Chair, Fully Assembled, Saddle Brown",
+      "category": "seating",
+      "modelSrc": "/models/catalog/seating/chita-swivel-accent-chair.glb",
+      "asin": "B0B7L7QGPT",
+      "sourceUrl": "https://www.amazon.com/dp/B0B7L7QGPT",
+      "dimensionsMeters": {
+        "width": 0.7620000243186951,
+        "depth": 0.8381999731063843,
+        "height": 0.838200032711029
+      },
+      "sizeBytes": 789176,
+      "sha256": "1fca95f38ceb53ca977259561b8c81f47a4ca12f37296725650832bc47d8cf8f",
+      "originalArchive": "amazon-furniture-10-glb-only.zip",
+      "originalFilename": "chita-swivel-accent-chair.glb",
+      "sourceMetadata": {
+        "slug": "chita-swivel-accent-chair",
+        "provenance": {
+          "product": "CHITA Faux Leather Swivel Accent Chair, Fully Assembled, Saddle Brown",
+          "source_url": "https://www.amazon.com/dp/B0B7L7QGPT",
+          "asin": "B0B7L7QGPT",
+          "dimension_source": "Amazon product dimensions: 33 D x 30 W x 33 H inches; source inspected directly.",
+          "reference_image_url": "https://m.media-amazon.com/images/I/71hNa+no9xL._AC_SL1500_.jpg",
+          "sources": [
+            "https://www.amazon.com/dp/B0B7L7QGPT",
+            "https://www.drewandjonathan.com/product/chita-swivel-accent-chair/"
+          ],
+          "notes": "Overall dimensions explicit; cushion thickness, arm height and seam paths visually estimated. No manufacturer CAD."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.7620000243186951,
+          0.8381999731063843,
+          0.838200032711029
+        ],
+        "requested_dimensions_m": [
+          0.762,
+          0.8382,
+          0.8382
+        ],
+        "bounds_min_m": [
+          -0.38100001215934753,
+          -0.41909998655319214,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.38100001215934753,
+          0.41909998655319214,
+          0.838200032711029
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 13,
+        "triangles": 23528,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "chita-swivel-accent-chair.blend",
+          "glb": "chita-swivel-accent-chair.glb",
+          "preview": "chita-swivel-accent-chair-preview.png",
+          "metadata": "chita-swivel-accent-chair-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "christopher-knight-elizabeth-recliner",
+      "name": "Christopher Knight Home Elizabeth Tufted Fabric Recliner, Light Beige",
+      "category": "seating",
+      "modelSrc": "/models/catalog/seating/christopher-knight-elizabeth-recliner.glb",
+      "asin": "B01MYMWYNA",
+      "sourceUrl": "https://www.amazon.com/dp/B01MYMWYNA",
+      "dimensionsMeters": {
+        "width": 0.8889999389648438,
+        "depth": 0.7492999732494354,
+        "height": 1.0286998755764216
+      },
+      "sizeBytes": 1776156,
+      "sha256": "45015f810c63814c8c1ec91f8719fd8c8d67ec1b292e4ef01132caaf71fa1405",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "christopher-knight-elizabeth-recliner.glb",
+      "sourceMetadata": {
+        "slug": "christopher-knight-elizabeth-recliner",
+        "provenance": {
+          "product": "Christopher Knight Home Elizabeth Tufted Fabric Recliner, Light Beige",
+          "source_url": "https://www.amazon.com/dp/B01MYMWYNA",
+          "asin": "B01MYMWYNA",
+          "dimension_source": "Amazon directly inspected explicitly labels 29.5 D x 35 W x 40.5 H inches; mapping retained.",
+          "reference_image_url": "https://m.media-amazon.com/images/I/91+AcMb6qdL._AC_SL1500_.jpg",
+          "sources": [
+            "https://www.amazon.com/dp/B01MYMWYNA",
+            "https://barbados.desertcart.com/products/40442464-christopher-knight-home-gdf-studio-elizabeth-tufted-fabric-recliner-vintage"
+          ],
+          "notes": "Static upright model, no reclining animation. Amazon width/depth labels retained despite related variants listing reversed dimensions. Tufting/leg profiles/photo proportions approximate."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.8889999389648438,
+          0.7492999732494354,
+          1.0286998755764216
+        ],
+        "requested_dimensions_m": [
+          0.889,
+          0.7493,
+          1.0287
+        ],
+        "bounds_min_m": [
+          -0.4444999694824219,
+          -0.3746499717235565,
+          -6.984919309616089e-10
+        ],
+        "bounds_max_m": [
+          0.4444999694824219,
+          0.3746500015258789,
+          1.0286998748779297
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 95,
+        "triangles": 57490,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "christopher-knight-elizabeth-recliner.blend",
+          "glb": "christopher-knight-elizabeth-recliner.glb",
+          "preview": "christopher-knight-elizabeth-recliner-preview.png",
+          "metadata": "christopher-knight-elizabeth-recliner-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "christopher-knight-scarlett-bench",
+      "name": "Christopher Knight Home Scarlett Tufted Ottoman Bench, Dark Blue",
+      "category": "seating",
+      "modelSrc": "/models/catalog/seating/christopher-knight-scarlett-bench.glb",
+      "asin": "B01N57GMYZ",
+      "sourceUrl": "https://www.amazon.com/dp/B01N57GMYZ",
+      "dimensionsMeters": {
+        "width": 1.0413999557495117,
+        "depth": 0.43840399384498596,
+        "height": 0.4254499953240156
+      },
+      "sizeBytes": 1201840,
+      "sha256": "d2e776cce7b35bd675d6d127bc4a267d696903152d495ce343369b5a1e6fd7a0",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "christopher-knight-scarlett-bench.glb",
+      "sourceMetadata": {
+        "slug": "christopher-knight-scarlett-bench",
+        "provenance": {
+          "product": "Christopher Knight Home Scarlett Tufted Ottoman Bench, Dark Blue",
+          "source_url": "https://www.amazon.com/dp/B01N57GMYZ",
+          "asin": "B01N57GMYZ",
+          "dimension_source": "ASIN-matched listing: 17.26 D x 41 W x 16.75 H inches. Matching 299600 manufacturer model at Home Depot and selected dark blue retailer confirms.",
+          "reference_image_url": "https://ak1.ostkcdn.com/images/products/9352788/Scarlette-Tufted-Fabric-Ottoman-Bench-by-Christopher-Knight-Home-17-H-x-41-W-x-17.25-D-024d3289-06e3-4b7f-880c-829882a6a561_1000.jpg",
+          "sources": [
+            "https://www.amazon.com/dp/B01N57GMYZ",
+            "https://aruba.desertcart.com/products/39437210-christopher-knight-home-scarlett-fabric-ottoman-bench-dark-blue-17",
+            "https://www.homedepot.ca/product/noble-house-scarlett-dark-blue-fabric-ottoman-bench/1001613670",
+            "https://www.overstock.com/Home-Garden/Scarlette-Tufted-Fabric-Ottoman-Bench-by-Christopher-Knight-Home-17-H-x-41-W-x-17.25-D/9352788/product.html"
+          ],
+          "notes": "Amazon direct page unavailable to research tool. Matching model photo used; retailer rounds depth to 17.25 inch versus 17.26 ASIN listing. Tufting and curved leg profiles approximate."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          1.0413999557495117,
+          0.43840399384498596,
+          0.4254499953240156
+        ],
+        "requested_dimensions_m": [
+          1.0414,
+          0.438404,
+          0.42545
+        ],
+        "bounds_min_m": [
+          -0.5206999778747559,
+          -0.21920199692249298,
+          1.862645149230957e-09
+        ],
+        "bounds_max_m": [
+          0.5206999778747559,
+          0.21920199692249298,
+          0.42544999718666077
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 19,
+        "triangles": 37338,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "christopher-knight-scarlett-bench.blend",
+          "glb": "christopher-knight-scarlett-bench.glb",
+          "preview": "christopher-knight-scarlett-bench-preview.png",
+          "metadata": "christopher-knight-scarlett-bench-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "critter-sitters-pig-ottoman",
+      "name": "Critter Sitters Pink Pig Ottoman",
+      "category": "seating",
+      "modelSrc": "/models/catalog/seating/critter-sitters-pig-ottoman.glb",
+      "asin": "B08257LCB9",
+      "sourceUrl": "https://www.amazon.com/dp/B08257LCB9",
+      "dimensionsMeters": {
+        "width": 0.507999986410141,
+        "depth": 0.3555999994277954,
+        "height": 0.38099998235702515
+      },
+      "sizeBytes": 1202368,
+      "sha256": "dd399decb46dc6b9070a9d380e392aa70299fc4a5ef451c568e1d155e71b11e2",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "critter-sitters-pig-ottoman.glb",
+      "sourceMetadata": {
+        "slug": "critter-sitters-pig-ottoman",
+        "provenance": {
+          "slug": "critter-sitters-pig-ottoman",
+          "name": "Critter Sitters Pink Pig Ottoman",
+          "brand": "Critter Sitters",
+          "category": "animal ottoman",
+          "unusual": true,
+          "asin": "B08257LCB9",
+          "amazon_url": "https://www.amazon.com/dp/B08257LCB9",
+          "source_url": "https://www.amazon.com/dp/B08257LCB9",
+          "variant": "Pink, non-storage, CSPIGOTT-PNK",
+          "dimensions_inches": {
+            "width": 20,
+            "depth": 14,
+            "height": 15
+          },
+          "dimensions_m": [
+            0.508,
+            0.3556,
+            0.381
+          ],
+          "dimension_source": "Critter Sitters manufacturer catalog and Lowes CSPIGOTT-PNK; Amazon ASIN resolved from exact published product link.",
+          "source_urls": [
+            "https://www.amazon.com/dp/B08257LCB9",
+            "https://www.findthisbest.com/best-nursery-gliding-ottomans",
+            "https://www.lowes.com/pd/Critter-Sitters-Critter-Sitters-15-in-Seat-Height-Pink-Pig-Animal-Shape-Ottoman-Furniture-for-Nursery-Bedroom-Playroom-and-Living-Room-Decor/3805840",
+            "https://www.bedbathandbeyond.com/downloads/pdf/1402512668_c0cc35fe-f8a5-354b-9faf-3bb3615082e9.pdf"
+          ],
+          "reference_image": "work/amazon-batch-20/references/pig.jpg",
+          "appearance": "Pink rounded fabric pig with snout, little ears, black bead eyes, curly tail and four short tapered wooden feet.",
+          "uncertainty": "Direct Amazon page returned HTTP500. Exact Amazon ASIN resolved from published product link; dimensions and non-storage model confirmed by Lowes and manufacturer catalog. No live price or stock claim. Overall longest body axis is X to match manufacturer width.",
+          "notes": "Original procedural visual model; no manufacturer CAD or listing photographs embedded. Direct Amazon page returned HTTP500. Exact Amazon ASIN resolved from published product link; dimensions and non-storage model confirmed by Lowes and manufacturer catalog. No live price or stock claim. Overall longest body axis is X to match manufacturer width."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.507999986410141,
+          0.3555999994277954,
+          0.38099998235702515
+        ],
+        "requested_dimensions_m": [
+          0.508,
+          0.3556,
+          0.381
+        ],
+        "bounds_min_m": [
+          -0.2540000081062317,
+          -0.1777999997138977,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.2539999783039093,
+          0.1777999997138977,
+          0.38099998235702515
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 13,
+        "triangles": 36316,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "critter-sitters-pig-ottoman.blend",
+          "glb": "critter-sitters-pig-ottoman.glb",
+          "preview": "critter-sitters-pig-ottoman-preview.png",
+          "metadata": "critter-sitters-pig-ottoman-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "foinfun-mushroom-stool",
+      "name": "Foinfun Mushroom Resin Stool, Green Mushroom",
+      "category": "seating",
+      "modelSrc": "/models/catalog/seating/foinfun-mushroom-stool.glb",
+      "asin": "B0GXV7TYVW",
+      "sourceUrl": "https://www.amazon.com/dp/B0GXV7TYVW",
+      "dimensionsMeters": {
+        "width": 0.3302000015974045,
+        "depth": 0.3302000015974045,
+        "height": 0.34035998582839966
+      },
+      "sizeBytes": 1238952,
+      "sha256": "4c4c9771bd24d44cbcc4da1a118ed5728d537fae9a1d6d08967b479cd5953ce3",
+      "originalArchive": "amazon-furniture-10-glb-only.zip",
+      "originalFilename": "foinfun-mushroom-stool.glb",
+      "sourceMetadata": {
+        "slug": "foinfun-mushroom-stool",
+        "provenance": {
+          "slug": "foinfun-mushroom-stool",
+          "name": "Foinfun Mushroom Resin Stool, Green Mushroom",
+          "brand": "Foinfun",
+          "category": "novelty stool",
+          "unusual": true,
+          "asin": "B0GXV7TYVW",
+          "amazon_url": "https://www.amazon.com/dp/B0GXV7TYVW",
+          "dimensions_inches": {
+            "width": 13,
+            "depth": 13,
+            "height": 13.4
+          },
+          "dimensions_m": [
+            0.3302,
+            0.3302,
+            0.34036
+          ],
+          "dimension_source": "Amazon selected green variant specification: 13 D x 13 W x 13.4 H inches, directly retrieved 2026-10-24",
+          "source_urls": [
+            "https://www.amazon.com/dp/B0GXV7TYVW",
+            "https://www.cherrypicksreviews.com/sellers/amazon/swellsuite"
+          ],
+          "reference_image": "references/mushroom.jpg",
+          "reference_image_url": "https://m.media-amazon.com/images/I/71+xAdF0DvL._AC_SL1500_.jpg",
+          "appearance": "Glossy emerald green squat mushroom cap with small white circular spots and a broad nearly flat seat; ivory stem with vertical woodlike ridges and flared foot.",
+          "uncertainty": "Listing title advertises 13.8 inch but selected green variant detailed dimensions say 13.4 inch; model uses selected variant specification. Surface carving and spot placement approximated.",
+          "source_url": "https://www.amazon.com/dp/B0GXV7TYVW"
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.3302000015974045,
+          0.3302000015974045,
+          0.34035998582839966
+        ],
+        "requested_dimensions_m": [
+          0.3302,
+          0.3302,
+          0.34036
+        ],
+        "bounds_min_m": [
+          -0.16509999334812164,
+          -0.16510000824928284,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.16510000824928284,
+          0.16509999334812164,
+          0.34035998582839966
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 8,
+        "triangles": 42968,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "foinfun-mushroom-stool.blend",
+          "glb": "foinfun-mushroom-stool.glb",
+          "preview": "foinfun-mushroom-stool-preview.png",
+          "metadata": "foinfun-mushroom-stool-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "homepop-round-velvet-ottoman",
+      "name": "HomePop Round Storage Ottoman, Velvet Green",
+      "category": "seating",
+      "modelSrc": "/models/catalog/seating/homepop-round-velvet-ottoman.glb",
+      "asin": "B0CHGSLKG1",
+      "sourceUrl": "https://www.amazon.com/dp/B0CHGSLKG1",
+      "dimensionsMeters": {
+        "width": 0.48260000348091125,
+        "depth": 0.48260000348091125,
+        "height": 0.45719999074935913
+      },
+      "sizeBytes": 582160,
+      "sha256": "4a0bf05003d1ed128a4e3222931c59bed3a1c4f6eed393430f2b9fcb58158d2c",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "homepop-round-velvet-ottoman.glb",
+      "sourceMetadata": {
+        "slug": "homepop-round-velvet-ottoman",
+        "provenance": {
+          "product": "HomePop Round Storage Ottoman, Velvet Green",
+          "source_url": "https://www.amazon.com/dp/B0CHGSLKG1",
+          "asin": "B0CHGSLKG1",
+          "dimension_source": "Target exact matching UPC 655258866023: 18 H x 19 W x 19 D inches, leg height 2.7 inches. BrickSeek ties this UPC/product to Amazon ASIN.",
+          "reference_image_url": "https://target.scene7.com/is/image/Target/GUEST_09cb4fe8-0e4e-4a33-9651-c4a00ad0d660",
+          "sources": [
+            "https://www.amazon.com/dp/B0CHGSLKG1",
+            "https://www.target.com/p/-/A-89612752",
+            "https://brickseek.com/products/homepop-home-decor-upholstered/18361670"
+          ],
+          "notes": "Amazon direct page unavailable to research tool; matching UPC and selected velvet green retailer listing used. Closed storage approximation without interior or mechanism."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.48260000348091125,
+          0.48260000348091125,
+          0.45719999074935913
+        ],
+        "requested_dimensions_m": [
+          0.4826,
+          0.4826,
+          0.4572
+        ],
+        "bounds_min_m": [
+          -0.24130000174045563,
+          -0.24130000174045563,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.24130000174045563,
+          0.24130000174045563,
+          0.45719999074935913
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 8,
+        "triangles": 9380,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "homepop-round-velvet-ottoman.blend",
+          "glb": "homepop-round-velvet-ottoman.glb",
+          "preview": "homepop-round-velvet-ottoman-preview.png",
+          "metadata": "homepop-round-velvet-ottoman-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "monicanest-lips-sofa",
+      "name": "MonicaNest Red Lip Sofa",
+      "category": "seating",
+      "modelSrc": "/models/catalog/seating/monicanest-lips-sofa.glb",
+      "asin": "B0G6XR1GVJ",
+      "sourceUrl": "https://www.amazon.com/dp/B0G6XR1GVJ",
+      "dimensionsMeters": {
+        "width": 1.9999959468841553,
+        "depth": 0.9999979436397552,
+        "height": 0.8300719857215881
+      },
+      "sizeBytes": 1158376,
+      "sha256": "7d82f1a4ff157b06a6abe2bba04eec8661a86457052db3c322827273d6e36835",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "monicanest-lips-sofa.glb",
+      "sourceMetadata": {
+        "slug": "monicanest-lips-sofa",
+        "provenance": {
+          "slug": "monicanest-lips-sofa",
+          "name": "MonicaNest Red Lip Sofa",
+          "brand": "MonicaNest",
+          "category": "sofa",
+          "unusual": true,
+          "asin": "B0G6XR1GVJ",
+          "amazon_url": "https://www.amazon.com/dp/B0G6XR1GVJ",
+          "source_url": "https://www.amazon.com/dp/B0G6XR1GVJ",
+          "variant": "Burgundy, 78.74 inch width",
+          "dimensions_inches": {
+            "width": 78.74,
+            "depth": 39.37,
+            "height": 32.68
+          },
+          "dimensions_m": [
+            1.999996,
+            0.999998,
+            0.830072
+          ],
+          "dimension_source": "Amazon selected variant product dimensions",
+          "source_urls": [
+            "https://www.amazon.com/dp/B0G6XR1GVJ"
+          ],
+          "reference_image": "work/amazon-batch-20/references/lips.jpg",
+          "appearance": "Red upholstered lips silhouette: plush rounded lower lip seat and upper lip back with two humps and cupid bow.",
+          "uncertainty": "Amazon overall dimensions are 39.37D x78.74W x32.68H; other depth fields conflict (30.71). Uses labeled overall dimensions. Color field Burgundy; photographs bright red.",
+          "notes": "Original procedural visual model; no manufacturer CAD or listing photographs embedded. Amazon overall dimensions are 39.37D x78.74W x32.68H; other depth fields conflict (30.71). Uses labeled overall dimensions. Color field Burgundy; photographs bright red."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          1.9999959468841553,
+          0.9999979436397552,
+          0.8300719857215881
+        ],
+        "requested_dimensions_m": [
+          1.999996,
+          0.999998,
+          0.830072
+        ],
+        "bounds_min_m": [
+          -0.9999979734420776,
+          -0.49999895691871643,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.9999979734420776,
+          0.4999989867210388,
+          0.8300719857215881
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 4,
+        "triangles": 40212,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "monicanest-lips-sofa.blend",
+          "glb": "monicanest-lips-sofa.glb",
+          "preview": "monicanest-lips-sofa-preview.png",
+          "metadata": "monicanest-lips-sofa-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "nathan-james-hylie-counter-stool",
+      "name": "Nathan James Hylie 24 Inch Counter Stool, Gray/White",
+      "category": "seating",
+      "modelSrc": "/models/catalog/seating/nathan-james-hylie-counter-stool.glb",
+      "asin": "B07894DDW6",
+      "sourceUrl": "https://www.amazon.com/dp/B07894DDW6",
+      "dimensionsMeters": {
+        "width": 0.431799978017807,
+        "depth": 0.3301999866962433,
+        "height": 0.6096000075340271
+      },
+      "sizeBytes": 887392,
+      "sha256": "8b25198e94306f50de04dad2df53b12b2c02e32998cf31935cb98d53242fb097",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "nathan-james-hylie-counter-stool.glb",
+      "sourceMetadata": {
+        "slug": "nathan-james-hylie-counter-stool",
+        "provenance": {
+          "product": "Nathan James Hylie 24 Inch Counter Stool, Gray/White",
+          "source_url": "https://www.amazon.com/dp/B07894DDW6",
+          "asin": "B07894DDW6",
+          "dimension_source": "Matching 24-inch Gray/White product at ShopAbunda: 13 D x 17 W x 24 H inches; ASIN independently linked by Amazon listing references.",
+          "reference_image_url": "https://m.media-amazon.com/images/I/51nTF-04G3L._AC_US1400_.jpg",
+          "sources": [
+            "https://www.amazon.com/dp/B07894DDW6",
+            "https://www.shopabunda.com/products/nathan-james-hylie-nailhead-wood-pub-height-kitchen-counter-bar-stool-24-gray-white",
+            "https://www.u-buy.com.au/product/NRGDXBC-nathan-james-hylie-nailhead-wood-pub-height-kitchen-counter-bar-stool-24-light-gray-white"
+          ],
+          "notes": "Amazon direct page unavailable to research tool. Matching product image and dimensions sourced through retailer listing; no availability claim. Upholstery saddle and nailhead spacing approximated."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.431799978017807,
+          0.3301999866962433,
+          0.6096000075340271
+        ],
+        "requested_dimensions_m": [
+          0.4318,
+          0.3302,
+          0.6096
+        ],
+        "bounds_min_m": [
+          -0.2158999890089035,
+          -0.16509999334812164,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.2158999890089035,
+          0.16509999334812164,
+          0.6096000075340271
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 60,
+        "triangles": 19248,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "nathan-james-hylie-counter-stool.blend",
+          "glb": "nathan-james-hylie-counter-stool.glb",
+          "preview": "nathan-james-hylie-counter-stool-preview.png",
+          "metadata": "nathan-james-hylie-counter-stool-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "novogratz-brittany-futon",
+      "name": "Novogratz Brittany Sofa Futon, Premium Linen Upholstery and Wooden Legs, Blue Linen",
+      "category": "seating",
+      "modelSrc": "/models/catalog/seating/novogratz-brittany-futon.glb",
+      "asin": "B01LY1WBQN",
+      "sourceUrl": "https://www.amazon.com/dp/B01LY1WBQN",
+      "dimensionsMeters": {
+        "width": 2.0701000690460205,
+        "depth": 0.8762999475002289,
+        "height": 0.8000999689102173
+      },
+      "sizeBytes": 1169348,
+      "sha256": "fa1400facf141cb4c4a1d6d08753ea8a649c82fc9e639f868ce4b29824f8877a",
+      "originalArchive": "amazon-furniture-10-glb-only.zip",
+      "originalFilename": "novogratz-brittany-futon.glb",
+      "sourceMetadata": {
+        "slug": "novogratz-brittany-futon",
+        "provenance": {
+          "product": "Novogratz Brittany Sofa Futon, Premium Linen Upholstery and Wooden Legs, Blue Linen",
+          "source_url": "https://www.amazon.com/dp/B01LY1WBQN",
+          "asin": "B01LY1WBQN",
+          "dimension_source": "Amazon product dimensions: 34.5 D x 81.5 W x 31.5 H inches. Seat height 16 inches, seat depth 23.5 inches, legs 8 inches. Manufacturer confirms same overall dimensions.",
+          "reference_image_url": "https://m.media-amazon.com/images/I/61-YZAc9zeL._AC_SL1500_.jpg",
+          "sources": [
+            "https://www.amazon.com/dp/B01LY1WBQN",
+            "https://www.shopthenovogratz.com/products/brittany-futon?variant=4581199740957"
+          ],
+          "notes": "Modeled upright only; folding mechanism not animated. Channel spacing and curvature from reference photo."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          2.0701000690460205,
+          0.8762999475002289,
+          0.8000999689102173
+        ],
+        "requested_dimensions_m": [
+          2.0701,
+          0.8763,
+          0.8001
+        ],
+        "bounds_min_m": [
+          -1.0350500345230103,
+          -0.43814998865127563,
+          0.0
+        ],
+        "bounds_max_m": [
+          1.0350500345230103,
+          0.43814995884895325,
+          0.8000999689102173
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 30,
+        "triangles": 35880,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "novogratz-brittany-futon.blend",
+          "glb": "novogratz-brittany-futon.glb",
+          "preview": "novogratz-brittany-futon-preview.png",
+          "metadata": "novogratz-brittany-futon-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "poly-bark-weave-dining-chair",
+      "name": "POLY & BARK Weave Wishbone Dining Chair, Oak, Single",
+      "category": "seating",
+      "modelSrc": "/models/catalog/seating/poly-bark-weave-dining-chair.glb",
+      "asin": "B00PZMS78A",
+      "sourceUrl": "https://www.amazon.com/dp/B00PZMS78A",
+      "dimensionsMeters": {
+        "width": 0.5461000204086304,
+        "depth": 0.546099990606308,
+        "height": 0.7746999859809875
+      },
+      "sizeBytes": 877356,
+      "sha256": "6224b9efe1082b3f228b0c82a9e886517637e2910ebf2fb13e1068cd13885441",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "poly-bark-weave-dining-chair.glb",
+      "sourceMetadata": {
+        "slug": "poly-bark-weave-dining-chair",
+        "provenance": {
+          "product": "POLY & BARK Weave Wishbone Dining Chair, Oak, Single",
+          "source_url": "https://www.amazon.com/dp/B00PZMS78A",
+          "asin": "B00PZMS78A",
+          "dimension_source": "Amazon directly inspected: 21.5 D x 21.5 W x 30.5 H inches.",
+          "reference_image_url": "https://m.media-amazon.com/images/I/71pCuDSCt+L._AC_SL1500_.jpg",
+          "sources": [
+            "https://www.amazon.com/dp/B00PZMS78A",
+            "https://www.desertcart.in/products/21607427-poly-barkweave-chair-single-natural"
+          ],
+          "notes": "Overall dimensions explicit; joinery and individual cord geometry approximated from product photograph."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.5461000204086304,
+          0.546099990606308,
+          0.7746999859809875
+        ],
+        "requested_dimensions_m": [
+          0.5461,
+          0.5461,
+          0.7747
+        ],
+        "bounds_min_m": [
+          -0.2730500102043152,
+          -0.2730499804019928,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.2730500102043152,
+          0.2730500102043152,
+          0.7746999859809875
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 80,
+        "triangles": 20700,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "poly-bark-weave-dining-chair.blend",
+          "glb": "poly-bark-weave-dining-chair.glb",
+          "preview": "poly-bark-weave-dining-chair-preview.png",
+          "metadata": "poly-bark-weave-dining-chair-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "serwall-blue-adirondack-chair",
+      "name": "SERWALL Folding Adjustable Adirondack Chair with Cup Holder, Blue, Set of 1",
+      "category": "seating",
+      "modelSrc": "/models/catalog/seating/serwall-blue-adirondack-chair.glb",
+      "asin": "B0CB63RTJR",
+      "sourceUrl": "https://www.amazon.com/dp/B0CB63RTJR",
+      "dimensionsMeters": {
+        "width": 0.7492999732494354,
+        "depth": 0.8991599977016449,
+        "height": 0.9093199372291565
+      },
+      "sizeBytes": 1440048,
+      "sha256": "0f96b55ade96fe037bab9e61974ac37d48b3a00d4203a754193f5450fc497d49",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "serwall-blue-adirondack-chair.glb",
+      "sourceMetadata": {
+        "slug": "serwall-blue-adirondack-chair",
+        "provenance": {
+          "product": "SERWALL Folding Adjustable Adirondack Chair with Cup Holder, Blue, Set of 1",
+          "source_url": "https://www.amazon.com/dp/B0CB63RTJR",
+          "asin": "B0CB63RTJR",
+          "dimension_source": "ASIN-linked product documentation explicitly gives 35.4 D x 29.5 W x 35.8 H inches. Official A041-046-001 manufacturer gives rounded 29.5 W x 35.43 D x 35.82 H.",
+          "reference_image_url": "https://m.media-amazon.com/images/I/71bZs7sM1eL._AC_SL1500_.jpg",
+          "sources": [
+            "https://www.amazon.com/dp/B0CB63RTJR",
+            "https://manuals.plus/asin/B0CB63RTJR",
+            "https://www.desertcart.in/products/574738717-folding-adjustable-adirondack-chair-with-cup-holder-blue",
+            "https://serwalloutdoor.com/classic-reclining-adirondack-chair/"
+          ],
+          "notes": "Amazon direct page unavailable. ASIN-linked Amazon image inspected for slate blue; official turquoise photograph inspected for structure only. Static upright approximation, no folding/reclining animation; hardware simplified."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.7492999732494354,
+          0.8991599977016449,
+          0.9093199372291565
+        ],
+        "requested_dimensions_m": [
+          0.7493,
+          0.89916,
+          0.90932
+        ],
+        "bounds_min_m": [
+          -0.3746500015258789,
+          -0.44957998394966125,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.3746499717235565,
+          0.44958001375198364,
+          0.9093199372291565
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 46,
+        "triangles": 24104,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "serwall-blue-adirondack-chair.blend",
+          "glb": "serwall-blue-adirondack-chair.glb",
+          "preview": "serwall-blue-adirondack-chair-preview.png",
+          "metadata": "serwall-blue-adirondack-chair-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "songmics-bamboo-shoe-bench",
+      "name": "SONGMICS Shoe Rack Bench, 3-Tier Bamboo Shoe Storage Organizer, Natural ULBS04N",
+      "category": "seating",
+      "modelSrc": "/models/catalog/seating/songmics-bamboo-shoe-bench.glb",
+      "asin": "B00NL8NB6S",
+      "sourceUrl": "https://www.amazon.com/dp/B00NL8NB6S",
+      "dimensionsMeters": {
+        "width": 0.7010399699211121,
+        "depth": 0.2870199978351593,
+        "height": 0.45212000608444214
+      },
+      "sizeBytes": 1108940,
+      "sha256": "a2d111fa03014a2c26d01375cadded852b0b864e9afe4a1aded4ad6146b3ac1e",
+      "originalArchive": "amazon-furniture-10-glb-only.zip",
+      "originalFilename": "songmics-bamboo-shoe-bench.glb",
+      "sourceMetadata": {
+        "slug": "songmics-bamboo-shoe-bench",
+        "provenance": {
+          "product": "SONGMICS Shoe Rack Bench, 3-Tier Bamboo Shoe Storage Organizer, Natural ULBS04N",
+          "source_url": "https://www.amazon.com/dp/B00NL8NB6S",
+          "asin": "B00NL8NB6S",
+          "dimension_source": "Amazon product title and dimensions both specify 11.3 D x 27.6 W x 17.8 H inches.",
+          "reference_image_url": "https://m.media-amazon.com/images/I/81OEUxyNuQL._AC_SL1500_.jpg",
+          "sources": [
+            "https://www.amazon.com/dp/B00NL8NB6S"
+          ],
+          "notes": "Overall dimensions explicit; slat counts, thicknesses and screw spacing inferred from image."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.7010399699211121,
+          0.2870199978351593,
+          0.45212000608444214
+        ],
+        "requested_dimensions_m": [
+          0.70104,
+          0.28702,
+          0.45212
+        ],
+        "bounds_min_m": [
+          -0.35051998496055603,
+          -0.14350999891757965,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.35051998496055603,
+          0.14350999891757965,
+          0.45212000608444214
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 90,
+        "triangles": 15960,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "songmics-bamboo-shoe-bench.blend",
+          "glb": "songmics-bamboo-shoe-bench.glb",
+          "preview": "songmics-bamboo-shoe-bench-preview.png",
+          "metadata": "songmics-bamboo-shoe-bench-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "yaheetech-flower-swivel-chair",
+      "name": "Yaheetech Flower Swivel Accent Chair",
+      "category": "seating",
+      "modelSrc": "/models/catalog/seating/yaheetech-flower-swivel-chair.glb",
+      "asin": "B0DGFVHZ64",
+      "sourceUrl": "https://www.amazon.com/dp/B0DGFVHZ64",
+      "dimensionsMeters": {
+        "width": 0.5715000033378601,
+        "depth": 0.6096000075340271,
+        "height": 0.7493000030517578
+      },
+      "sizeBytes": 1563032,
+      "sha256": "061befe987159e67fa684b2e5c7a2247a858cbea0d0a31ff7b487e3a53c8a5af",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "yaheetech-flower-swivel-chair.glb",
+      "sourceMetadata": {
+        "slug": "yaheetech-flower-swivel-chair",
+        "provenance": {
+          "slug": "yaheetech-flower-swivel-chair",
+          "name": "Yaheetech Flower Swivel Accent Chair",
+          "brand": "Yaheetech",
+          "category": "accent chair",
+          "unusual": true,
+          "asin": "B0DGFVHZ64",
+          "amazon_url": "https://www.amazon.com/dp/B0DGFVHZ64",
+          "source_url": "https://www.amazon.com/dp/B0DGFVHZ64",
+          "variant": "White, set of 1",
+          "dimensions_inches": {
+            "width": 22.5,
+            "depth": 24,
+            "height": 29.5
+          },
+          "dimensions_m": [
+            0.5715,
+            0.6096,
+            0.7493
+          ],
+          "dimension_source": "Amazon selected variant product dimensions",
+          "source_urls": [
+            "https://www.amazon.com/dp/B0DGFVHZ64"
+          ],
+          "reference_image": "work/amazon-batch-20/references/flower.jpg",
+          "appearance": "White chenille scalloped three-panel back with low side petals, rounded seat and four black splayed square legs.",
+          "uncertainty": "Photo-informed approximation; internal construction and unlisted details are estimated.",
+          "notes": "Original procedural visual model; no manufacturer CAD or listing photographs embedded. "
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.5715000033378601,
+          0.6096000075340271,
+          0.7493000030517578
+        ],
+        "requested_dimensions_m": [
+          0.5715,
+          0.6096,
+          0.7493
+        ],
+        "bounds_min_m": [
+          -0.28575000166893005,
+          -0.30480000376701355,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.28575000166893005,
+          0.30480000376701355,
+          0.7493000030517578
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 17,
+        "triangles": 47748,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "yaheetech-flower-swivel-chair.blend",
+          "glb": "yaheetech-flower-swivel-chair.glb",
+          "preview": "yaheetech-flower-swivel-chair-preview.png",
+          "metadata": "yaheetech-flower-swivel-chair-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "furinno-jaya-three-tier-bookcase",
+      "name": "Furinno JAYA 3-Tier Adjustable Shelf Bookcase, White",
+      "category": "storage",
+      "modelSrc": "/models/catalog/storage/furinno-jaya-three-tier-bookcase.glb",
+      "asin": "B01BWZWEAK",
+      "sourceUrl": "https://www.amazon.com/dp/B01BWZWEAK",
+      "dimensionsMeters": {
+        "width": 0.6200140714645386,
+        "depth": 0.2410459965467453,
+        "height": 1.0238739252090454
+      },
+      "sizeBytes": 504884,
+      "sha256": "d32369aea3e778af1093d4d78f28bc08e1b8ea337183a13a21c86b84b3e0a995",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "furinno-jaya-three-tier-bookcase.glb",
+      "sourceMetadata": {
+        "slug": "furinno-jaya-three-tier-bookcase",
+        "provenance": {
+          "asin": "B01BWZWEAK",
+          "product_name": "Furinno JAYA 3-Tier Adjustable Shelf Bookcase, White",
+          "source_url": "https://www.amazon.com/dp/B01BWZWEAK",
+          "selected_finish": "White, model 14151R1WH",
+          "checked_date": "2026-10-24",
+          "dimension_source": "Amazon specification table gives 9.49 D × 24.41 W × 40.31 H inches. Marketed rounded dimensions 9.5 × 24.5 × 40.3 differ slightly; exact specification table used.",
+          "modeling_notes": "Simple slim white rectangular bookcase with full back, two intermediate shelves making three storage bays, full-height sides, shallow bottom kick board. Tiny shelf-pin holes in inner side panels. Shelf levels positioned from product photograph. Empty shelves; books, plant and basket excluded.",
+          "accuracy": "Original photo-based visual approximation; not manufacturer CAD."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.6200140714645386,
+          0.2410459965467453,
+          1.0238739252090454
+        ],
+        "requested_dimensions_m": [
+          0.620014,
+          0.241046,
+          1.023874
+        ],
+        "bounds_min_m": [
+          -0.3100070357322693,
+          -0.12052299827337265,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.3100070357322693,
+          0.12052299827337265,
+          1.0238739252090454
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 56,
+        "triangles": 10016,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "furinno-jaya-three-tier-bookcase.blend",
+          "glb": "furinno-jaya-three-tier-bookcase.glb",
+          "preview": "furinno-jaya-three-tier-bookcase-preview.png",
+          "metadata": "furinno-jaya-three-tier-bookcase-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "furinno-tree-bookshelf",
+      "name": "Furinno 7-Tier Tree Bookshelf",
+      "category": "storage",
+      "modelSrc": "/models/catalog/storage/furinno-tree-bookshelf.glb",
+      "asin": "B0CV4ZMZ1Y",
+      "sourceUrl": "https://www.amazon.com/dp/B0CV4ZMZ1Y",
+      "dimensionsMeters": {
+        "width": 0.40004998445510864,
+        "depth": 0.21310599148273468,
+        "height": 0.9999979734420776
+      },
+      "sizeBytes": 323524,
+      "sha256": "5cbbc23b05cd265db8a931b871423e6f05edfcc05d021b415016285700faa95a",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "furinno-tree-bookshelf.glb",
+      "sourceMetadata": {
+        "slug": "furinno-tree-bookshelf",
+        "provenance": {
+          "slug": "furinno-tree-bookshelf",
+          "name": "Furinno 7-Tier Tree Bookshelf",
+          "brand": "Furinno",
+          "category": "bookshelf",
+          "unusual": true,
+          "asin": "B0CV4ZMZ1Y",
+          "amazon_url": "https://www.amazon.com/dp/B0CV4ZMZ1Y",
+          "source_url": "https://www.amazon.com/dp/B0CV4ZMZ1Y",
+          "variant": "White 7-tier tree bookcase, model 23223WH",
+          "dimensions_inches": {
+            "width": 15.75,
+            "depth": 8.39,
+            "height": 39.37
+          },
+          "dimensions_m": [
+            0.40005,
+            0.213106,
+            0.999998
+          ],
+          "dimension_source": "Amazon selected variant product dimensions and corroborating linked sources",
+          "source_urls": [
+            "https://www.amazon.com/dp/B0CV4ZMZ1Y",
+            "https://www.furinno.com/product/furinno-tree-bookshelf-7-tier-floor-standing-tree-bookcase/"
+          ],
+          "reference_image": "work/amazon-batch-20/references/tree.jpg",
+          "appearance": "White flat base and rear spine with alternating slanted shelves branching left/right.",
+          "uncertainty": "Empty shelf model; books in source photograph are styling props and are excluded.",
+          "notes": "Original procedural visual model; no manufacturer CAD or listing photographs embedded. Empty shelf model; books in source photograph are styling props and are excluded."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.40004998445510864,
+          0.21310599148273468,
+          0.9999979734420776
+        ],
+        "requested_dimensions_m": [
+          0.40005,
+          0.213106,
+          0.999998
+        ],
+        "bounds_min_m": [
+          -0.20002499222755432,
+          -0.10655299574136734,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.20002499222755432,
+          0.10655299574136734,
+          0.9999979734420776
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 3,
+        "triangles": 4580,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "furinno-tree-bookshelf.blend",
+          "glb": "furinno-tree-bookshelf.glb",
+          "preview": "furinno-tree-bookshelf-preview.png",
+          "metadata": "furinno-tree-bookshelf-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "homcom-colonial-pantry",
+      "name": "HOMCOM 72-inch Traditional Colonial Pantry Cabinet, White",
+      "category": "storage",
+      "modelSrc": "/models/catalog/storage/homcom-colonial-pantry.glb",
+      "asin": "B073ZJWHH3",
+      "sourceUrl": "https://www.amazon.com/dp/B073ZJWHH3",
+      "dimensionsMeters": {
+        "width": 0.7619999647140503,
+        "depth": 0.40639999508857727,
+        "height": 1.8415000438690186
+      },
+      "sizeBytes": 4710672,
+      "sha256": "d01b51a83a0c4c9a86b95912ca3e9bb35fe6395ffe52c0f38c103436fb6702d3",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "homcom-colonial-pantry.glb",
+      "sourceMetadata": {
+        "slug": "homcom-colonial-pantry",
+        "provenance": {
+          "asin": "B073ZJWHH3",
+          "product_name": "HOMCOM 72-inch Traditional Colonial Pantry Cabinet, White",
+          "source_url": "https://www.amazon.com/dp/B073ZJWHH3",
+          "selected_finish": "White, model 835-042WT",
+          "checked_date": "2026-10-24",
+          "dimension_source": "Amazon specification table states 16 D × 30 W × 72.5 H inches. Title/bullet round height to 72 and some older descriptions give 15.75 depth; the current specification table is used consistently.",
+          "modeling_notes": "Tall white colonial pantry with broad crown, bottom plinth, upper pair of long framed beadboard doors, wide central drawer with two black half-cup pulls, lower pair of shorter beadboard doors, black round door knobs. Closed-door pose; product photo shows doors open for storage demonstration. Hidden hardware and beadboard spacing inferred.",
+          "accuracy": "Original photo-based visual approximation; not manufacturer CAD."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.7619999647140503,
+          0.40639999508857727,
+          1.8415000438690186
+        ],
+        "requested_dimensions_m": [
+          0.762,
+          0.4064,
+          1.8415
+        ],
+        "bounds_min_m": [
+          -0.38099998235702515,
+          -0.20319999754428864,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.38099998235702515,
+          0.20319999754428864,
+          1.8415000438690186
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 130,
+        "triangles": 79360,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "homcom-colonial-pantry.blend",
+          "glb": "homcom-colonial-pantry.glb",
+          "preview": "homcom-colonial-pantry-preview.png",
+          "metadata": "homcom-colonial-pantry-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "modway-render-tv-stand",
+      "name": "Modway Render 48-inch TV stand",
+      "category": "storage",
+      "modelSrc": "/models/catalog/storage/modway-render-tv-stand.glb",
+      "asin": "B078KDCJHT",
+      "sourceUrl": "https://www.amazon.com/dp/B078KDCJHT",
+      "dimensionsMeters": {
+        "width": 1.2192000150680542,
+        "depth": 0.34290000796318054,
+        "height": 0.4318000078201294
+      },
+      "sizeBytes": 599384,
+      "sha256": "2ea2b7268fcc4759983f5643d8fa586dec177a5988513bd813ec6d63445ce659",
+      "originalArchive": "amazon-furniture-10-glb-only.zip",
+      "originalFilename": "modway_render_tv_stand.glb",
+      "sourceMetadata": {
+        "slug": "modway_render_tv_stand",
+        "provenance": {
+          "asin": "B078KDCJHT",
+          "product_name": "Modway Render 48-inch TV stand",
+          "source_url": "https://www.amazon.com/dp/B078KDCJHT",
+          "selected_finish": "Walnut",
+          "checked_date": "2026-10-24",
+          "accuracy": "Photo-based approximation. Overall dimensions follow the cited listing; hidden construction, bevels and small details are estimated.",
+          "modeling_notes": "Horizontal slatted left sliding door, right open shelf, rear cable ports, splayed tapered legs. Uses 13.5-inch depth from detailed dimensions; Amazon top summary rounds depth to 14 inches."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          1.2192000150680542,
+          0.34290000796318054,
+          0.4318000078201294
+        ],
+        "requested_dimensions_m": [
+          1.2191999999999998,
+          0.3429,
+          0.43179999999999996
+        ],
+        "bounds_min_m": [
+          -0.6096000075340271,
+          -0.17145000398159027,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.6096000075340271,
+          0.17145000398159027,
+          0.4318000078201294
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 27,
+        "triangles": 6620,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "modway_render_tv_stand.blend",
+          "glb": "modway_render_tv_stand.glb",
+          "preview": "modway_render_tv_stand-preview.png",
+          "metadata": "modway_render_tv_stand-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "nathan-james-carter-bar-cart",
+      "name": "Nathan James Carter Two-Tier Rolling Bar Cart, Black/Brown",
+      "category": "storage",
+      "modelSrc": "/models/catalog/storage/nathan-james-carter-bar-cart.glb",
+      "asin": "B07CY841TW",
+      "sourceUrl": "https://www.amazon.com/dp/B07CY841TW",
+      "dimensionsMeters": {
+        "width": 0.6096000075340271,
+        "depth": 0.4317999929189682,
+        "height": 0.8889999988323978
+      },
+      "sizeBytes": 1481516,
+      "sha256": "aa91a87f380f2d4280a5477b646e722903f73a52b3f7c79a99b19c8c14fc53fa",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "nathan-james-carter-bar-cart.glb",
+      "sourceMetadata": {
+        "slug": "nathan-james-carter-bar-cart",
+        "provenance": {
+          "asin": "B07CY841TW",
+          "product_name": "Nathan James Carter Two-Tier Rolling Bar Cart, Black/Brown",
+          "source_url": "https://www.amazon.com/dp/B07CY841TW",
+          "selected_finish": "Black metal / brown lower shelf, model 45001",
+          "checked_date": "2026-10-24",
+          "dimension_source": "Amazon specification table states 17 D × 24 W × 35 H inches.",
+          "modeling_notes": "Two-tier black tubular steel cart: clear tempered glass top, warm brown lower wood shelf. Thin square safety rails on both tiers, four round uprights, raised curved push handle at left end, four small swivel casters. Glass uses portable glTF transmission material. Handle bend and caster details visually approximated; staged glasses, bottles and food excluded.",
+          "accuracy": "Original photo-based visual approximation; not manufacturer CAD."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.6096000075340271,
+          0.4317999929189682,
+          0.8889999988323978
+        ],
+        "requested_dimensions_m": [
+          0.6096,
+          0.4318,
+          0.889
+        ],
+        "bounds_min_m": [
+          -0.30480000376701355,
+          -0.2158999890089035,
+          -2.62909194415073e-10
+        ],
+        "bounds_max_m": [
+          0.30480000376701355,
+          0.2159000039100647,
+          0.8889999985694885
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 41,
+        "triangles": 31920,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "nathan-james-carter-bar-cart.blend",
+          "glb": "nathan-james-carter-bar-cart.glb",
+          "preview": "nathan-james-carter-bar-cart-preview.png",
+          "metadata": "nathan-james-carter-bar-cart-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "nathan-james-mina-nightstand",
+      "name": "Nathan James Mina nightstand",
+      "category": "storage",
+      "modelSrc": "/models/catalog/storage/nathan-james-mina-nightstand.glb",
+      "asin": "B084HCTYZ7",
+      "sourceUrl": "https://www.amazon.com/dp/B084HCTYZ7",
+      "dimensionsMeters": {
+        "width": 0.48260000348091125,
+        "depth": 0.4318000078201294,
+        "height": 0.5587999820709229
+      },
+      "sizeBytes": 752076,
+      "sha256": "c44547230649dea2d6db12aedbeb133b68e003da871a3158c7445c487917add8",
+      "originalArchive": "amazon-furniture-10-glb-only.zip",
+      "originalFilename": "nathan_james_mina_nightstand.glb",
+      "sourceMetadata": {
+        "slug": "nathan_james_mina_nightstand",
+        "provenance": {
+          "asin": "B084HCTYZ7",
+          "product_name": "Nathan James Mina nightstand",
+          "source_url": "https://www.amazon.com/dp/B084HCTYZ7",
+          "selected_finish": "Oak / Black",
+          "checked_date": "2026-10-24",
+          "accuracy": "Photo-based approximation. Overall dimensions follow the cited listing; hidden construction, bevels and small details are estimated.",
+          "modeling_notes": "Open upper cubby, lower cane-front door with real grid geometry, black metal sled legs. Cane weave and cabinet internals estimated from photo."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.48260000348091125,
+          0.4318000078201294,
+          0.5587999820709229
+        ],
+        "requested_dimensions_m": [
+          0.4826,
+          0.43179999999999996,
+          0.5588
+        ],
+        "bounds_min_m": [
+          -0.24130000174045563,
+          -0.2159000039100647,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.24130000174045563,
+          0.2159000039100647,
+          0.5587999820709229
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 111,
+        "triangles": 5172,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "nathan_james_mina_nightstand.blend",
+          "glb": "nathan_james_mina_nightstand.glb",
+          "preview": "nathan_james_mina_nightstand-preview.png",
+          "metadata": "nathan_james_mina_nightstand-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "sicotas-fluted-sideboard",
+      "name": "SICOTAS 66.3-inch Fluted 4-Door Sideboard, White Alder",
+      "category": "storage",
+      "modelSrc": "/models/catalog/storage/sicotas-fluted-sideboard.glb",
+      "asin": "B0DQP7JT9H",
+      "sourceUrl": "https://www.amazon.com/dp/B0DQP7JT9H",
+      "dimensionsMeters": {
+        "width": 1.6840200424194336,
+        "depth": 0.3937000036239624,
+        "height": 0.8686800003051758
+      },
+      "sizeBytes": 1581960,
+      "sha256": "786fb4597af0b10817a7ffa466d78d85fe087be073ecb504809156ff8885ba82",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "sicotas-fluted-sideboard.glb",
+      "sourceMetadata": {
+        "slug": "sicotas-fluted-sideboard",
+        "provenance": {
+          "asin": "B0DQP7JT9H",
+          "product_name": "SICOTAS 66.3-inch Fluted 4-Door Sideboard, White Alder",
+          "source_url": "https://www.amazon.com/dp/B0DQP7JT9H",
+          "selected_finish": "White Alder",
+          "checked_date": "2026-10-24",
+          "dimension_source": "Amazon specification table states 15.5 D × 66.3 W × 34.2 H inches.",
+          "modeling_notes": "Low plinth, substantial pale wood rectangular enclosure with softened outer front corners. Four equal door panels covered by narrow vertically rounded flutes; no visible pulls. Flute count and curvature approximated. Modeled with closed doors; inner shelves provided, hidden hinges simplified.",
+          "accuracy": "Original photo-based visual approximation; not manufacturer CAD."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          1.6840200424194336,
+          0.3937000036239624,
+          0.8686800003051758
+        ],
+        "requested_dimensions_m": [
+          1.68402,
+          0.3937,
+          0.86868
+        ],
+        "bounds_min_m": [
+          -0.8420100212097168,
+          -0.1968500018119812,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.8420100212097168,
+          0.1968500018119812,
+          0.8686800003051758
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 74,
+        "triangles": 50040,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "sicotas-fluted-sideboard.blend",
+          "glb": "sicotas-fluted-sideboard.glb",
+          "preview": "sicotas-fluted-sideboard-preview.png",
+          "metadata": "sicotas-fluted-sideboard-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "vasagle-ladder-bookcase",
+      "name": "VASAGLE 5-tier ladder shelf",
+      "category": "storage",
+      "modelSrc": "/models/catalog/storage/vasagle-ladder-bookcase.glb",
+      "asin": "B092KFMM9M",
+      "sourceUrl": "https://www.amazon.com/dp/B092KFMM9M",
+      "dimensionsMeters": {
+        "width": 0.5994399785995483,
+        "depth": 0.29972000420093536,
+        "height": 1.6992599964141846
+      },
+      "sizeBytes": 550288,
+      "sha256": "ba1bb96e509a143cba780587de569964f4b9c1df8f92532ee91d76be151f7ec0",
+      "originalArchive": "amazon-furniture-10-glb-only.zip",
+      "originalFilename": "vasagle_ladder_bookcase.glb",
+      "sourceMetadata": {
+        "slug": "vasagle_ladder_bookcase",
+        "provenance": {
+          "asin": "B092KFMM9M",
+          "product_name": "VASAGLE 5-tier ladder shelf",
+          "source_url": "https://www.amazon.com/dp/B092KFMM9M",
+          "selected_finish": "Rustic Brown / Black",
+          "checked_date": "2026-10-24",
+          "accuracy": "Photo-based approximation. Overall dimensions follow the cited listing; hidden construction, bevels and small details are estimated.",
+          "modeling_notes": "Five progressively shallower shelves, rear retaining lips, sloped black front rails and vertical rear rails. Decorative objects in source photo excluded. Shelf spacing estimated."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.5994399785995483,
+          0.29972000420093536,
+          1.6992599964141846
+        ],
+        "requested_dimensions_m": [
+          0.59944,
+          0.29972,
+          1.69926
+        ],
+        "bounds_min_m": [
+          -0.29971998929977417,
+          -0.14985999464988708,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.29971998929977417,
+          0.14986000955104828,
+          1.6992599964141846
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 40,
+        "triangles": 10208,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "vasagle_ladder_bookcase.blend",
+          "glb": "vasagle_ladder_bookcase.glb",
+          "preview": "vasagle_ladder_bookcase-preview.png",
+          "metadata": "vasagle_ladder_bookcase-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "wlive-nine-drawer-dresser",
+      "name": "WLIVE Tall Dresser for Bedroom, 9 Drawer Chest of Drawers, Charcoal Black",
+      "category": "storage",
+      "modelSrc": "/models/catalog/storage/wlive-nine-drawer-dresser.glb",
+      "asin": "B09SH31M9Z",
+      "sourceUrl": "https://www.amazon.com/dp/B09SH31M9Z",
+      "dimensionsMeters": {
+        "width": 1.0058399438858032,
+        "depth": 0.29971998929977417,
+        "height": 1.0210800170898438
+      },
+      "sizeBytes": 2754712,
+      "sha256": "f05fbe7369cb5a353dbbc517aee49f4cf25efd5c33df63bf0065d4bae5a2e72e",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "wlive-nine-drawer-dresser.glb",
+      "sourceMetadata": {
+        "slug": "wlive-nine-drawer-dresser",
+        "provenance": {
+          "asin": "B09SH31M9Z",
+          "product_name": "WLIVE Tall Dresser for Bedroom, 9 Drawer Chest of Drawers, Charcoal Black",
+          "source_url": "https://www.amazon.com/dp/B09SH31M9Z",
+          "selected_finish": "Charcoal Black / black walnut top",
+          "checked_date": "2026-10-24",
+          "dimension_source": "Amazon specification table explicitly states 11.8 D × 39.6 W × 40.2 H inches.",
+          "modeling_notes": "Nine dark charcoal fabric drawer fronts: three small across top, then three rows of two wide drawers. Slim black square steel frame and horizontal pull handles. Thin dark walnut top; small adjustable circular feet. Drawer seams, frame thickness and hidden runners are estimated from the photograph.",
+          "accuracy": "Original photo-based visual approximation; not manufacturer CAD."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          1.0058399438858032,
+          0.29971998929977417,
+          1.0210800170898438
+        ],
+        "requested_dimensions_m": [
+          1.00584,
+          0.29972,
+          1.02108
+        ],
+        "bounds_min_m": [
+          -0.5029199719429016,
+          -0.14985999464988708,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.5029199719429016,
+          0.14985999464988708,
+          1.0210800170898438
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 81,
+        "triangles": 52892,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "wlive-nine-drawer-dresser.blend",
+          "glb": "wlive-nine-drawer-dresser.glb",
+          "preview": "wlive-nine-drawer-dresser-preview.png",
+          "metadata": "wlive-nine-drawer-dresser-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "christopher-knight-kajsa-table",
+      "name": "Christopher Knight Home Kajsa Outdoor Lightweight Concrete Accent Table, Black",
+      "category": "tables",
+      "modelSrc": "/models/catalog/tables/christopher-knight-kajsa-table.glb",
+      "asin": "B07F65C22Z",
+      "sourceUrl": "https://www.amazon.com/dp/B07F65C22Z",
+      "dimensionsMeters": {
+        "width": 0.3174999952316284,
+        "depth": 0.3174999952316284,
+        "height": 0.45719999074935913
+      },
+      "sizeBytes": 280044,
+      "sha256": "1e575b945859ae9eefbbb54ea7ac2cd72b79fd556a95c658bdfa45e4bff063e4",
+      "originalArchive": "amazon-furniture-10-glb-only.zip",
+      "originalFilename": "christopher-knight-kajsa-table.glb",
+      "sourceMetadata": {
+        "slug": "christopher-knight-kajsa-table",
+        "provenance": {
+          "slug": "christopher-knight-kajsa-table",
+          "name": "Christopher Knight Home Kajsa Outdoor Lightweight Concrete Accent Table, Black",
+          "brand": "Christopher Knight Home",
+          "category": "sculptural side table",
+          "unusual": true,
+          "asin": "B07F65C22Z",
+          "amazon_url": "https://www.amazon.com/dp/B07F65C22Z",
+          "dimensions_inches": {
+            "width": 12.5,
+            "depth": 12.5,
+            "height": 18
+          },
+          "dimensions_m": [
+            0.3175,
+            0.3175,
+            0.4572
+          ],
+          "dimension_source": "Amazon specification and descriptive dimensions directly retrieved 2026-10-24",
+          "source_urls": [
+            "https://www.amazon.com/dp/B07F65C22Z",
+            "https://www.furniture.com/shop/christopher-knight-home-kajsa-outdoor-lightweight-concrete-accent-table-black-amazon-amz-b07f65c22z"
+          ],
+          "reference_image": "references/kajsa.webp",
+          "appearance": "Solid black faux wood concrete table formed as a sharply twisted square hourglass; broad square top and base, narrow middle, subtly softened edges.",
+          "uncertainty": "Overall listed dimensions verified. Twist profile and subtle grain approximated from reference imagery.",
+          "source_url": "https://www.amazon.com/dp/B07F65C22Z"
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.3174999952316284,
+          0.3174999952316284,
+          0.45719999074935913
+        ],
+        "requested_dimensions_m": [
+          0.3175,
+          0.3175,
+          0.4572
+        ],
+        "bounds_min_m": [
+          -0.1587499976158142,
+          -0.1587499976158142,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.1587499976158142,
+          0.1587499976158142,
+          0.45719999074935913
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 6,
+        "triangles": 6916,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "christopher-knight-kajsa-table.blend",
+          "glb": "christopher-knight-kajsa-table.glb",
+          "preview": "christopher-knight-kajsa-table-preview.png",
+          "metadata": "christopher-knight-kajsa-table-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "design-toscano-elephant-table",
+      "name": "Design Toscano Good Fortune Elephant Glass-Topped Table",
+      "category": "tables",
+      "modelSrc": "/models/catalog/tables/design-toscano-elephant-table.glb",
+      "asin": "B003M0JV5K",
+      "sourceUrl": "https://www.amazon.com/dp/B003M0JV5K",
+      "dimensionsMeters": {
+        "width": 0.40639999508857727,
+        "depth": 0.40639999508857727,
+        "height": 0.5461000204086304
+      },
+      "sizeBytes": 3907992,
+      "sha256": "e9843159be1074513d3564dca80e8c6a6ee502525142e1c12e5a29968a724493",
+      "originalArchive": "amazon-furniture-10-glb-only.zip",
+      "originalFilename": "design-toscano-elephant-table.glb",
+      "sourceMetadata": {
+        "slug": "design-toscano-elephant-table",
+        "provenance": {
+          "slug": "design-toscano-elephant-table",
+          "name": "Design Toscano Good Fortune Elephant Glass-Topped Table",
+          "brand": "Design Toscano",
+          "category": "sculptural side table",
+          "unusual": true,
+          "asin": "B003M0JV5K",
+          "amazon_url": "https://www.amazon.com/dp/B003M0JV5K",
+          "dimensions_inches": {
+            "width": 16,
+            "depth": 16,
+            "height": 21.5
+          },
+          "dimensions_m": [
+            0.4064,
+            0.4064,
+            0.5461
+          ],
+          "dimension_source": "Amazon product specification Item Dimensions D x W x H; directly retrieved 2026-10-24",
+          "source_urls": [
+            "https://www.amazon.com/dp/B003M0JV5K",
+            "https://www.bedbathandbeyond.com/Home-Garden/Design-Toscano-Good-Fortune-Elephant-Sculpture-Glass-Topped-Table/20442298/product.html"
+          ],
+          "reference_image": "references/elephant-detail.jpg",
+          "reference_image_url": "https://m.media-amazon.com/images/I/71Bk01C8XyL._AC_SL1500_.jpg",
+          "appearance": "Taupe-brown resin elephant upright on hind legs, raised forelegs, wide ears, pale tusks, raised curled trunk supporting circular clear glass top; ornate low circular plinth.",
+          "uncertainty": "Hand modeled visual approximation; fine carved skin texture and base ornament simplified. Listed overall dimensions verified; internal sculptural proportions estimated from photographs.",
+          "source_url": "https://www.amazon.com/dp/B003M0JV5K"
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.40639999508857727,
+          0.40639999508857727,
+          0.5461000204086304
+        ],
+        "requested_dimensions_m": [
+          0.4064,
+          0.4064,
+          0.5461
+        ],
+        "bounds_min_m": [
+          -0.20319999754428864,
+          -0.20319999754428864,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.20319999754428864,
+          0.20319999754428864,
+          0.5461000204086304
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 71,
+        "triangles": 155850,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "design-toscano-elephant-table.blend",
+          "glb": "design-toscano-elephant-table.glb",
+          "preview": "design-toscano-elephant-table-preview.png",
+          "metadata": "design-toscano-elephant-table-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "fezibo-standing-desk",
+      "name": "FEZIBO Electric Standing Desk 48 × 24, Black Walnut",
+      "category": "tables",
+      "modelSrc": "/models/catalog/tables/fezibo-standing-desk.glb",
+      "asin": "B0FJXWCSXY",
+      "sourceUrl": "https://www.amazon.com/dp/B0FJXWCSXY",
+      "dimensionsMeters": {
+        "width": 1.2192000150680542,
+        "depth": 0.6096000075340271,
+        "height": 0.7188199758529663
+      },
+      "sizeBytes": 1014980,
+      "sha256": "6b095ee51f5b993311f0510f22995e99123f98a1aa39e39bcbc2b974d3070c0d",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "fezibo-standing-desk.glb",
+      "sourceMetadata": {
+        "slug": "fezibo-standing-desk",
+        "provenance": {
+          "asin": "B0FJXWCSXY",
+          "product_name": "FEZIBO Electric Standing Desk 48 × 24, Black Walnut",
+          "source_url": "https://www.amazon.com/dp/B0FJXWCSXY",
+          "selected_finish": "Black Walnut tabletop / black steel frame, lowered height",
+          "checked_date": "2026-10-24",
+          "dimension_source": "Amazon table states 24 D × 48 W × 28.3 H inches; adjustable range 28.3–46.5 inches. Model uses lowest listed height. A feature bullet calls top 47.2 × 23.6; nominal 48 × 24 title/specification selected.",
+          "modeling_notes": "Black walnut laminate split desktop with rounded corners. Two black telescoping rectangular columns on long fore-aft low T-feet. Small angled controller under front-right edge, subtle side hooks, underside motor/frame. Lowered static configuration only; not animated. Desk only, excluding monitors, headphones, bag and decorations.",
+          "accuracy": "Original photo-based visual approximation; not manufacturer CAD."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          1.2192000150680542,
+          0.6096000075340271,
+          0.7188199758529663
+        ],
+        "requested_dimensions_m": [
+          1.2192,
+          0.6096,
+          0.71882
+        ],
+        "bounds_min_m": [
+          -0.6096000075340271,
+          -0.30480000376701355,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.6096000075340271,
+          0.30480000376701355,
+          0.7188199758529663
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 33,
+        "triangles": 20116,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "fezibo-standing-desk.blend",
+          "glb": "fezibo-standing-desk.glb",
+          "preview": "fezibo-standing-desk-preview.png",
+          "metadata": "fezibo-standing-desk-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "mordchil-cloud-coffee-table",
+      "name": "Mordchil HF Cloud Coffee Table",
+      "category": "tables",
+      "modelSrc": "/models/catalog/tables/mordchil-cloud-coffee-table.glb",
+      "asin": "B0FMDZ2SQC",
+      "sourceUrl": "https://www.amazon.com/dp/B0FMDZ2SQC",
+      "dimensionsMeters": {
+        "width": 0.8636000156402588,
+        "depth": 0.5333999991416931,
+        "height": 0.38099998235702515
+      },
+      "sizeBytes": 616212,
+      "sha256": "2bdcb8d028f92ddda945f776eb5e48dc55fbaa632ec5ce34acd7301a1c218077",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "mordchil-cloud-coffee-table.glb",
+      "sourceMetadata": {
+        "slug": "mordchil-cloud-coffee-table",
+        "provenance": {
+          "slug": "mordchil-cloud-coffee-table",
+          "name": "Mordchil HF Cloud Coffee Table",
+          "brand": "Mordchil HF",
+          "category": "coffee table",
+          "unusual": true,
+          "asin": "B0FMDZ2SQC",
+          "amazon_url": "https://www.amazon.com/dp/B0FMDZ2SQC",
+          "source_url": "https://www.amazon.com/dp/B0FMDZ2SQC",
+          "variant": "Walnut",
+          "dimensions_inches": {
+            "width": 34,
+            "depth": 21,
+            "height": 15
+          },
+          "dimensions_m": [
+            0.8636,
+            0.5334,
+            0.381
+          ],
+          "dimension_source": "Amazon selected variant product dimensions",
+          "source_urls": [
+            "https://www.amazon.com/dp/B0FMDZ2SQC"
+          ],
+          "reference_image": "work/amazon-batch-20/references/cloud.jpg",
+          "appearance": "Low organic lobed tabletop with rounded edge and three broad cylinder legs.",
+          "uncertainty": "Photo-informed approximation; internal construction and unlisted details are estimated.",
+          "notes": "Original procedural visual model; no manufacturer CAD or listing photographs embedded. "
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          0.8636000156402588,
+          0.5333999991416931,
+          0.38099998235702515
+        ],
+        "requested_dimensions_m": [
+          0.8636,
+          0.5334,
+          0.381
+        ],
+        "bounds_min_m": [
+          -0.4318000078201294,
+          -0.26669999957084656,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.4318000078201294,
+          0.26669999957084656,
+          0.38099998235702515
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 4,
+        "triangles": 14768,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "mordchil-cloud-coffee-table.blend",
+          "glb": "mordchil-cloud-coffee-table.glb",
+          "preview": "mordchil-cloud-coffee-table-preview.png",
+          "metadata": "mordchil-cloud-coffee-table-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "nathan-james-telos-desk",
+      "name": "Nathan James Telos 42-inch desk",
+      "category": "tables",
+      "modelSrc": "/models/catalog/tables/nathan-james-telos-desk.glb",
+      "asin": "B07889LS54",
+      "sourceUrl": "https://www.amazon.com/dp/B07889LS54",
+      "dimensionsMeters": {
+        "width": 1.0667999982833862,
+        "depth": 0.5079999566078186,
+        "height": 0.7365999817848206
+      },
+      "sizeBytes": 432568,
+      "sha256": "28dd4d26571daa531f116146cdf18806e81bb356265fb1c25587ace927ff2c3b",
+      "originalArchive": "amazon-furniture-10-glb-only.zip",
+      "originalFilename": "nathan_james_telos_desk.glb",
+      "sourceMetadata": {
+        "slug": "nathan_james_telos_desk",
+        "provenance": {
+          "asin": "B07889LS54",
+          "product_name": "Nathan James Telos 42-inch desk",
+          "source_url": "https://www.amazon.com/dp/B07889LS54",
+          "selected_finish": "White / Brown",
+          "checked_date": "2026-10-24",
+          "accuracy": "Photo-based approximation. Overall dimensions follow the cited listing; hidden construction, bevels and small details are estimated.",
+          "modeling_notes": "Single center drawer with curved finger cutout, white modesty panel, warm wood side frames. Drawer and joinery proportions estimated from listing photo."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          1.0667999982833862,
+          0.5079999566078186,
+          0.7365999817848206
+        ],
+        "requested_dimensions_m": [
+          1.0668,
+          0.508,
+          0.7365999999999999
+        ],
+        "bounds_min_m": [
+          -0.5333999991416931,
+          -0.2539999783039093,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.5333999991416931,
+          0.2539999783039093,
+          0.7365999817848206
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 18,
+        "triangles": 3768,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "nathan_james_telos_desk.blend",
+          "glb": "nathan_james_telos_desk.glb",
+          "preview": "nathan_james_telos_desk-preview.png",
+          "metadata": "nathan_james_telos_desk-metadata.json"
+        },
+        "studio_exported": false
+      }
+    },
+    {
+      "id": "vasagle-lift-top-coffee-table",
+      "name": "VASAGLE Lift Top Coffee Table ULCT202B22, Black with Wood Grain",
+      "category": "tables",
+      "modelSrc": "/models/catalog/tables/vasagle-lift-top-coffee-table.glb",
+      "asin": "B0BTHKXWTJ",
+      "sourceUrl": "https://www.amazon.com/dp/B0BTHKXWTJ",
+      "dimensionsMeters": {
+        "width": 1.0007599592208862,
+        "depth": 0.5003799796104431,
+        "height": 0.49021998047828674
+      },
+      "sizeBytes": 1038308,
+      "sha256": "852a46a20dafce4b21eef0a82fd1dc080568fbb0ea0ef547a0a4559582bec804",
+      "originalArchive": "amazon-furniture-20-glb-only.zip",
+      "originalFilename": "vasagle-lift-top-coffee-table.glb",
+      "sourceMetadata": {
+        "slug": "vasagle-lift-top-coffee-table",
+        "provenance": {
+          "asin": "B0BTHKXWTJ",
+          "product_name": "VASAGLE Lift Top Coffee Table ULCT202B22, Black with Wood Grain",
+          "source_url": "https://www.amazon.com/dp/B0BTHKXWTJ",
+          "selected_finish": "Black with wood grain, closed top",
+          "checked_date": "2026-10-24",
+          "dimension_source": "Amazon dimension photograph states tabletop 39.4 × 19.7 inches, closed height 19.3 and raised height 24.4; model uses closed position. 37.4 × 17.7 inch base footprint and three 11.5 inch cubbies also shown.",
+          "modeling_notes": "Long rectangular black wood top, shallow hidden storage box, lower shelf divided into three open cubbies. Black square steel corner legs and X-braces on short ends. Top modeled closed; lift hardware exists underneath but not animated. Photo is raised to display function; model closed footprint follows dimension diagram.",
+          "accuracy": "Original photo-based visual approximation; not manufacturer CAD."
+        },
+        "accuracy": "Photo-based visual approximation for AR prototyping; not manufacturer CAD. Listed overall dimensions are used; unlisted construction details are estimated.",
+        "units": "meters",
+        "dimension_order": [
+          "width",
+          "depth",
+          "height"
+        ],
+        "dimensions_m": [
+          1.0007599592208862,
+          0.5003799796104431,
+          0.49021998047828674
+        ],
+        "requested_dimensions_m": [
+          1.00076,
+          0.50038,
+          0.49022
+        ],
+        "bounds_min_m": [
+          -0.5003799796104431,
+          -0.25018998980522156,
+          0.0
+        ],
+        "bounds_max_m": [
+          0.5003799796104431,
+          0.25018998980522156,
+          0.49021998047828674
+        ],
+        "origin": "floor center",
+        "blender_axes": "Z up; front faces -Y",
+        "glb_axes": "Y up; standard glTF meter units",
+        "mesh_objects": 31,
+        "triangles": 18292,
+        "textures": "Original generated PBR texture maps packed into BLEND and GLB, where applicable.",
+        "exports": {
+          "blend": "vasagle-lift-top-coffee-table.blend",
+          "glb": "vasagle-lift-top-coffee-table.glb",
+          "preview": "vasagle-lift-top-coffee-table-preview.png",
+          "metadata": "vasagle-lift-top-coffee-table-metadata.json"
+        },
+        "studio_exported": false
+      }
+    }
+  ]
+}
