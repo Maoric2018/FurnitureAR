@@ -2,7 +2,7 @@ import { getVariant, parseProduct } from './products';
 import type { FurnitureProduct, FurnitureVariant } from './products';
 import { parseListing } from './amazon';
 import type { AmazonListing } from './amazon';
-import { parseSurvey } from './room-scan';
+import { parseSurvey, placementWarnings } from './room-scan';
 import type { RoomSurvey } from './room-scan';
 
 export interface ProductItem {
@@ -97,6 +97,12 @@ export function clampPlacement(item: PlacedItem, room: Pick<RoomLayout,'width'|'
   const limitX=Math.max(0,room.width/2-extentX),limitZ=Math.max(0,room.depth/2-extentZ);
   return {...item,rotation,x:Math.max(-limitX,Math.min(limitX,item.x)),z:Math.max(-limitZ,Math.min(limitZ,item.z))};
 }
+/** Snap before clamping so the entire rotated footprint can still sit flush with a wall. */
+export function movePlacement(item: PlacedItem, room: Pick<RoomLayout,'width'|'depth'>, x: number, z: number, snap=false): PlacedItem {
+  if (![x,z].every(Number.isFinite)) return item;
+  const grid=(value:number)=>Math.round(value/.05)*.05;
+  return clampPlacement({...item,x:snap?grid(x):x,z:snap?grid(z):z},room);
+}
 export function placeItem(room:RoomLayout, item:ProductItem): RoomLayout {
   if (!item.product) throw new Error('This product needs a matching 3D model before it can be placed in a layout.');
   if(room.items.length>=30) throw new Error('This layout has 30 pieces. Start another layout to add more.');
@@ -106,6 +112,18 @@ export function placeItem(room:RoomLayout, item:ProductItem): RoomLayout {
   const z=Math.floor(index/columns)*spacing-room.depth/4;
   const placed=clampPlacement({...reconcileItemVariant(item),product:item.product,id:crypto.randomUUID(),x,z,rotation:0},room);
   return {...room,items:[...room.items,placed],updatedAt:new Date().toISOString()};
+}
+export function duplicatePlacedItem(room:RoomLayout, source:PlacedItem): RoomLayout {
+  if(room.items.length>=30) throw new Error('This layout has 30 pieces. Start another layout to add more.');
+  const copy={...source,id:crypto.randomUUID()};
+  const candidates:PlacedItem[]=[];
+  for(let x=-room.width/2;x<=room.width/2;x+=.2)for(let z=-room.depth/2;z<=room.depth/2;z+=.2){
+    candidates.push(clampPlacement({...copy,x,z},room));
+  }
+  candidates.sort((a,b)=>Math.hypot(a.x-source.x,a.z-source.z)-Math.hypot(b.x-source.x,b.z-source.z));
+  const placed=candidates.find(item=>!placementWarnings(item,room).length)
+    ??clampPlacement({...copy,x:source.x+.25,z:source.z+.25},room);
+  return {...room,items:[...room.items,placed]};
 }
 export function duplicateLayout(layout:RoomLayout): RoomLayout {
   return {...structuredClone(layout),id:crypto.randomUUID(),name:`${layout.name} copy`.slice(0,80),items:layout.items.map(item=>({...item,id:crypto.randomUUID()})),updatedAt:new Date().toISOString()};

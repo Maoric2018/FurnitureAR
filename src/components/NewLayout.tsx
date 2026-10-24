@@ -3,7 +3,6 @@ import { ArrowLeft, ArrowRight, Ruler, ScanLine } from 'lucide-react';
 import { createLayout } from '../lib/workspace';
 import type { RoomLayout } from '../lib/workspace';
 import Modal from './Modal';
-import RoomScanImport from './RoomScanImport';
 
 export default function NewLayout({ onClose, onCreate }: {
   onClose: () => void;
@@ -15,10 +14,6 @@ export default function NewLayout({ onClose, onCreate }: {
   const [depth, setDepth] = useState('4');
   const [error, setError] = useState('');
 
-  if (step === 'scan') return <RoomScanImport onClose={onClose} onBack={() => setStep('choose')} onImport={scan => {
-    onCreate({ ...createLayout(scan.name, 'Scanned room', scan.width, scan.depth), survey: scan.survey });
-  }}/>;
-
   return <Modal label="New layout" onClose={onClose} className="small-modal">
     {step === 'choose' ? <div className="modal-form room-setup">
       <span className="overline">NEW LAYOUT</span>
@@ -29,9 +24,15 @@ export default function NewLayout({ onClose, onCreate }: {
           <Ruler size={24}/><span><strong>Enter room size</strong><small>Set the width and depth yourself.</small></span><ArrowRight size={18}/>
         </button>
         <button className="room-method" aria-label="Scan your room" onClick={() => setStep('scan')}>
-          <ScanLine size={24}/><span><strong>Scan your room</strong><small>Capture walls and existing furniture.</small><small className="room-method-note">LiDAR iPhone or iPad · scanner app required</small></span><ArrowRight size={18}/>
+          <ScanLine size={24}/><span><strong>Scan your room <span className="coming-soon">Coming soon</span></strong><small>Room scanning is coming to the app.</small></span><ArrowRight size={18}/>
         </button>
       </div>
+    </div> : step === 'scan' ? <div className="modal-form room-setup">
+      <button type="button" className="text-button setup-back" onClick={() => setStep('choose')}><ArrowLeft size={15}/>Back</button>
+      <span className="overline">COMING TO THE APP</span>
+      <h2>Your room, captured.</h2>
+      <p>Room scanning will live inside the Furniture AR app. For now, enter your room’s dimensions to start arranging furniture on the web.</p>
+      <button className="button primary" onClick={() => setStep('manual')}>Enter room size<ArrowRight size={16}/></button>
     </div> : <form className="modal-form room-setup" onSubmit={event => {
       event.preventDefault();
       try { onCreate(createLayout(name, 'Room', Number(width), Number(depth))); }

@@ -124,8 +124,10 @@ export function solidWallSegments(wall: ScanWall, openings: ScanOpening[]): Scan
   return segments;
 }
 export function placementWarnings(item: PlacedItem, layout: RoomLayout): string[] {
-  if(!layout.survey)return [];
   const polygon=itemPolygon(item),survey=layout.survey,messages:string[]=[];
+  if(polygon.some(p=>Math.abs(p.x)>layout.width/2+.001||Math.abs(p.z)>layout.depth/2+.001))messages.push('Too large for these room dimensions');
+  if(layout.items.some(other=>other.id!==item.id&&polygonsOverlap(polygon,itemPolygon(other))))messages.push('Overlaps another piece');
+  if(!survey)return messages;
   if(survey.obstacles.some(obstacle=>polygonsOverlap(polygon,footprintCorners(obstacle))))messages.push('Overlaps an existing object');
   if(survey.walls.some(w=>solidWallSegments(w,survey.openings).some(segment=>polygonsOverlap(polygon,segmentBox(segment,.10)))))messages.push('Crosses a scanned wall');
   if(survey.openings.some(o=>o.kind!=='window'&&polygonsOverlap(polygon,segmentBox(o,.9))))messages.push('Near a doorway — check access');
