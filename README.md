@@ -53,7 +53,7 @@ Amazon ASIN B0F2ML48Y6 uses this table. ASIN B0C4DGFFCM uses the supplied Ambima
 
 The partner’s SerpApi implementation is integrated into `POST /api/products/import`. See [INTEGRATION.md](./INTEGRATION.md) for setup, request/response details, supported links, limitations and model provenance. The API key is a server secret; it is never bundled into the phone app.
 
-The current prototype selects the first registered model variant. Geometry dimensions and Amazon listing dimensions are displayed separately. SAM 3D generation remains a separate local trial and is not connected to live imports yet.
+The current prototype selects the first registered model variant. Geometry dimensions and Amazon listing dimensions are displayed separately. SAM 3D generation remains a separate [local experiment](./experiments/README.md) and is not connected to live imports yet. See [VALIDATION.md](./VALIDATION.md) for the tested behavior and remaining limits.
 
 ## Source map
 
@@ -72,7 +72,7 @@ The current prototype selects the first registered model variant. Geometry dimen
 - `worker/index.ts`: hosted API route and static asset serving.
 - `tests/`: model dimensions, importer contract, input validation, layout persistence and combined-scene transforms/USDZ export.
 
-Original furniture GLBs are retained as development fixtures; the UI exposes only the one placeholder model. They can be regenerated with `npm run models`.
+Original procedural furniture GLBs are retained as development fixtures and can be regenerated with `npm run models`. New imports expose only a model registered for that exact Amazon product. The supplied table and lamp are independent of these procedural fixtures.
 
 ## Credits
 
