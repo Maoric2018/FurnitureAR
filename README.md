@@ -2,10 +2,12 @@
 
 A mobile web app with two ways to plan furniture:
 
-- **One product:** paste a link, inspect its 3D model, choose a finish, preview it in AR, and save it or add it to a room.
-- **A whole room:** create a named layout, add multiple links, move and rotate pieces on a floor plan, choose each piece’s finish, then view the complete arrangement in 3D or AR.
+- **One product:** search Amazon or paste a link, inspect its 3D model, choose a finish, preview it in AR, and save it or add it to a room.
+- **A whole room:** create a named layout, find products through search or links, move and rotate pieces on a floor plan, choose each piece’s finish, then view the complete arrangement in 3D or AR.
 
-The home screen is a workspace. Paste an **Amazon.com product link** to import its real name, photos, price, and available measurements. The table and lamp supplied by the project team have approximate 3D previews. Other products can be saved with their details; AR and room placement remain unavailable until a matching model exists. No unrelated placeholder is substituted.
+The home screen is a workspace. **Search Amazon by keyword** or paste an **Amazon.com product link** to import real product details. Search opens a photo-card list with prices and ratings when supplied, model-availability labels, and pagination. Selecting a result loads its full listing through the existing importer. The table and lamp supplied by the project team have approximate 3D previews. Other products can be saved with their details; AR and room placement remain unavailable until a matching model exists. No unrelated placeholder is substituted.
+
+Search is also available in Saved items and the room editor. It returns the products supplied for each Amazon search page, rather than attempting to download the entire catalog. Search results do not guarantee current stock; confirm price, availability, size, and finish on Amazon. Product search and import share the configured SerpApi account allowance; search runs only on submission or pagination, not on every keystroke.
 
 ## Run
 
@@ -60,7 +62,7 @@ Amazon ASIN B0F2ML48Y6 and the six registered table finish ASINs listed in [INTE
 
 ## Amazon importer
 
-The partner’s SerpApi implementation is integrated into `POST /api/products/import`. See [INTEGRATION.md](./INTEGRATION.md) for setup, request/response details, material variants, supported links, limitations, and model provenance. The API key is a server secret; it is never bundled into the phone app.
+The partner’s SerpApi implementation is integrated into `POST /api/products/import` and `POST /api/products/search`. See [INTEGRATION.md](./INTEGRATION.md) for setup, request/response details, material variants, supported links, limitations, and model provenance. The API key is a server secret; it is never bundled into the phone app.
 
 The same-origin route runs in the Cloudflare Worker for local development and hosted deployment. SAM 3D generation remains a separate local trial and is not connected to live imports yet. Product photos and URLs alone do not provide accurate geometry.
 
@@ -79,6 +81,7 @@ The same-origin route runs in the Cloudflare Worker for local development and ho
 - `src/components/Viewer.tsx`: fixed-scale AR activation, tracking, errors and capability fallback.
 - `src/lib/products.ts`: product/variant schema and geometry dimension validation.
 - `src/lib/amazon.ts`: live listing validation and import request.
+- `src/lib/amazon-search.ts`: search result validation and keyword-search requests.
 - `server/`: adapted partner transport, normalizer, importer, caching and access checks.
 - `worker/index.ts`: hosted API route and static asset serving.
 - `tests/`: dimensions, importer contracts, input validation, finish persistence, material isolation/restoration and combined GLB/USDZ colors and transforms.

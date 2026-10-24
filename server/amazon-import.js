@@ -28,6 +28,10 @@ const tableFinishes = new Map([
   ['B0DSZGP1HK', 'White'], ['B0D8NQHBBH', 'Brown'],
 ]);
 
+export function hasRegisteredModel(asin) {
+  return typeof asin === 'string' && (Object.hasOwn(models, asin) || tableFinishes.has(asin));
+}
+
 function tableModel(asin, data, source) {
   const name = tableFinishes.get(asin);
   if (!name) return null;

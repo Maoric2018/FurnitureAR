@@ -13,6 +13,22 @@ The app uses the partner's SerpApi transport and normalizer through a same-origi
 
 `VITE_PRODUCT_API_URL` optionally overrides the default `/api/products/import` URL. An external endpoint must return the complete listing/product contract below and permit the app's origin through CORS. Vite variables are public configuration, never a place for secrets.
 
+## Keyword search
+
+`POST /api/products/search` with `Content-Type: application/json`:
+
+```json
+{"q":"floor lamp","page":1}
+```
+
+The server uses [SerpApi's Amazon Search API](https://serpapi.com/amazon-search-api), with `engine=amazon`, `k` for the keywords, and `amazon_domain=amazon.com`. Queries contain 2–200 characters after whitespace normalization. Pages are integers from 1 through 10. `VITE_PRODUCT_SEARCH_API_URL` optionally overrides this route independently of the product-import endpoint.
+
+The response contains `query`, `page`, `nextPage`, `totalResults`, `products`, `retrievedAt`, `providerRetrievedAt`, and `cached`. Each product contains `asin`, `title`, a canonical Amazon `url`, nullable `imageUrl`, nullable `price` (`amount`, `currency`, and nullable `display`), nullable `rating`, nullable `ratingsTotal`, nullable `availability`, and `modelAvailable`.
+
+Only supplied organic result entries with valid ASINs and titles become cards. Duplicate ASINs are removed; unsafe image links are discarded. Ratings, prices, stock, totals, and retrieval timestamps remain unknown when the provider omits them. `nextPage` is present only when the provider supplies a next-page link, and the app never fetches that URL directly. Results are paginated; there is no guarantee of exhaustive Amazon inventory or current stock.
+
+`modelAvailable` means this app has a registered approximate model for that exact ASIN. Selecting a card calls the existing product-import endpoint to verify the actual listing and obtain the model; search summaries alone cannot be placed in AR. Products without a model still open their details and can be saved. Search uses the same server-only SerpApi key, sign-in and same-origin JSON checks, request limits, one-hour caching, and credential-safe errors as import. Each endpoint limits uncached requests to eight per user per minute and four simultaneous lookups per Worker instance.
+
 ## Request and response
 
 `POST /api/products/import` with `Content-Type: application/json`:
