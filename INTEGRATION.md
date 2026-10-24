@@ -27,7 +27,7 @@ The response contains `query`, `page`, `nextPage`, `totalResults`, `products`, `
 
 Only supplied organic result entries with valid ASINs and titles become cards. Duplicate ASINs are removed; unsafe image links are discarded. Ratings, prices, stock, totals, and retrieval timestamps remain unknown when the provider omits them. `nextPage` is present only when the provider supplies a next-page link, and the app never fetches that URL directly. Results are paginated; there is no guarantee of exhaustive Amazon inventory or current stock.
 
-`modelAvailable` means this app has a registered approximate model for that exact ASIN. Selecting a card calls the existing product-import endpoint to verify the actual listing and obtain the model; search summaries alone cannot be placed in AR. Products without a model still open their details and can be saved. Search and import allow anonymous requests and use the same server-only SerpApi key, same-origin JSON checks, request-size limits, one-hour caching, and credential-safe errors. There is no app-imposed per-user request quota. Each endpoint allows four simultaneous lookups per Worker instance to bound concurrent work.
+`modelAvailable` means this app has a registered approximate model for that exact ASIN. The search response does not enumerate the generated-model cache. Selecting a card calls the product-import endpoint, which checks persistent model storage before looking up the full listing; search summaries alone cannot be placed in AR. Products without a model still open their details and can be saved. Search and import allow anonymous requests and use the same server-only SerpApi key, same-origin JSON checks, request-size limits, caching, and credential-safe errors. There is no app-imposed per-user request quota. Each endpoint allows four simultaneous lookups per Worker instance to bound concurrent work.
 
 ## Request and response
 
@@ -37,7 +37,7 @@ Only supplied organic result entries with valid ASINs and titles become cards. D
 {"url":"https://www.amazon.com/dp/B0F2ML48Y6"}
 ```
 
-The response contains `listing`, `product`, and `cached`. `listing` has the real title, brand, photo URLs, price (nullable), availability (nullable), feature text, raw listing dimensions, normalized dimensions (nullable), ASIN and retrieval timestamp. `product` is a validated FurnitureProduct with geometry dimensions and a model URL **only when a model is registered for the confirmed ASIN**; otherwise it is null.
+The response contains `listing`, `product`, `model`, and `cached`. `listing` has the real title, brand, photo URLs, price (nullable), availability (nullable), feature text, raw listing dimensions, normalized dimensions (nullable), ASIN and retrieval timestamp. `product` is a validated FurnitureProduct with geometry dimensions and a model URL **only when a registered or completed generated model exists for the confirmed ASIN**; otherwise it is null. `model` describes whether the result is ready, waiting for generation, or unavailable. Older external adapters may omit this field. See [MODEL_GENERATION.md](MODEL_GENERATION.md) for the durable cache and generator contract.
 
 The UI can save and reopen listings without models. Those listings cannot enter a floor plan or launch AR. No unrelated placeholder is substituted. Previously saved placeholder products still reopen.
 
@@ -121,11 +121,11 @@ For new model mappings:
 
 ## Request controls
 
-Search and import require neither a signed-in user header nor a session cookie. Browser requests omit credentials and use same-origin JSON. There is a 4 KB body limit, strict host/ASIN validation, 60-second upstream timeout, and 65-second browser timeout. Each Worker instance caches successful results for one hour, coalesces simultaneous requests for the same input, and allows up to four different in-flight lookups. The app does not impose per-user or shared guest request quotas. SerpApi's own cache and subscription limits still apply; its private key remains in the server environment.
+Search and import require neither a signed-in user header nor a session cookie. Browser requests omit credentials and use same-origin JSON. There is a 4 KB body limit, strict host/ASIN validation, 60-second upstream timeout, and 65-second browser timeout. Search and uncached product-detail lookups retain a one-hour cache. Completed model records persist and bypass fresh Amazon lookups; pending generation retains its original listing snapshot. Each Worker instance coalesces simultaneous requests for the same product and allows up to four different in-flight product operations. The app does not impose per-user or shared guest request quotas. SerpApi's own cache and subscription limits still apply; its private key remains in the server environment.
 
 Sites' hosting audience is independent of these API routes. A public Site can serve anonymous visitors; an owner-private Site can still require sign-in before the app loads. Guest browsing on a hosted copy requires a public hosting audience as well as this version of the source.
 
-SAM 3D generation is a separate local experiment. This route does not yet generate new models from product photos.
+SAM 3D generation is a separate local experiment. The active route now has a generator adapter and persistent model cache, but the adapter deliberately returns `not_configured` until a real conversion service is connected. It does not run the experiment or fabricate a GLB.
 
 ## Code entry points
 

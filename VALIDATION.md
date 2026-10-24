@@ -1,6 +1,6 @@
 # Integration checks — October 24, 2026
 
-- App: all 137 automated tests and the production build passed after merging guest browsing with the latest room-scanning and model-catalog updates.
+- App: all 160 automated tests and the production build passed after integrating the persistent model cache.
 - Partner package: all 86 original tests passed. Its 13 normalization tests also passed against the adapted normalizer used by this app.
 - Live SerpApi lookups returned the Little Tree table, Ambimall lamp, and a Virabit dining chair listing. A separate search result could not be retrieved by the product endpoint; the interface showed the failure instead of a placeholder.
 - The concurrent color-selection changes were merged without discarding the importer or Mac experiment. A fresh live table import returned seven finish choices; selecting Black changed the model and its exact Amazon product link.
@@ -36,3 +36,11 @@ The room scanner was merged with the newer GitHub Amazon search and observed-col
 - The client sends search/import requests without credentials, prevents login redirects, and presents a service error instead of a sign-in prompt if a hosting configuration still blocks anonymous access.
 - Caching, request coalescing, and a maximum of four simultaneous provider lookups per Worker instance remain. SerpApi subscription limits still apply; no subscription change was made.
 - This version has not been published. The configured Sites project could not be found in the connected account. Publishing through the account that owns the existing project is still required; a private hosting audience must separately allow public access.
+
+## Generated model cache — local verification
+
+- All 160 tests pass, including 23 new server/client cases for exact ASIN identity, tracking-link normalization, durable reuse across service instances, pending jobs, placeholder version changes, malformed GLBs, missing storage, failed writes, adapter timeouts, safe model status requests, and saved-item updates that preserve IDs and selected finishes. The production build includes the `MODEL_BUCKET` R2 binding and hosting declaration.
+- A separate real Miniflare R2 integration verified conditional create/update behavior and stale-write rejection. An injected test generator stored a 41,020-byte test-only GLB for a synthetic ASIN; after disposing and recreating the storage runtime, a fresh service reused the model and served identical bytes while both provider functions were configured to throw if called. This fixture was kept out of the app's live product cache.
+- A real Amazon search opened the Govee floor-lamp listing with its photo and the honest disabled-generator message. After restarting the local preview without any SerpApi key configured, a differently formatted link for the same ASIN returned the persisted product snapshot with `cached: true` and the same retrieval timestamp. No geometry was generated for that live product.
+- Independent review caught and resolved a cross-Worker race where a late pending result could overwrite ready metadata. Conditional R2 writes now preserve the completed result. It also verified completion updates a previously saved item even when a fresh preview has a different ID.
+- Changed files and the browser build contain no configured API credentials. The actual image-to-GLB adapter remains a dummy. Hosted storage and publication remain unverified because the existing Sites project is inaccessible through the connected account.
