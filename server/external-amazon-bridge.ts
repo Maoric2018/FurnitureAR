@@ -53,15 +53,19 @@ interface Combination {
 function readCombinations(value: unknown): Combination[] {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value)) throw new ImportError('Amazon returned incomplete color information. Please try again.');
-  return value.map(entry => {
-    if (!record(entry) || !record(entry.dimensions) || !asinValue(entry.asin)
+  return value.flatMap(entry => {
+    if (!record(entry) || !record(entry.dimensions)
         || !Object.keys(entry.dimensions).length || !Object.values(entry.dimensions).every(nonempty)
         || !nonempty(entry.dimensions.color)
-        || (entry.unavailable !== undefined && entry.unavailable !== null && typeof entry.unavailable !== 'boolean')) {
+        || [entry.unavailable, entry.available].some(value => value !== undefined && value !== null && typeof value !== 'boolean')) {
       throw new ImportError('Amazon returned incomplete color information. Please try again.');
     }
-    return { asin: asinValue(entry.asin)!, dimensions: entry.dimensions as Record<string, string>,
-      unavailable: entry.unavailable === true, productUrl: entry.productUrl };
+    const asin = asinValue(entry.asin), unavailable = entry.unavailable === true || entry.available === false;
+    if (!asin) {
+      if (unavailable && (entry.asin === undefined || entry.asin === null)) return [];
+      throw new ImportError('Amazon returned incomplete color information. Please try again.');
+    }
+    return [{ asin, dimensions: entry.dimensions as Record<string, string>, unavailable, productUrl: entry.productUrl }];
   });
 }
 function sameOtherDimensions(a: Combination, b: Combination): boolean {
@@ -96,11 +100,17 @@ export function adaptAmazonProduct(raw: unknown, requestedAsin: string): Furnitu
     throw new ImportError('Amazon did not return an unambiguous set of color options for this table.');
   }
   const combinations = readCombinations(product.variantCombinations);
+  if (Array.isArray(product.variantCombinations) && product.variantCombinations.length && !combinations.length) {
+    throw new ImportError('Amazon did not identify an available color and size for this product. Please try another product link.');
+  }
   const currentMatches = combinations.filter(combination => combination.asin === asin);
   if (combinations.length && (currentMatches.length !== 1 || currentMatches[0].unavailable)) {
     throw new ImportError('Amazon did not identify an available color and size for this product. Please try another product link.');
   }
   const current = currentMatches[0];
+  if (!current && product.variantGroups.some(group => record(group) && group.kind !== 'color')) {
+    throw new ImportError('Amazon did not confirm color choices for the selected size and style. Please try again.');
+  }
   const labels = new Set<string>(), optionAsins = new Set<string>(), resolvedAsins = new Set<string>();
   const variants: FurnitureVariant[] = [];
   let selectedCount = 0;
@@ -112,6 +122,15 @@ export function adaptAmazonProduct(raw: unknown, requestedAsin: string): Furnitu
     }
     labels.add(label.toLocaleLowerCase());
     if (directAsin) optionAsins.add(directAsin);
+    if ([option.unavailable, option.available].some(value => value !== undefined && value !== null && typeof value !== 'boolean')) {
+      throw new ImportError('Amazon returned incomplete color information. Please try again.');
+    }
+    if (option.unavailable === true || option.available === false) {
+      if (directAsin === asin || option.selected === true) {
+        throw new ImportError('Amazon did not identify an available color and size for this product. Please try another product link.');
+      }
+      continue;
+    }
     let optionAsin = directAsin, link = option.productUrl;
     if (current) {
       const matches = combinations.filter(combination => combination.dimensions.color === label && sameOtherDimensions(current, combination));

@@ -11,3 +11,10 @@
 Physical iPhone/Android camera AR has not been tested here. Registered models are supplied approximations, and arbitrary Amazon photos do not yet generate models through the app. Listing measurements can be missing or disagree with model geometry; the interface keeps both sources distinct.
 
 The separate [Mac SAM 3D experiment](experiments/README.md) generated and exported the isolated table example in 601.2 seconds. Its CPU-decoded mesh had zero invalid vertices/faces; the final 20,000-triangle textured GLB passed geometry/texture checks and visual inspection. Small reconstruction artifacts remain, and its scale has not been verified.
+
+## Amazon color sync — local verification
+
+- All 126 app tests and the production build pass, including unavailable and missing-ASIN combinations, size/style isolation, ambiguous metadata, legacy snapshots, and client selection enforcement.
+- Live imports reported seven Little Tree table colors and ten Ambimall lamp options. All seven registered table finishes were selectable; the lamp exposed only its compatible original model.
+- Browser checks covered Black/White model selection and exact ASIN links, original-color price labeling, save/reopen, room placement, undo, and a 390 × 844 viewport. Older imported room items without color metadata retained their appearance and offered no unverified choices.
+- The private SerpApi key was absent from changed source files and the browser build. Color options remain import snapshots subject to caching; no continuous stock check or additional lamp models were added.

@@ -40,7 +40,9 @@ Choose a named finish in the product preview or on a selected room piece when it
 
 The retained Little Tree sample palette offers textured Oak plus Black, Grey, Light Brown, Rustic Brown, White, and Brown **approximate solid-color previews**. These are authored previews, not color-matched scans or verified live availability. Dedicated GLBs can represent alternate appearances more faithfully. Exact variant ASINs and product links are optional metadata; when available, the product link follows the selected variant.
 
-The integrated Amazon importer reads observed color options for the registered Little Tree table family and maps recognized finishes to this palette. It keeps the listing’s exact variant ASINs and links and omits unavailable or ambiguous options; if color data is unusable, it retains the known finish for the requested ASIN. This is a limited model-family mapping, not general color discovery for every Amazon product. The lamp currently has only its original Beige and Black model.
+Every Amazon import now carries the listing’s observed color options and exact variant ASINs. Product, room, and in-AR color controls offer only reported options that also have a compatible modeled finish. Explicitly unavailable choices and different size/style combinations are excluded. Missing or ambiguous color data keeps the current model appearance but offers no unverified color changes; old saved imports without this data must be imported again to obtain current options.
+
+Color discovery also works for listings without a model, but does not create new geometry or material presets. The Little Tree table maps supported options to its authored palette; the lamp currently has only its original Beige and Black model. Options reflect the import snapshot and provider cache, not a continuous stock check. Changing color follows the exact variant’s Amazon link; the originally imported price and stock are not presented as the new variant’s price and stock.
 
 ## AR
 

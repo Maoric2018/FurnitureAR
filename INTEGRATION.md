@@ -47,7 +47,22 @@ For a modeled product, `category` must be `Seating`, `Tables`, `Lighting`, or `S
 
 ## Variant colors and product identity
 
-The renderer supports dedicated models and named-material color overrides. The integrated SerpApi importer reads observed color options for the registered Little Tree table family and maps recognized finishes to the authored palette. It preserves confirmed variant ASINs and links and filters unavailable or ambiguous alternatives, including incompatible size/style combinations. If the color payload cannot be used, the importer retains the known finish for the requested ASIN while still returning the listing. It does not fabricate additional options or treat the entire palette as evidence of current availability. The lamp currently returns only its original Beige and Black model.
+The importer reads [SerpApi’s product variant groups and combinations](https://serpapi.com/amazon-product-api) and returns `listing.colors` for every product, including products without a model:
+
+```json
+{
+  "status": "observed",
+  "options": [
+    { "asin": "B0F2ML48Y6", "name": "Oak", "url": "https://www.amazon.com/dp/B0F2ML48Y6", "imageUrl": null, "selected": true }
+  ]
+}
+```
+
+`status` is `observed` or `unconfirmed`. Unconfirmed data has an empty `options` array. Options have real ASINs, canonical links, and nullable safe HTTPS images; `selected` identifies the requested ASIN. Missing, ambiguous, or inconsistent identity information fails closed. Explicitly unavailable options are excluded, and combinations must match the current non-color dimensions, such as size and style. A reported option is evidence from the import snapshot, not a guarantee of current stock; both the app and provider cache may affect freshness.
+
+The renderer supports dedicated models and named-material color overrides. The model registry still controls which reported options can be previewed: the Little Tree table maps recognized finishes to its authored palette, while the lamp currently has only its original Beige and Black model. A color label or product photo never invents an alternate model or RGB material. When data cannot be confirmed, the importer preserves the requested model’s appearance for viewing, but the UI does not offer unverified color choices.
+
+`availableItemVariants()` intersects modeled variants with `listing.colors` by exact ASIN for every picker, including room editing and WebXR controls. `selectItemVariant()` enforces the same rule, and workspace loading preserves it. Old listings without `colors` remain readable but offer no unverified alternate colors; import the product again to update the saved snapshot. Authored sample products without an Amazon listing retain their explicitly labeled demo palette. Prices and stock from the original import are labeled as such after choosing another variant; its Amazon link follows the selected ASIN.
 
 A variant with its own `modelSrc` uses that asset’s supplied material appearance. The `color` field draws its UI swatch; it does not recolor every surface automatically. For an explicit solid-color preview on shared geometry, supply `materialOverrides` with exact, case-sensitive glTF material names:
 
