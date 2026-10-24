@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { catalog, getVariant, parseProduct } from '../src/lib/products.ts';
-import { createLayout, createProductItem, duplicateLayout, parseWorkspace, placeItem, placeholderProduct, readWorkspace, saveWorkspace, selectItemVariant } from '../src/lib/workspace.ts';
+import type { AmazonListing } from '../src/lib/amazon.ts';
+import type { RoomLayout } from '../src/lib/workspace.ts';
+import { arrangeModels, exportLayout } from '../src/lib/layout-model.ts';
+import { createImportedItem, createLayout, createProductItem, duplicateLayout, parseWorkspace, placeItem, placeholderProduct, readWorkspace, saveWorkspace, selectItemVariant } from '../src/lib/workspace.ts';
 
 test('The placeholder palette retains original oak and marks all added finishes as approximate previews',()=>{
   const product=parseProduct(placeholderProduct);
@@ -119,4 +122,64 @@ test('Palette migration never expands unrelated products or replaces an existing
     const restored=parseWorkspace({items:[saved],layouts:[]}).items[0];
     assert.deepEqual(restored.product.variants,product.variants);
   }
+});
+
+const importedListing: AmazonListing={
+  asin:'B0F2ML48Y6',title:'Oak dining table',brand:'LITTLE TREE',
+  url:'https://www.amazon.com/dp/B0F2ML48Y6',images:[],price:null,availability:null,
+  features:[],dimensionText:null,dimensions:null,retrievedAt:'2026-10-24T12:00:00.000Z',
+  modelNote:'Approximate reconstruction.',
+};
+
+test('Imported model selections retain listing provenance in saved items and room copies',()=>{
+  const product={...placeholderProduct,variants:[
+    {...placeholderProduct.variants[0],asin:importedListing.asin,productUrl:importedListing.url},
+    {...placeholderProduct.variants[1],asin:'B0D8P23H61',productUrl:'https://www.amazon.com/dp/B0D8P23H61'},
+  ]};
+  const original=createImportedItem(importedListing,product);
+  assert.equal(original.variantId,'oak');
+  const selected=selectItemVariant(original,'black');
+  assert.equal(selected.listing,importedListing);
+  assert.equal(selected.sourceUrl,importedListing.url);
+  assert.equal(selected.product,product);
+  const room=placeItem(createLayout('Dining room'),selected);
+  const workspace={items:[selected],layouts:[room,duplicateLayout(room)]};
+  const restored=parseWorkspace(JSON.parse(JSON.stringify(workspace)));
+  assert.deepEqual(restored,workspace);
+  for(const item of [restored.items[0],...restored.layouts.flatMap(layout=>layout.items)]){
+    assert.equal(item.variantId,'black');
+    assert.equal(item.listing?.asin,importedListing.asin);
+    assert.equal(item.product?.variants[1].asin,'B0D8P23H61');
+  }
+});
+
+test('A single-finish imported listing never gains unreported finishes during migration',()=>{
+  const product={...placeholderProduct,variants:[placeholderProduct.variants[0]]};
+  const imported=createImportedItem(importedListing,product);
+  const room=placeItem(createLayout('Dining room'),imported);
+  const restored=parseWorkspace({items:[imported],layouts:[room]});
+  for(const item of [restored.items[0],...restored.layouts[0].items]){
+    assert.equal(item.variantId,'oak');
+    assert.deepEqual(item.product?.variants,product.variants);
+    assert.deepEqual(item.listing,importedListing);
+  }
+});
+
+test('Listings without a model cannot select a finish and reload without a stale selection',()=>{
+  const item=createImportedItem(importedListing,null);
+  assert.equal(Object.hasOwn(item,'variantId'),false);
+  assert.throws(()=>selectItemVariant(item,'oak'),/available finish/);
+  const restored=parseWorkspace({items:[{...item,variantId:'oak'}],layouts:[]}).items[0];
+  assert.deepEqual(restored,item);
+  assert.equal(Object.hasOwn(restored,'variantId'),false);
+});
+
+
+test('Layouts reject unmodeled imported items at the rendering boundary',async()=>{
+  const item={...createImportedItem(importedListing,null),x:0,z:0,rotation:0};
+  // A stale or externally constructed layout must fail before loading any assets.
+  const invalidLayout={...createLayout('Dining room'),items:[item]} as unknown as RoomLayout;
+  assert.throws(()=>arrangeModels(invalidLayout.items,new Map()),/matching 3D model/);
+  await assert.rejects(exportLayout(invalidLayout),/matching 3D model/);
+  assert.deepEqual(parseWorkspace({items:[],layouts:[invalidLayout]}).layouts[0].items,[]);
 });

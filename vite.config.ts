@@ -1,19 +1,17 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { createAmazonImportMiddleware } from './server/amazon-import';
+import { cloudflare } from '@cloudflare/vite-plugin';
+import { sites } from './scripts/vite/sites-vite-plugin';
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
-  const importer = () => createAmazonImportMiddleware({
-    backendBaseUrl: env.FURNITURE_API_BASE_URL ?? '',
-    authToken: env.FURNITURE_API_AUTH_TOKEN,
-  });
-  return {
-    plugins: [react(), {
-      name: 'amazon-product-import',
-      configureServer(server) { server.middlewares.use(importer()); },
-      configurePreviewServer(server) { server.middlewares.use(importer()); },
-    }],
-    build: { chunkSizeWarningLimit: 1100 },
-  };
+export default defineConfig({
+  plugins: [react(), sites(), cloudflare({
+    viteEnvironment: { name: 'server' }, inspectorPort: false,
+    config: {
+      name: 'furniture-ar', main: './worker/index.ts', compatibility_date: '2026-05-15',
+      compatibility_flags: ['nodejs_compat'],
+      assets: { binding: 'ASSETS', not_found_handling: 'single-page-application', run_worker_first: ['/api/*'] },
+    },
+  })],
+  server: { host: '127.0.0.1', watch: { usePolling: true } },
+  build: { chunkSizeWarningLimit: 1100 },
 });

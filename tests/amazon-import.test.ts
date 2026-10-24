@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { PassThrough } from 'node:stream';
-import { adaptAmazonProduct, createAmazonImportMiddleware } from '../server/amazon-import.ts';
+import { adaptAmazonProduct, createAmazonImportMiddleware } from '../server/external-amazon-bridge.ts';
 
 const oak = 'B0F2ML48Y6', black = 'B0D8P23H61', white = 'B0DSZGP1HK';
 function fixture(asin = oak) {

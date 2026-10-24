@@ -1,0 +1,2 @@
+# Server-only local secret. Copy this file to .dev.vars and add your key.
+SERPAPI_API_KEY=

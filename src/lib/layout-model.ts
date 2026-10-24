@@ -10,6 +10,7 @@ import type { RoomLayout, PlacedItem } from './workspace';
 export function arrangeModels(items:PlacedItem[],models:Map<string,Group>):Scene {
   const scene=new Scene();
   for(const item of items){
+    if(!item.product)throw new Error('Every piece needs a matching 3D model before this layout can be previewed.');
     const variant=getVariant(item.product,item.variantId);
     const source=models.get(variant.modelSrc);
     if(!source)throw new Error(`The model for ${item.name} is missing.`);
@@ -24,6 +25,7 @@ export function arrangeModels(items:PlacedItem[],models:Map<string,Group>):Scene
 }
 export async function exportLayout(layout:RoomLayout, signal?:AbortSignal):Promise<{url:string;dimensions:{width:number;height:number;depth:number}}> {
   if(!layout.items.length)throw new Error('Add a piece before opening the 3D preview.');
+  if(layout.items.some(item=>!item.product))throw new Error('Every piece needs a matching 3D model before this layout can be previewed.');
   const models=new Map<string,Group>(),loader=new GLTFLoader();
   const assets=new Map(layout.items.map(item=>[getVariant(item.product,item.variantId).modelSrc,item.product]));
   for(const [src,product] of assets){

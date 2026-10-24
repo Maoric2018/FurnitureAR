@@ -1,91 +1,47 @@
-# Connect the Amazon importer
+# Amazon product import
 
-The product preview and multi-item layout editor support selected finishes, including dedicated models and named-material color overrides. Your service turns a product URL into the product below. Without the endpoint, every valid HTTP/HTTPS link uses the demo Little Tree table and its approximate color palette; the original link is retained with each item.
+The app uses the partner's SerpApi transport and normalizer through a same-origin server route. It supports US Amazon product URLs (`/dp/`, `/gp/product/`, `/gp/aw/d/`) and bare ASINs. Short links must first be expanded in a browser. Other stores and marketplaces return a clear error without being fetched.
 
-## Local bridge to the existing Amazon API
+## Run locally
 
-Run the existing Amazon API separately, then configure `.env.local` and restart Vite:
+1. `npm ci`
+2. Copy `.dev.vars.example` to `.dev.vars` and set `SERPAPI_API_KEY`.
+3. `npm run dev`
+4. Open the printed localhost address. The local sign-in link uses the Sites development identity.
 
-```dotenv
-VITE_PRODUCT_API_URL=/api/products/import
-FURNITURE_API_BASE_URL=http://127.0.0.1:8787
-```
+`.dev.vars` is ignored by Git. Never put the API key in a `VITE_` variable. Hosted deployments use the Sites runtime secret named `SERPAPI_API_KEY`. The Cloudflare Vite plugin runs the same Worker entry point locally; the active importer does not require a separately running Amazon API.
 
-If that backend requires bearer authentication, set `FURNITURE_API_AUTH_TOKEN` as a server-only environment value. The bridge sends it to the backend; it is never a public `VITE_` variable. The SerpAPI key belongs in the Amazon backend, not in this frontend or the browser.
+`VITE_PRODUCT_API_URL` optionally overrides the default `/api/products/import` URL. An external endpoint must return the complete listing/product contract below and permit the app's origin through CORS. Vite variables are public configuration, never a place for secrets.
 
-The bridge accepts the frontend POST below, extracts the ASIN from an HTTPS `amazon.com`, `www.amazon.com`, or `m.amazon.com` product URL, and requests `GET /v1/products/{ASIN}` from the configured backend. Supported product paths are `/dp/{ASIN}`, `/gp/product/{ASIN}`, and `/gp/aw/d/{ASIN}`; short links are not supported by this bridge. The backend supplies normalized product details, complete dimensions in meters, color groups, and exact variant combinations. The adapter retains only unambiguous, available colors for the selected size/style and preserves their exact ASIN and product link. Preview RGB colors come from the registered palette, not from an assumption that a retailer color name specifies a measured RGB value.
+## Request and response
 
-The current model mapping covers these seven Little Tree round-table family entries:
-
-| ASIN | Finish |
-| --- | --- |
-| `B0F2ML48Y6` | Oak |
-| `B0D8P23H61` | Black |
-| `B0D8P1SVLG` | Grey |
-| `B0D8NSXYQ6` | Light Brown |
-| `B0F2MJHXBC` | Rustic Brown |
-| `B0DSZGP1HK` | White |
-| `B0D8NQHBBH` | Brown |
-
-Only this family has registered geometry and a material palette. Other products require an explicit mapping to their own correctly scaled model; the bridge returns an error instead of substituting the demo table. It does not claim all seven finishes are available on every live lookup. Returned dimensions still have to match the supplied model before AR is enabled.
-
-This is **local Vite middleware**, mounted through `configureServer` and `configurePreviewServer`. `npm run build` produces static assets and does not package a running API. Static production hosting requires deploying equivalent middleware or setting `VITE_PRODUCT_API_URL` to a real deployed import endpoint. The separately running Amazon backend is required in both cases.
-
-## Endpoint
-
-To use a service that already returns the frontend contract directly, set `VITE_PRODUCT_API_URL=https://your-service.example/api/products/import` in `.env.local` and restart Vite (or rebuild for production). Leave it empty for demo mode. Set CORS on a cross-origin service to permit the app's origin. A Vite variable is public configuration, never a place for secrets. Handle credentials and Amazon access on your server.
-
-Request:
-
-```http
-POST /api/products/import
-Content-Type: application/json
-
-{"url":"https://www.amazon.com/dp/PRODUCT_ID"}
-```
-
-Response (`200`, `Content-Type: application/json`):
+`POST /api/products/import` with `Content-Type: application/json`:
 
 ```json
-{
-  "product": {
-    "id": "amazon-product-id",
-    "name": "Example lounge chair",
-    "category": "Seating",
-    "tagline": "A chair for your reading corner.",
-    "description": "A description from your importer.",
-    "material": "Upholstered fabric · wood legs",
-    "background": "#e9ede5",
-    "dimensions": { "width": 0.78, "height": 0.81, "depth": 0.82 },
-    "variants": [
-      {
-        "id": "sage",
-        "name": "Sage",
-        "color": "#8c9b7d",
-        "modelSrc": "https://your-assets.example/chair-sage.glb"
-      }
-    ]
-  }
-}
+{"url":"https://www.amazon.com/dp/B0F2ML48Y6"}
 ```
 
-The optional `footprint` field accepts `"ellipse"` for round/oval furniture or `"rectangle"` (the default). It controls floor-plan rendering and room-boundary checks.
+The response contains `listing`, `product`, and `cached`. `listing` has the real title, brand, photo URLs, price (nullable), availability (nullable), feature text, raw listing dimensions, normalized dimensions (nullable), ASIN and retrieval timestamp. `product` is a validated FurnitureProduct with geometry dimensions and a model URL **only when a model is registered for the confirmed ASIN**; otherwise it is null.
 
-`category` must be `Seating`, `Tables`, `Lighting`, or `Storage`. Dimensions are numbers in **meters**, greater than zero, at most 20. Each variant needs a unique nonempty ID, nonempty name, six-digit hex color, and valid GLB URL. Optional `iosSrc` can point to a prebuilt USDZ. The UI accepts same-origin paths beginning with one `/` or HTTPS model URLs.
+The UI can save and reopen listings without models. Those listings cannot enter a floor plan or launch AR. No unrelated placeholder is substituted. Previously saved placeholder products still reopen.
+
+Errors use `{ "error": { "code": "...", "message": "..." } }`. The UI handles sign-in, invalid URLs, unavailable products, provider failures, quota limits, and timeouts. A returned ASIN mismatch blocks model association. Secrets and raw upstream responses never go to the client.
+
+For a modeled product, `category` must be `Seating`, `Tables`, `Lighting`, or `Storage`. Dimensions are numbers in **meters**, greater than zero, at most 20. Each variant needs a unique nonempty ID, nonempty name, six-digit hex color, and valid GLB URL. Optional `iosSrc` can point to a prebuilt USDZ. The UI accepts same-origin paths beginning with one `/` or HTTPS model URLs.
 
 ## Variant colors and product identity
+
+The renderer supports dedicated models and named-material color overrides. The integrated SerpApi importer reads observed color options for the registered Little Tree table family and maps recognized finishes to the authored palette. It preserves confirmed variant ASINs and links and filters unavailable or ambiguous alternatives, including incompatible size/style combinations. If the color payload cannot be used, the importer retains the known finish for the requested ASIN while still returning the listing. It does not fabricate additional options or treat the entire palette as evidence of current availability. The lamp currently returns only its original Beige and Black model.
 
 A variant with its own `modelSrc` uses that asset’s supplied material appearance. The `color` field draws its UI swatch; it does not recolor every surface automatically. For an explicit solid-color preview on shared geometry, supply `materialOverrides` with exact, case-sensitive glTF material names:
 
 ```json
 {
-  "id": "B0DSZGP1HK",
+  "id": "white-preview",
   "name": "White",
   "color": "#eeeae2",
   "modelSrc": "/models/little-tree-oak-table.glb",
   "approximate": true,
-  "asin": "B0DSZGP1HK",
-  "productUrl": "https://www.amazon.com/dp/B0DSZGP1HK",
   "materialOverrides": [
     { "materialName": "Oak | original grain texture", "color": "#eeeae2" }
   ]
@@ -96,28 +52,50 @@ A variant with its own `modelSrc` uses that asset’s supplied material appearan
 
 Overrides replace only the named materials’ base color and base-color texture. Normal, roughness, other textures, geometry, and dimensions remain intact. The viewer snapshots original colors and textures once per loaded model, so successive changes do not accumulate tint and choosing the original variant restores its original wood texture. An override naming a missing material fails visibly and blocks AR. Same-source finish changes preserve the viewer and camera.
 
-For the supplied table, Oak retains the embedded original grain texture. Its other registered colors are labeled approximate solid previews. Dedicated, correctly textured GLBs are the preferred way to represent real alternate finish appearances when such assets are available.
+The retained table sample palette has textured Oak plus approximate Black, Grey, Light Brown, Rustic Brown, White, and Brown solid-color previews. These are authored preview colors rather than measured RGB values from Amazon. Dedicated, correctly textured GLBs are preferred for faithful alternate appearances when available. Other product families need explicit model and material mappings before their live variants can drive this renderer; similarly named colors do not establish shared geometry.
 
-Each product item stores its selected `variantId`; the first variant is only the initial/default choice or a fallback for an obsolete saved ID. Saving, adding to a room, duplicating, and reloading preserve the choice. Each placed copy can have its own finish, and room finish edits participate in Undo. The layout exporter loads each selected variant’s model and clones its materials per instance before applying overrides, so mixed finishes export together without changing neighboring pieces. Optional variant product links follow the selection without replacing the item’s original source URL.
+Each modeled product item stores its selected `variantId`; the first variant is only the initial/default choice or a fallback for an obsolete saved ID. Saving, adding to a room, duplicating, and reloading preserve the choice. Each placed copy can have its own finish, and room finish edits participate in Undo. The layout exporter loads each selected variant’s model and clones its materials per instance before applying overrides, so mixed finishes export together without changing neighboring pieces. Optional variant product links follow the selection without replacing the item’s original source URL.
 
 ## AR color behavior
 
-WebXR single-product previews include live finish controls after placement. iPhone Quick Look cannot host the app’s controls: choose a finish in the app first, then open AR. To change the finish, return to the app and reopen Quick Look. Layout AR places the exported arrangement as one group; edit its per-piece finishes in the room editor before opening AR.
+WebXR single-product previews include live finish controls for variants sharing the current model. Choose a variant with a different GLB before entering AR. iPhone Quick Look cannot host the app’s controls: choose a finish in the app first, then open AR. To change the finish, return to the app and reopen Quick Look. Layout AR places the exported arrangement as one group; edit its per-piece finishes in the room editor before opening AR.
 
 When runtime overrides are active, the viewer omits any supplied `iosSrc` and generates USDZ from the selected model materials. Removing the overridden base-color texture avoids Quick Look’s limitation with multiplying a tint onto a texture. A dedicated variant without overrides may use a matching prebuilt USDZ. Automated tests inspect actual GLB and USDZ color output; live WebXR tracking, in-session controls, and iPhone Quick Look have not been verified on a physical device.
 
-## Model requirements
+## Registered models
 
-- glTF 2.0 binary `.glb`; use PBR materials supported by model-viewer/Quick Look.
-- Geometry uses **1 unit = 1 meter**, Y up, front +Z. Bake transformations into the export. The minimum Y is zero and the model is centered on X/Z.
-- Actual model bounds must match the dimensions in your response. The viewer does not resize a real product to hide incorrect geometry.
-- Keep assets small, preferably below 10 MB. Use self-contained textures; if hosting across origins, enable CORS so WebGL and the USDZ exporter can read them.
+| ASIN | Asset | Scale |
+| --- | --- | --- |
+| B0F2ML48Y6 | Little Tree Oak | Approximately 1.20 × 1.20 × 0.75 m |
+| B0D8P23H61 | Little Tree Black preview | Same table geometry |
+| B0D8P1SVLG | Little Tree Grey preview | Same table geometry |
+| B0D8NSXYQ6 | Little Tree Light Brown preview | Same table geometry |
+| B0F2MJHXBC | Little Tree Rustic Brown preview | Same table geometry |
+| B0DSZGP1HK | Little Tree White preview | Same table geometry |
+| B0D8NQHBBH | Little Tree Brown preview | Same table geometry |
+| B0C4DGFFCM | Ambimall floor lamp | 1.524 m tall; bounds include the cord |
+
+Both assets are manually created approximations supplied by the project team. They are not Amazon-provided or SAM-generated. The lamp's root is translated to center its complete footprint on the floor; its geometry, textures and scale are retained.
+
+Model bounds and listing measurements stay separate. In the live test, the lamp listing specified 61.8 inches while its model is 60 inches. The table included both labeled and unlabeled duplicate measurements. The integrated normalizer retains the explicit axes when the duplicate contains exactly the same three lengths. Ambiguous measurements alone, conflicting fields, and shipping dimensions remain unknown. No supplied asset is rescaled to hide a mismatch.
+
+For new model mappings:
+
+- Use glTF 2.0 binary `.glb` with PBR materials supported by model-viewer/Quick Look.
+- Geometry uses **1 unit = 1 meter**, Y up, front +Z. Bake transformations into the export. Minimum Y is zero and the model is centered on X/Z.
+- Actual model bounds must match the product geometry dimensions. The viewer does not resize a real product to hide incorrect geometry.
+- Keep assets small, preferably below 10 MB. Use self-contained textures; cross-origin assets need CORS for WebGL and USDZ export.
 - Optional USDZ must represent the same finish and exact meter dimensions as its GLB; it is ignored while runtime material overrides are active.
 - Do not return an image URL in `modelSrc`. Product photos need a separate 3D reconstruction pipeline and reliable physical dimensions first.
-- Return non-2xx on failures. The local bridge allows 70 seconds for the backend, and the UI allows 75 seconds for the complete import. For the same-origin `/api/products/import` route, the UI displays a nonempty plain `error` string of at most 400 characters; malformed responses and external endpoint failures use a generic message. Error text is rendered as text, never interpreted as HTML.
 
-The UI accepts arbitrary valid HTTP/HTTPS links, including links without a scheme (normalized to HTTPS). A configured backend must enforce the retailers it supports and return an appropriate error for others; the local bridge has the narrower Amazon URL rules above. Any short-link resolution and product fetches belong on the backend; restrict redirects and block internal network targets. The Amazon-specific validator also validates optional variant product links; the general link-entry flow retains its broader URL validation.
+## Request controls
 
-## Frontend connection point
+Imports require the trusted Sites signed-in user header. Browser POSTs must be same-origin JSON. There is a 4 KB body limit, strict host/ASIN validation, 60-second upstream timeout, and 65-second browser timeout. Each Worker instance caches successful results for one hour, coalesces simultaneous requests for the same ASIN, allows up to four different in-flight lookups, and limits uncached imports to eight per user per minute. These per-instance limits are prototype safeguards, not a durable account-wide billing cap. SerpApi's own cache remains enabled; live requests share the supplied account's allowance.
 
-`src/lib/products.ts` exports `importProduct(url, endpoint, signal)`, `parseProduct()`, `getVariant()`, and the product/variant types. `src/components/LinkInput.tsx` calls the importer only when the endpoint is configured. Both individual previews and room layouts use this component. `src/lib/workspace.ts` wraps the result with a unique item ID, original source link, and selected `variantId`; `selectItemVariant()` changes that selection without rearranging the product’s variants. `src/components/FinishPicker.tsx` presents choices, `src/lib/material-colors.ts` applies/restores named material colors, and `src/lib/layout-model.ts` exports each piece’s selected appearance. `server/amazon-import.ts` implements the local bridge and its limited model-family adapter.
+SAM 3D generation is a separate local experiment. This route does not yet generate new models from product photos.
+
+## Code entry points
+
+`src/lib/amazon.ts` validates live listings and calls the active import route. `src/lib/products.ts` validates modeled products and variants and exports `getVariant()`. `src/lib/workspace.ts` stores original links and selected `variantId`; `selectItemVariant()` changes the selection without rearranging variants. `src/components/FinishPicker.tsx` presents choices, `src/lib/material-colors.ts` applies and restores named material colors, and `src/lib/layout-model.ts` exports each piece’s selected appearance.
+
+`server/amazon-import.js` associates confirmed ASINs with registered model data. `server/import-handler.js` handles authentication, request limits, caching, and safe errors. `worker/index.ts` mounts the API and serves the app's assets. `server/external-amazon-bridge.ts`, the separate adapter for the earlier external Amazon backend, is not mounted by the active Vite or Worker configuration; it is not a substitute for the current listing/product response contract.
