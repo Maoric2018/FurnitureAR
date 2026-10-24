@@ -2,8 +2,8 @@
 
 A mobile web app with two ways to plan furniture:
 
-- **One product:** paste a link, inspect its 3D model, preview it in AR, and save it or add it to a room.
-- **A whole room:** create a named layout, add multiple links, move and rotate pieces on a floor plan, then view the complete arrangement in 3D or AR.
+- **One product:** paste a link, inspect its 3D model, choose a finish, preview it in AR, and save it or add it to a room.
+- **A whole room:** create a named layout, add multiple links, move and rotate pieces on a floor plan, choose each piece’s finish, then view the complete arrangement in 3D or AR.
 
 The home screen is a workspace. Paste an **Amazon.com product link** to import its real name, photos, price, and available measurements. The table and lamp supplied by the project team have approximate 3D previews. Other products can be saved with their details; AR and room placement remain unavailable until a matching model exists. No unrelated placeholder is substituted.
 
@@ -26,54 +26,65 @@ npm run preview
 
 ## Room layouts
 
-Layouts save automatically in this browser, including names, room dimensions, source links, product metadata, positions, and rotations. Create, reopen, rename, duplicate, or delete layouts. Deletion offers Undo. Editing supports undo, pointer/touch dragging, arrow-key nudges (Shift for larger steps), and R to rotate. Selected pieces also have position sliders, rotation, duplicate, and remove controls. Room dimensions can be changed after creation.
+Layouts save automatically in this browser, including names, room dimensions, source links, product metadata, each piece’s selected finish, positions, and rotations. Create, reopen, rename, duplicate, or delete layouts. Deletion offers Undo. Editing supports undo, pointer/touch dragging, arrow-key nudges (Shift for larger steps), and R to rotate. Selected pieces also have finish choices, position sliders, rotation, duplicate, and remove controls. Finish changes participate in layout Undo. Room dimensions can be changed after creation.
 
 A room supports up to 30 pieces. Floor-plan units are meters. The editor keeps rotated footprints within room bounds when the item fits. The layout is a planning surface, not a scan of the physical room: enter its dimensions yourself. Real AR alignment is performed on the phone.
 
-Saved individual products form a separate library and can be reused across layouts. Persistence is **local to the current browser/device**, with no cross-device or account sync. Existing v1 favorites remain untouched in their original storage key; the new workspace uses `furniture-ar:workspace:v2`.
+Saved individual products form a separate library and can be reused across layouts when they have models. Saving or adding a product keeps its selected finish; duplicated pieces and layouts retain their choices and can then be changed independently. Persistence is **local to the current browser/device**, with no cross-device or account sync. Existing v1 favorites remain untouched in their original storage key; the new workspace uses `furniture-ar:workspace:v2`. Previously saved Little Tree placeholders still reopen with their approximate finish palette.
+
+## Finish previews
+
+Choose a named finish in the product preview or on a selected room piece when its product includes multiple variants. A variant can supply its own GLB, or apply explicit color overrides to named materials in a shared GLB. Same-model color changes keep the camera, shape, scale, and placement; returning to the original finish restores its original colors and wood texture. Normal and roughness textures remain intact. Missing target materials show an error and prevent AR activation.
+
+The retained Little Tree sample palette offers textured Oak plus Black, Grey, Light Brown, Rustic Brown, White, and Brown **approximate solid-color previews**. These are authored previews, not color-matched scans or verified live availability. Dedicated GLBs can represent alternate appearances more faithfully. Exact variant ASINs and product links are optional metadata; when available, the product link follows the selected variant.
+
+The integrated Amazon importer reads observed color options for the registered Little Tree table family and maps recognized finishes to this palette. It keeps the listing’s exact variant ASINs and links and omits unavailable or ambiguous options; if color data is unusable, it retains the known finish for the requested ASIN. This is a limited model-family mapping, not general color discovery for every Amazon product. The lamp currently has only its original Beige and Black model.
 
 ## AR
 
 Open the HTTPS deployment in Safari on iPhone or Chrome on an ARCore-compatible Android phone. Product import requires ChatGPT sign-in on the hosted site. The local preview uses the Sites development sign-in. A plain HTTP LAN development URL will not enable WebXR.
 
-- Single products use their GLB at actual scale.
-- Layouts load their constituent models and export one combined GLB, preserving positions and rotations in meters. Its floor stays at y=0.
+- Single products use the selected finish’s GLB and material colors at actual scale.
+- Layouts load each selected variant and export one combined GLB with independent per-piece materials, preserving colors, positions, and rotations in meters. Its floor stays at y=0.
 - The phone places the **whole arrangement as one group**. Edit relative positions in the floor plan, then reopen AR. Individual object movement inside the AR session and scanned-room persistence are not implemented.
-- `<model-viewer>` uses WebXR and iOS Quick Look (USDZ generated on demand). Scene Viewer is omitted because external model fetches cannot access a private site's authenticated assets.
+- `<model-viewer>` uses WebXR and iOS Quick Look. Single-product WebXR has live finish controls for finishes that share the currently selected GLB; choose finishes with a different GLB before opening AR. On iPhone, choose the finish before opening Quick Look; native Quick Look cannot display the app’s buttons. To change it, return to the app and reopen AR.
+- Runtime material overrides use automatically generated USDZ, ignoring any supplied `iosSrc`, so the exported solid colors follow the selection. Dedicated unmodified variants can use their matching prebuilt USDZ. Scene Viewer is omitted because external model fetches cannot access a private site's authenticated assets.
 - AR scale is locked. The app checks GLB bounds against product dimensions before enabling AR. For layouts it validates each constituent model too.
-- A compatible physical phone is required to verify camera tracking. AR is a visual guide; confirm purchase-critical measurements with a tape measure.
+- Material changes and GLB/USDZ export are covered by automated tests. Live WebXR placement and iPhone Quick Look remain **untested on a physical device**. A compatible phone is required to verify camera tracking. AR is a visual guide; confirm purchase-critical measurements with a tape measure.
 
-## Current table model
+## Supplied models
 
 `public/models/little-tree-oak-table.glb` is the user-supplied file, preserved without rescaling or changing its textures. Its embedded metadata specifies a 1.199896 m diameter and 0.750062 m height (displayed as 120 × 120 × 75 cm). Geometry is centered on X/Z with its base at Y=0. The model describes itself as a photo-based reconstruction: overall dimensions follow the listing, with some hidden construction details estimated. These measurements come from the supplied file, not a new independent product verification.
 
-Amazon ASIN B0F2ML48Y6 uses this table. ASIN B0C4DGFFCM uses the supplied Ambimall lamp. Previously saved products retain their original models. Round furniture uses an elliptical footprint in the floor plan and in room-boundary checks.
+Amazon ASIN B0F2ML48Y6 and the six registered table finish ASINs listed in [INTEGRATION.md](./INTEGRATION.md) use this table geometry. ASIN B0C4DGFFCM uses the supplied Ambimall lamp. The lamp is 1.524 m tall, and its footprint includes the cord. Both models are manually created approximations, not Amazon-provided assets. Model bounds and Amazon listing measurements are displayed separately. Previously saved products retain their original models. Round furniture uses an elliptical footprint in the floor plan and in room-boundary checks.
 
 ## Amazon importer
 
-The partner’s SerpApi implementation is integrated into `POST /api/products/import`. See [INTEGRATION.md](./INTEGRATION.md) for setup, request/response details, supported links, limitations and model provenance. The API key is a server secret; it is never bundled into the phone app.
+The partner’s SerpApi implementation is integrated into `POST /api/products/import`. See [INTEGRATION.md](./INTEGRATION.md) for setup, request/response details, material variants, supported links, limitations, and model provenance. The API key is a server secret; it is never bundled into the phone app.
 
-The current prototype selects the first registered model variant. Geometry dimensions and Amazon listing dimensions are displayed separately. SAM 3D generation remains a separate [local experiment](./experiments/README.md) and is not connected to live imports yet. See [VALIDATION.md](./VALIDATION.md) for the tested behavior and remaining limits.
+The same-origin route runs in the Cloudflare Worker for local development and hosted deployment. SAM 3D generation remains a separate [local experiment](./experiments/README.md) and is not connected to live imports yet. Product photos and URLs alone do not provide accurate geometry. See [VALIDATION.md](./VALIDATION.md) for the tested behavior and remaining limits.
 
 ## Source map
 
 - `src/App.tsx`: workspace overview, layouts, saved library, creation and navigation.
-- `src/components/LinkInput.tsx`: universal product-link entry and importer connection.
-- `src/components/PreviewModal.tsx`: individual product/AR preview.
+- `src/components/LinkInput.tsx`: Amazon product-link entry and importer connection.
+- `src/components/PreviewModal.tsx`: listing details and individual product/AR preview.
+- `src/components/FinishPicker.tsx`: named finish choices and approximate-preview labels.
 - `src/components/RoomEditor.tsx`: arrangement editing and undo.
 - `src/components/FloorPlan.tsx`: dimensioned SVG plan with touch, pointer and keyboard controls.
 - `src/components/LayoutViewer.tsx`: whole-layout 3D/AR preview and temporary asset lifecycle.
 - `src/lib/layout-model.ts`: model loading, geometry checks and combined scene export.
+- `src/lib/material-colors.ts`: exact-name material overrides, original texture restoration and isolated instance materials.
 - `src/lib/workspace.ts`: workspace types, validation, persistence and layout operations.
 - `src/components/Viewer.tsx`: fixed-scale AR activation, tracking, errors and capability fallback.
-- `src/lib/products.ts`: model schema and geometry dimension validation.
+- `src/lib/products.ts`: product/variant schema and geometry dimension validation.
 - `src/lib/amazon.ts`: live listing validation and import request.
 - `server/`: adapted partner transport, normalizer, importer, caching and access checks.
 - `worker/index.ts`: hosted API route and static asset serving.
-- `tests/`: model dimensions, importer contract, input validation, layout persistence and combined-scene transforms/USDZ export.
+- `tests/`: dimensions, importer contracts, input validation, finish persistence, material isolation/restoration and combined GLB/USDZ colors and transforms.
 
-Original procedural furniture GLBs are retained as development fixtures and can be regenerated with `npm run models`. New imports expose only a model registered for that exact Amazon product. The supplied table and lamp are independent of these procedural fixtures.
+Original procedural furniture GLBs remain as development fixtures and can be regenerated with `npm run models`. Live imports only associate the explicitly registered models above. The supplied table and lamp are independent of these procedural fixtures.
 
 ## Credits
 
-The room photograph is from [Unsplash](https://images.unsplash.com/photo-1600210492486-724fe5c67fb0), downloaded as a local UI asset. It illustrates the room-planning entry point and is not a saved user layout. The original procedural fixture geometry is CC0-1.0; this does not apply to the separately supplied Little Tree table. Package licenses apply to dependencies. AR support uses Google's [model-viewer](https://modelviewer.dev/docs/index.html).
+The room photograph is from [Unsplash](https://images.unsplash.com/photo-1600210492486-724fe5c67fb0), downloaded as a local UI asset. It illustrates the room-planning entry point and is not a saved user layout. The original procedural fixture geometry is CC0-1.0; this does not apply to the separately supplied Little Tree table or Ambimall lamp. Package licenses apply to dependencies. AR support uses Google's [model-viewer](https://modelviewer.dev/docs/index.html).

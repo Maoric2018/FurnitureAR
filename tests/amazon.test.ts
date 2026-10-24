@@ -42,6 +42,33 @@ test('Matching models keep geometry dimensions separate from listing measurement
   assert.ok(Math.abs(lamp.listing.dimensions!.height! - 1.56972) < .000001);
   assert.match(lamp.listing.modelNote!, /different height/);
 });
+test('Integrated imports expose observed table colors with exact variant links and independent material overrides', () => {
+  const result = normalizeImport({ ...table, product_results: { ...table.product_results,
+    variants: [{ title: 'Color', items: [
+      { name: 'Oak', asin: 'B0F2ML48Y6', selected: true },
+      { name: 'Black', asin: 'B0D8P23H61', selected: false },
+      { name: 'White', asin: 'B0DSZGP1HK', selected: false },
+      { name: 'Blue', asin: 'B012345678', selected: false },
+    ] }],
+  } }, 'B0F2ML48Y6');
+  assert.deepEqual(result.product?.variants.map(variant => variant.name), ['Oak', 'Black', 'White']);
+  assert.equal(result.product?.variants[1].productUrl, 'https://www.amazon.com/dp/B0D8P23H61');
+  assert.equal(result.product?.variants[1].approximate, true);
+  assert.deepEqual(result.product?.variants[1].materialOverrides, [{ materialName: 'Oak | original grain texture', color: '#292929' }]);
+  assert.equal(result.product?.dimensions.height, .750062);
+  const stored = createImportedItem(parseListing(result.listing), result.product);
+  stored.variantId = 'B0DSZGP1HK';
+  assert.equal(parseWorkspace({ items: [stored], layouts: [] }).items[0].variantId, 'B0DSZGP1HK');
+});
+test('Missing or ambiguous live color groups keep only the requested mapped finish', () => {
+  assert.equal(normalizeImport(table, 'B0F2ML48Y6').product?.variants.length, 1);
+  const black = normalizeImport({ product_results: { asin: 'B0D8P23H61', title: 'Black table',
+    variants: [{ title: 'Color', items: [{ name: 'Oak', asin: 'B0D8P23H61', selected: true }] }],
+  } }, 'B0D8P23H61');
+  assert.deepEqual(black.product?.variants.map(variant => variant.name), ['Black']);
+  assert.equal(black.product?.variants[0].asin, 'B0D8P23H61');
+  assert.equal(black.product?.variants[0].approximate, true);
+});
 test('Matching unlabeled duplicates do not erase explicitly labeled dimensions', () => {
   const data = { product_details: { product_dimensions: '47.24 x 47.24 x 29.53 inches' }, item_specifications: { item_dimensions: '47.24"D x 47.24"W x 29.53"H' } };
   assert.equal(normalizeSerpProduct(data, 'B0F2ML48Y6').dimensions.complete, true);

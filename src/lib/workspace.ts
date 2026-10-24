@@ -1,4 +1,4 @@
-import { parseProduct } from './products';
+import { getVariant, parseProduct } from './products';
 import type { FurnitureProduct } from './products';
 import { parseListing } from './amazon';
 import type { AmazonListing } from './amazon';
@@ -9,6 +9,7 @@ export interface ProductItem {
   sourceUrl: string;
   product: FurnitureProduct | null;
   listing?: AmazonListing;
+  variantId?: string;
   createdAt: string;
 }
 export interface PlacedItem extends ProductItem { product: FurnitureProduct; x: number; z: number; rotation: number }
@@ -24,7 +25,18 @@ export const placeholderProduct: FurnitureProduct = {
   description:'A round dining table in an oak finish with a sculptural cross pedestal.',
   dimensions:{width:1.199896,height:.750062,depth:1.199896},
   material:'Oak finish', background:'#e9dfd0', footprint:'ellipse',
-  variants:[{id:'oak',name:'Oak',color:'#b68d5d',modelSrc:'/models/little-tree-oak-table.glb'}],
+  variants:[
+    {id:'oak',name:'Oak',color:'#b68d5d',modelSrc:'/models/little-tree-oak-table.glb'},
+    ...[
+      {id:'black',name:'Black',color:'#292929'},
+      {id:'grey',name:'Grey',color:'#878781'},
+      {id:'light-brown',name:'Light Brown',color:'#b5936b'},
+      {id:'rustic-brown',name:'Rustic Brown',color:'#73513b'},
+      {id:'white',name:'White',color:'#eeeae2'},
+      {id:'brown',name:'Brown',color:'#79533b'},
+    ].map(variant=>({...variant,modelSrc:'/models/little-tree-oak-table.glb',approximate:true,
+      materialOverrides:[{materialName:'Oak | original grain texture',color:variant.color}]})),
+  ],
 };
 export function normalizeProductLink(value: string): string {
   const input=value.trim();
@@ -37,10 +49,15 @@ export function normalizeProductLink(value: string): string {
 }
 export function sourceLabel(url: string) { try { return new URL(url).hostname.replace(/^www\./,''); } catch {return 'Product link';} }
 export function createProductItem(url: string, product=placeholderProduct): ProductItem & { product: FurnitureProduct } {
-  return {id:crypto.randomUUID(),name:product.name,sourceUrl:normalizeProductLink(url),product,createdAt:new Date().toISOString()};
+  return {id:crypto.randomUUID(),name:product.name,sourceUrl:normalizeProductLink(url),product,variantId:getVariant(product).id,createdAt:new Date().toISOString()};
+}
+export function selectItemVariant<T extends ProductItem>(item: T, variantId: string): T {
+  if (!item.product?.variants.some(variant=>variant.id===variantId)) throw new Error('Choose an available finish for this item.');
+  return {...item,variantId};
 }
 export function createImportedItem(listing: AmazonListing, product: FurnitureProduct | null): ProductItem {
-  return { id: crypto.randomUUID(), name: listing.title, sourceUrl: listing.url, product, listing, createdAt: new Date().toISOString() };
+  return { id: crypto.randomUUID(), name: listing.title, sourceUrl: listing.url, product, listing,
+    ...(product ? {variantId:getVariant(product).id} : {}), createdAt: new Date().toISOString() };
 }
 export function createLayout(name: string, roomType='Living room', width=5, depth=4): RoomLayout {
   if(!name.trim()) throw new Error('Give your layout a name.');
@@ -78,7 +95,15 @@ export function parseWorkspace(raw:unknown):Workspace {
       if(!item||typeof item.id!=='string'||typeof item.name!=='string'||!item.name.trim()||typeof item.createdAt!=='string')return null;
       const listing = item.listing ? parseListing(item.listing) : undefined;
       if (item.product === null && !listing) return null;
-      return {...item,sourceUrl:normalizeProductLink(item.sourceUrl),product:item.product === null ? null : parseProduct(item.product),...(listing?{listing}:{})};
+      let product=item.product === null ? null : parseProduct(item.product);
+      // Expand only legacy sample items, never an imported listing's reported finishes.
+      if(!listing && product?.id===placeholderProduct.id && product.variants.length===1 && product.variants[0].id==='oak'
+          && product.variants[0].modelSrc===placeholderProduct.variants[0].modelSrc) {
+        product={...product,variants:[product.variants[0],...placeholderProduct.variants.slice(1)]};
+      }
+      const {variantId: savedVariantId, ...rest}=item;
+      const variant=product ? getVariant(product,typeof savedVariantId==='string'?savedVariantId:undefined) : null;
+      return {...rest,sourceUrl:normalizeProductLink(item.sourceUrl),product,...(listing?{listing}:{}),...(variant?{variantId:variant.id}:{})};
     }catch{return null;}
   };
   const layouts:RoomLayout[]=[];

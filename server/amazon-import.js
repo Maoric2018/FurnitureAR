@@ -1,6 +1,9 @@
 import { SerpApiClient } from './partner/serpapi.js';
 import { normalizeSerpProduct } from './partner/serp-normalize.js';
 import { ApiError } from './partner/errors.js';
+import { normalizeSerpVariants } from './partner/serp-variants.js';
+import { adaptAmazonProduct } from './external-amazon-bridge.ts';
+import { placeholderProduct } from '../src/lib/workspace.ts';
 
 const models = {
   B0F2ML48Y6: {
@@ -18,6 +21,39 @@ const models = {
     note: 'Approximate 60-inch model. Its footprint includes the cord. The listing may report a different height; check the selected size before buying.',
   },
 };
+
+const tableFinishes = new Map([
+  ['B0F2ML48Y6', 'Oak'], ['B0D8P23H61', 'Black'], ['B0D8P1SVLG', 'Grey'],
+  ['B0D8NSXYQ6', 'Light Brown'], ['B0F2MJHXBC', 'Rustic Brown'],
+  ['B0DSZGP1HK', 'White'], ['B0D8NQHBBH', 'Brown'],
+]);
+
+function tableModel(asin, data, source) {
+  const name = tableFinishes.get(asin);
+  if (!name) return null;
+  const original = models.B0F2ML48Y6;
+  const finish = placeholderProduct.variants.find(variant => variant.name === name);
+  const selected = { ...finish, id: asin, asin, productUrl: `https://www.amazon.com/dp/${asin}` };
+  const model = { ...original, material: `${name} finish`, variants: [selected],
+    note: `${original.note} Alternate finishes are approximate solid-color previews.` };
+  const color = data.product_details?.color ?? data.item_specifications?.color;
+  // Never change geometry or size to fit a listing. The adapter uses the known
+  // model's meter bounds; listing measurements remain separate below.
+  try {
+    const product = adaptAmazonProduct({ source: 'serpapi', product: {
+      asin, title: source.title, selectedColor: color,
+      dimensions: { complete: true, meters: {
+        width: model.dimensions.width, height: model.dimensions.height, length: model.dimensions.depth,
+      } },
+      ...normalizeSerpVariants(data.product_results),
+    } }, asin);
+    return { ...model, variants: product.variants };
+  } catch {
+    // Missing or ambiguous variant data must not invent alternative colors.
+    // Keep the independently mapped requested finish and its model disclosure.
+    return model;
+  }
+}
 
 export function parseAmazonLink(value) {
   if (typeof value !== 'string' || value.length > 2048 || /[\s\\\u0000-\u001f]/.test(value.trim())) {
@@ -47,7 +83,7 @@ export function normalizeImport(data, requestedAsin, now = new Date()) {
   }
   const source = normalizeSerpProduct(data, requestedAsin);
   if (!source.title) throw new ApiError(502, 'INCOMPLETE_PRODUCT', 'Amazon returned incomplete product details. Try again shortly.');
-  const registered = models[requestedAsin];
+  const registered = tableModel(requestedAsin, data, source) ?? models[requestedAsin];
   const listing = {
     asin: requestedAsin, title: source.title, brand: source.brand,
     url: `https://www.amazon.com/dp/${requestedAsin}`,
