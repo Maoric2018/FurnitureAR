@@ -1,14 +1,17 @@
 import { parseProduct } from './products';
 import type { FurnitureProduct } from './products';
+import { parseListing } from './amazon';
+import type { AmazonListing } from './amazon';
 
 export interface ProductItem {
   id: string;
   name: string;
   sourceUrl: string;
-  product: FurnitureProduct;
+  product: FurnitureProduct | null;
+  listing?: AmazonListing;
   createdAt: string;
 }
-export interface PlacedItem extends ProductItem { x: number; z: number; rotation: number }
+export interface PlacedItem extends ProductItem { product: FurnitureProduct; x: number; z: number; rotation: number }
 export interface RoomLayout {
   id: string; name: string; roomType: string; width: number; depth: number;
   items: PlacedItem[]; updatedAt: string;
@@ -33,8 +36,11 @@ export function normalizeProductLink(value: string): string {
   return url.href;
 }
 export function sourceLabel(url: string) { try { return new URL(url).hostname.replace(/^www\./,''); } catch {return 'Product link';} }
-export function createProductItem(url: string, product=placeholderProduct): ProductItem {
+export function createProductItem(url: string, product=placeholderProduct): ProductItem & { product: FurnitureProduct } {
   return {id:crypto.randomUUID(),name:product.name,sourceUrl:normalizeProductLink(url),product,createdAt:new Date().toISOString()};
+}
+export function createImportedItem(listing: AmazonListing, product: FurnitureProduct | null): ProductItem {
+  return { id: crypto.randomUUID(), name: listing.title, sourceUrl: listing.url, product, listing, createdAt: new Date().toISOString() };
 }
 export function createLayout(name: string, roomType='Living room', width=5, depth=4): RoomLayout {
   if(!name.trim()) throw new Error('Give your layout a name.');
@@ -51,12 +57,13 @@ export function clampPlacement(item: PlacedItem, room: Pick<RoomLayout,'width'|'
   return {...item,rotation,x:Math.max(-limitX,Math.min(limitX,item.x)),z:Math.max(-limitZ,Math.min(limitZ,item.z))};
 }
 export function placeItem(room:RoomLayout, item:ProductItem): RoomLayout {
+  if (!item.product) throw new Error('This product needs a matching 3D model before it can be placed in a layout.');
   if(room.items.length>=30) throw new Error('This layout has 30 pieces. Start another layout to add more.');
   const index=room.items.length, spacing=Math.max(item.product.dimensions.width,item.product.dimensions.depth)+.2;
   const columns=Math.max(1,Math.floor(room.width/spacing));
   const x=(index%columns)*spacing-(Math.min(columns,3)-1)*spacing/2;
   const z=Math.floor(index/columns)*spacing-room.depth/4;
-  const placed=clampPlacement({...item,id:crypto.randomUUID(),x,z,rotation:0},room);
+  const placed=clampPlacement({...item,product:item.product,id:crypto.randomUUID(),x,z,rotation:0},room);
   return {...room,items:[...room.items,placed],updatedAt:new Date().toISOString()};
 }
 export function duplicateLayout(layout:RoomLayout): RoomLayout {
@@ -69,7 +76,9 @@ export function parseWorkspace(raw:unknown):Workspace {
     try {
       const item=value as ProductItem;
       if(!item||typeof item.id!=='string'||typeof item.name!=='string'||!item.name.trim()||typeof item.createdAt!=='string')return null;
-      return {...item,sourceUrl:normalizeProductLink(item.sourceUrl),product:parseProduct(item.product)};
+      const listing = item.listing ? parseListing(item.listing) : undefined;
+      if (item.product === null && !listing) return null;
+      return {...item,sourceUrl:normalizeProductLink(item.sourceUrl),product:item.product === null ? null : parseProduct(item.product),...(listing?{listing}:{})};
     }catch{return null;}
   };
   const layouts:RoomLayout[]=[];
@@ -78,7 +87,7 @@ export function parseWorkspace(raw:unknown):Workspace {
     const items:PlacedItem[]=[];
     for(const entry of value.items.slice(0,30)){
       const item=readItem(entry);
-      if(item&&[entry.x,entry.z,entry.rotation].every(Number.isFinite))items.push(clampPlacement({...item,x:entry.x,z:entry.z,rotation:entry.rotation},value));
+      if(item?.product&&[entry.x,entry.z,entry.rotation].every(Number.isFinite))items.push(clampPlacement({...item,product:item.product,x:entry.x,z:entry.z,rotation:entry.rotation},value));
     }
     layouts.push({...value,items});
   }

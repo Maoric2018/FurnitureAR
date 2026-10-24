@@ -1,61 +1,43 @@
-# Connect the Amazon importer
+# Amazon product import
 
-The product preview and multi-item layout editor are ready. Your service turns a product URL into the product below. Without the endpoint, every valid HTTP/HTTPS link resolves to the same Little Tree oak table; the original link is retained with each item.
+The app uses the partner's SerpApi transport and normalizer through a same-origin server route. It supports US Amazon product URLs (`/dp/`, `/gp/product/`, `/gp/aw/d/`) and bare ASINs. Short links must first be expanded in a browser. Other stores and marketplaces return a clear error without being fetched.
 
-## Endpoint
+## Run locally
 
-Set `VITE_PRODUCT_API_URL=https://your-service.example/api/products/import` in `.env.local` and restart Vite (or rebuild for production). Leave it empty for demo mode. Set CORS on your service to permit the app's origin. A Vite variable is public configuration, never a place for secrets. Handle credentials and Amazon access on your server.
+1. `npm ci`
+2. Copy `.dev.vars.example` to `.dev.vars` and set `SERPAPI_API_KEY`.
+3. `npm run dev`
+4. Open the printed localhost address. The local sign-in link uses the Sites development identity.
 
-Request:
+`.dev.vars` is ignored by Git. Never put the API key in a `VITE_` variable. Hosted deployments use the Sites runtime secret named `SERPAPI_API_KEY`.
 
-```http
-POST /api/products/import
-Content-Type: application/json
+## Request and response
 
-{"url":"https://www.amazon.com/dp/PRODUCT_ID"}
-```
-
-Response (`200`, `Content-Type: application/json`):
+`POST /api/products/import` with `Content-Type: application/json`:
 
 ```json
-{
-  "product": {
-    "id": "amazon-product-id",
-    "name": "Example lounge chair",
-    "category": "Seating",
-    "tagline": "A chair for your reading corner.",
-    "description": "A description from your importer.",
-    "material": "Upholstered fabric · wood legs",
-    "background": "#e9ede5",
-    "dimensions": { "width": 0.78, "height": 0.81, "depth": 0.82 },
-    "variants": [
-      {
-        "id": "sage",
-        "name": "Sage",
-        "color": "#8c9b7d",
-        "modelSrc": "https://your-assets.example/chair-sage.glb"
-      }
-    ]
-  }
-}
+{"url":"https://www.amazon.com/dp/B0F2ML48Y6"}
 ```
 
-The optional `footprint` field accepts `"ellipse"` for round/oval furniture or `"rectangle"` (the default). It controls floor-plan rendering and room-boundary checks.
+The response contains `listing`, `product`, and `cached`. `listing` has the real title, brand, photo URLs, price (nullable), availability (nullable), feature text, raw listing dimensions, normalized dimensions (nullable), ASIN and retrieval timestamp. `product` is a validated FurnitureProduct with geometry dimensions and a model URL **only when a model is registered for the confirmed ASIN**; otherwise it is null.
 
-`category` must be `Seating`, `Tables`, `Lighting`, or `Storage`. Dimensions are numbers in **meters**, greater than zero, at most 20. Each variant needs a unique ID, name, six-digit hex color, and valid GLB URL. Optional `iosSrc` can point to a prebuilt USDZ. The UI accepts same-origin paths beginning with one `/` or HTTPS model URLs.
+The UI can save and reopen listings without models. Those listings cannot enter a floor plan or launch AR. No unrelated placeholder is substituted. Previously saved placeholder products still reopen.
 
-## Model requirements
+Errors use `{ "error": { "code": "...", "message": "..." } }`. The UI handles sign-in, invalid URLs, unavailable products, provider failures, quota limits, and timeouts. A returned ASIN mismatch blocks model association. Secrets and raw upstream responses never go to the client.
 
-- glTF 2.0 binary `.glb`; use PBR materials supported by model-viewer/Quick Look.
-- Geometry uses **1 unit = 1 meter**, Y up, front +Z. Bake transformations into the export. The minimum Y is zero and the model is centered on X/Z.
-- Actual model bounds must match the dimensions in your response. The viewer does not resize a real product to hide incorrect geometry.
-- Keep assets small, preferably below 10 MB. Use self-contained textures; if hosting across origins, enable CORS so WebGL and the USDZ exporter can read them.
-- Optional USDZ must represent the same finish and exact meter dimensions as its GLB.
-- Do not return an image URL in `modelSrc`. Product photos need a separate 3D reconstruction pipeline and reliable physical dimensions first.
-- Return non-2xx on failures. The UI handles errors, malformed responses and a 25-second timeout.
+## Registered models
 
-The UI now accepts arbitrary valid HTTP/HTTPS links, including links without a scheme (normalized to HTTPS). Your backend must enforce the retailers it supports and return an appropriate error for others. Short-link resolution and product fetches belong on your backend; restrict redirects and block internal network targets. The legacy Amazon-specific validator is retained for backend-adapter tests but is not used by the new link flow.
+| ASIN | Asset | Scale |
+| --- | --- | --- |
+| B0F2ML48Y6 | Little Tree oak table | Approximately 1.20 × 1.20 × 0.75 m |
+| B0C4DGFFCM | Ambimall floor lamp | 1.524 m tall; bounds include the cord |
 
-## Frontend connection point
+Both assets are manually created approximations supplied by the project team. They are not Amazon-provided or SAM-generated. The lamp's root is translated to center its complete footprint on the floor; its geometry, textures and scale are retained.
 
-`src/lib/products.ts` exports `importProduct(url, endpoint, signal)`, `parseProduct()`, and `FurnitureProduct`. `src/components/LinkInput.tsx` calls it only when the endpoint is configured. Both individual previews and room layouts use this component. `src/lib/workspace.ts` wraps the result with a unique item ID and source link. The current UI chooses the first returned variant; the layout exporter loads that same GLB. No other changes are required for the happy path.
+Model bounds and listing measurements stay separate. In the live test, the lamp listing specified 61.8 inches while its model is 60 inches. The table included both labeled and unlabeled duplicate measurements. The integrated normalizer retains the explicit axes when the duplicate contains exactly the same three lengths. Ambiguous measurements alone, conflicting fields, and shipping dimensions remain unknown. No supplied asset is rescaled to hide a mismatch.
+
+## Request controls
+
+Imports require the trusted Sites signed-in user header. Browser POSTs must be same-origin JSON. There is a 4 KB body limit, strict host/ASIN validation, 60-second upstream timeout, and 65-second browser timeout. Each Worker instance caches successful results for one hour, coalesces simultaneous requests for the same ASIN, allows up to four different in-flight lookups, and limits uncached imports to eight per user per minute. These per-instance limits are prototype safeguards, not a durable account-wide billing cap. SerpApi's own cache remains enabled; live requests share the supplied account's allowance.
+
+SAM 3D generation is a separate local experiment. This route does not yet generate new models from product photos.
