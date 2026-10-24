@@ -1,6 +1,7 @@
 import { useId, useRef } from 'react';
 import type { PointerEvent, KeyboardEvent } from 'react';
 import { clampPlacement } from '../lib/workspace';
+import { getVariant } from '../lib/products';
 import type { RoomLayout, PlacedItem } from '../lib/workspace';
 
 interface Props { layout:RoomLayout; selectedId?:string; onSelect?:(id:string)=>void; onMove?:(item:PlacedItem)=>void; onMoveStart?:()=>void; compact?:boolean }
@@ -35,18 +36,18 @@ export default function FloorPlan({layout,selectedId,onSelect,onMove,onMoveStart
     <rect x={-w/2} y={-h/2} width={w} height={h} fill="#f7f5ef"/>
     <rect x={-w/2} y={-h/2} width={w} height={h} fill={`url(#${pattern})`} stroke="#797b72" strokeWidth=".045"/>
     {!compact&&<><path d={`M ${-w/2} ${-h/2-.3} h ${w} m ${-w} -.07 v .14 m ${w} -.14 v .14`} fill="none" stroke="#a4a59d" strokeWidth=".012"/><text x="0" y={-h/2-.4} textAnchor="middle" fill="#85877e" fontSize=".14">{w.toFixed(1)} m</text><text x={w/2+.25} y="0" textAnchor="middle" fill="#85877e" fontSize=".14" transform={`rotate(90 ${w/2+.25} 0)`}>{h.toFixed(1)} m</text></>}
-    {layout.items.map((item,index)=>{const d=item.product.dimensions,active=item.id===selectedId;return <g key={item.id} role={compact?undefined:'button'} tabIndex={compact?undefined:0} aria-label={`${item.name} ${index+1}, ${Math.round(item.rotation)} degrees`} aria-pressed={compact?undefined:active} transform={`translate(${item.x} ${item.z}) rotate(${item.rotation})`} className={onMove?'plan-piece draggable':'plan-piece'} onPointerDown={event=>start(event,item)} onClick={()=>onSelect?.(item.id)} onKeyDown={event=>keyMove(event,item)}>
+    {layout.items.map((item,index)=>{const d=item.product.dimensions,active=item.id===selectedId,variant=getVariant(item.product,item.variantId);const channels=variant.color.slice(1).match(/.{2}/g)!.map(value=>parseInt(value,16));const labelColor=channels[0]*.299+channels[1]*.587+channels[2]*.114>145?'#30291f':'#fffdf8';return <g key={item.id} role={compact?undefined:'button'} tabIndex={compact?undefined:0} aria-label={`${item.name} ${index+1}, ${variant.name}, ${Math.round(item.rotation)} degrees`} aria-pressed={compact?undefined:active} transform={`translate(${item.x} ${item.z}) rotate(${item.rotation})`} className={onMove?'plan-piece draggable':'plan-piece'} onPointerDown={event=>start(event,item)} onClick={()=>onSelect?.(item.id)} onKeyDown={event=>keyMove(event,item)}>
       {active&&<rect x={-d.width/2-.065} y={-d.depth/2-.065} width={d.width+.13} height={d.depth+.13} rx=".06" fill="none" stroke="#bb5839" strokeWidth=".02" strokeDasharray=".055 .035"/>}
       {item.product.footprint==='ellipse'?<>
-        <ellipse rx={d.width/2} ry={d.depth/2} fill={active?'#d9b68a':'#dfc49f'} stroke={active?'#a85537':'#ae8b61'} strokeWidth=".018"/>
-        <ellipse rx={Math.max(.01,d.width/2-.035)} ry={Math.max(.01,d.depth/2-.035)} fill="none" stroke="#b89367" strokeWidth=".008"/>
-        <path d={`M ${-d.width/2+.035} 0 H ${d.width/2-.035} M 0 ${-d.depth/2+.035} V ${d.depth/2-.035}`} stroke="#b89367" strokeWidth=".008"/>
+        <ellipse rx={d.width/2} ry={d.depth/2} fill={variant.color} stroke={active?'#a85537':'#554d40'} strokeWidth=".018"/>
+        <ellipse rx={Math.max(.01,d.width/2-.035)} ry={Math.max(.01,d.depth/2-.035)} fill="none" stroke={labelColor} strokeOpacity=".25" strokeWidth=".008"/>
+        <path d={`M ${-d.width/2+.035} 0 H ${d.width/2-.035} M 0 ${-d.depth/2+.035} V ${d.depth/2-.035}`} stroke={labelColor} strokeOpacity=".25" strokeWidth=".008"/>
       </>:<>
-        <rect x={-d.width/2} y={-d.depth/2} width={d.width} height={d.depth} rx=".07" fill={active?'#dec1a0':'#d8c9b1'} stroke={active?'#a85537':'#a69a86'} strokeWidth=".018"/>
-        {item.product.category==='Seating'&&<><rect x={-d.width/2+.11} y={-d.depth/2+.19} width={Math.max(.05,d.width-.22)} height={Math.max(.05,d.depth-.27)} rx=".07" fill={active?'#ead4b7':'#e9dfcd'} stroke="#bca98e" strokeWidth=".012"/>
-        <rect x={-d.width/2+.09} y={-d.depth/2+.02} width={Math.max(.05,d.width-.18)} height=".17" rx=".05" fill={active?'#d6b58f':'#cbb99c'}/></>}
+        <rect x={-d.width/2} y={-d.depth/2} width={d.width} height={d.depth} rx=".07" fill={variant.color} stroke={active?'#a85537':'#554d40'} strokeWidth=".018"/>
+        {item.product.category==='Seating'&&<><rect x={-d.width/2+.11} y={-d.depth/2+.19} width={Math.max(.05,d.width-.22)} height={Math.max(.05,d.depth-.27)} rx=".07" fill="#ffffff" fillOpacity=".16" stroke={labelColor} strokeOpacity=".2" strokeWidth=".012"/>
+        <rect x={-d.width/2+.09} y={-d.depth/2+.02} width={Math.max(.05,d.width-.18)} height=".17" rx=".05" fill="#000000" fillOpacity=".12"/></>}
       </>}
-      {!compact&&<text x="0" y=".1" textAnchor="middle" fontSize=".16" fill="#6d5943" transform={`rotate(${-item.rotation})`}>{index+1}</text>}
+      {!compact&&<text x="0" y=".1" textAnchor="middle" fontSize=".16" fill={labelColor} transform={`rotate(${-item.rotation})`}>{index+1}</text>}
     </g>;})}
     {!layout.items.length&&<><path d="M -.18 -.18 h .36 v .36 h -.36 z M -.45 0 h -.17 m 1.07 0 h .17 M 0 -.45 v -.17 M 0 .45 v .17" fill="none" stroke="#b5b2a8" strokeWidth=".018"/>{!compact&&<text x="0" y=".92" textAnchor="middle" fontSize=".14" fill="#9a988e">Add a product to start arranging</text>}</>}
   </svg>;

@@ -1,7 +1,8 @@
 import { Box3, Group, Scene, Vector3 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-import { dimensionsMatch } from './products';
+import { dimensionsMatch, getVariant } from './products';
+import { cloneModelMaterials, createThreeColorController } from './material-colors';
 import type { RoomLayout, PlacedItem } from './workspace';
 
 /** Coordinates match the floor plan: x is right, z is down toward the viewer.
@@ -9,9 +10,11 @@ import type { RoomLayout, PlacedItem } from './workspace';
 export function arrangeModels(items:PlacedItem[],models:Map<string,Group>):Scene {
   const scene=new Scene();
   for(const item of items){
-    const source=models.get(item.product.variants[0].modelSrc);
+    const variant=getVariant(item.product,item.variantId);
+    const source=models.get(variant.modelSrc);
     if(!source)throw new Error(`The model for ${item.name} is missing.`);
-    const object=source.clone(true);
+    const object=cloneModelMaterials(source);
+    createThreeColorController(object).apply(variant.materialOverrides);
     object.position.set(item.x,0,item.z);
     object.rotation.y=-item.rotation*Math.PI/180;
     object.name=item.name;
@@ -22,7 +25,7 @@ export function arrangeModels(items:PlacedItem[],models:Map<string,Group>):Scene
 export async function exportLayout(layout:RoomLayout, signal?:AbortSignal):Promise<{url:string;dimensions:{width:number;height:number;depth:number}}> {
   if(!layout.items.length)throw new Error('Add a piece before opening the 3D preview.');
   const models=new Map<string,Group>(),loader=new GLTFLoader();
-  const assets=new Map(layout.items.map(item=>[item.product.variants[0].modelSrc,item.product]));
+  const assets=new Map(layout.items.map(item=>[getVariant(item.product,item.variantId).modelSrc,item.product]));
   for(const [src,product] of assets){
     const response=await fetch(src,{signal});
     if(!response.ok)throw new Error('A model couldn’t load. Please try again.');

@@ -10,7 +10,7 @@ export default function LinkInput({onProduct,buttonLabel='Preview product',compa
     try{
       const url=normalizeProductLink(link),endpoint=import.meta.env.VITE_PRODUCT_API_URL;
       if(!endpoint){onProduct(createProductItem(url));setLink('');return;}
-      setBusy(true);const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),25000);
+      setBusy(true);const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),75000);
       try{onProduct(createProductItem(url,await importProduct(url,endpoint,controller.signal)));setLink('');}finally{clearTimeout(timeout);}
     }catch(error){setError((error as Error).name==='AbortError'?'That took too long. Please try again.':(error as Error).message);}finally{setBusy(false);}
   }} noValidate>
