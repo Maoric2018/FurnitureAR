@@ -7,7 +7,7 @@ The app uses the partner's SerpApi transport and normalizer through a same-origi
 1. `npm ci`
 2. Copy `.dev.vars.example` to `.dev.vars` and set `SERPAPI_API_KEY`.
 3. `npm run dev`
-4. Open the printed localhost address. The local sign-in link uses the Sites development identity.
+4. Open the printed localhost address. Amazon searches and imports work immediately as a guest; no sign-in is required.
 
 `.dev.vars` is ignored by Git. Never put the API key in a `VITE_` variable. Hosted deployments use the Sites runtime secret named `SERPAPI_API_KEY`. The Cloudflare Vite plugin runs the same Worker entry point locally; the active importer does not require a separately running Amazon API.
 
@@ -27,7 +27,7 @@ The response contains `query`, `page`, `nextPage`, `totalResults`, `products`, `
 
 Only supplied organic result entries with valid ASINs and titles become cards. Duplicate ASINs are removed; unsafe image links are discarded. Ratings, prices, stock, totals, and retrieval timestamps remain unknown when the provider omits them. `nextPage` is present only when the provider supplies a next-page link, and the app never fetches that URL directly. Results are paginated; there is no guarantee of exhaustive Amazon inventory or current stock.
 
-`modelAvailable` means this app has a registered approximate model for that exact ASIN. Selecting a card calls the existing product-import endpoint to verify the actual listing and obtain the model; search summaries alone cannot be placed in AR. Products without a model still open their details and can be saved. Search uses the same server-only SerpApi key, sign-in and same-origin JSON checks, request limits, one-hour caching, and credential-safe errors as import. Each endpoint limits uncached requests to eight per user per minute and four simultaneous lookups per Worker instance.
+`modelAvailable` means this app has a registered approximate model for that exact ASIN. Selecting a card calls the existing product-import endpoint to verify the actual listing and obtain the model; search summaries alone cannot be placed in AR. Products without a model still open their details and can be saved. Search and import allow anonymous requests and use the same server-only SerpApi key, same-origin JSON checks, request-size limits, one-hour caching, and credential-safe errors. There is no app-imposed per-user request quota. Each endpoint allows four simultaneous lookups per Worker instance to bound concurrent work.
 
 ## Request and response
 
@@ -41,7 +41,7 @@ The response contains `listing`, `product`, and `cached`. `listing` has the real
 
 The UI can save and reopen listings without models. Those listings cannot enter a floor plan or launch AR. No unrelated placeholder is substituted. Previously saved placeholder products still reopen.
 
-Errors use `{ "error": { "code": "...", "message": "..." } }`. The UI handles sign-in, invalid URLs, unavailable products, provider failures, quota limits, and timeouts. A returned ASIN mismatch blocks model association. Secrets and raw upstream responses never go to the client.
+Errors use `{ "error": { "code": "...", "message": "..." } }`. The UI handles invalid URLs, unavailable products, provider failures, provider quota limits, and timeouts. Unexpected access errors describe a service problem rather than asking the visitor to sign in. A returned ASIN mismatch blocks model association. Secrets and raw upstream responses never go to the client.
 
 For a modeled product, `category` must be `Seating`, `Tables`, `Lighting`, or `Storage`. Dimensions are numbers in **meters**, greater than zero, at most 20. Each variant needs a unique nonempty ID, nonempty name, six-digit hex color, and valid GLB URL. Optional `iosSrc` can point to a prebuilt USDZ. The UI accepts same-origin paths beginning with one `/` or HTTPS model URLs.
 
@@ -121,7 +121,9 @@ For new model mappings:
 
 ## Request controls
 
-Imports require the trusted Sites signed-in user header. Browser POSTs must be same-origin JSON. There is a 4 KB body limit, strict host/ASIN validation, 60-second upstream timeout, and 65-second browser timeout. Each Worker instance caches successful results for one hour, coalesces simultaneous requests for the same ASIN, allows up to four different in-flight lookups, and limits uncached imports to eight per user per minute. These per-instance limits are prototype safeguards, not a durable account-wide billing cap. SerpApi's own cache remains enabled; live requests share the supplied account's allowance.
+Search and import require neither a signed-in user header nor a session cookie. Browser requests omit credentials and use same-origin JSON. There is a 4 KB body limit, strict host/ASIN validation, 60-second upstream timeout, and 65-second browser timeout. Each Worker instance caches successful results for one hour, coalesces simultaneous requests for the same input, and allows up to four different in-flight lookups. The app does not impose per-user or shared guest request quotas. SerpApi's own cache and subscription limits still apply; its private key remains in the server environment.
+
+Sites' hosting audience is independent of these API routes. A public Site can serve anonymous visitors; an owner-private Site can still require sign-in before the app loads. Guest browsing on a hosted copy requires a public hosting audience as well as this version of the source.
 
 SAM 3D generation is a separate local experiment. This route does not yet generate new models from product photos.
 
@@ -129,4 +131,4 @@ SAM 3D generation is a separate local experiment. This route does not yet genera
 
 `src/lib/amazon.ts` validates live listings and calls the active import route. `src/lib/products.ts` validates modeled products and variants and exports `getVariant()`. `src/lib/workspace.ts` stores original links and selected `variantId`; `selectItemVariant()` changes the selection without rearranging variants. `src/components/FinishPicker.tsx` presents choices, `src/lib/material-colors.ts` applies and restores named material colors, and `src/lib/layout-model.ts` exports each piece’s selected appearance.
 
-`server/amazon-import.js` associates confirmed ASINs with registered model data. `server/import-handler.js` handles authentication, request limits, caching, and safe errors. `worker/index.ts` mounts the API and serves the app's assets. `server/external-amazon-bridge.ts`, the separate adapter for the earlier external Amazon backend, is not mounted by the active Vite or Worker configuration; it is not a substitute for the current listing/product response contract.
+`server/amazon-import.js` associates confirmed ASINs with registered model data. `server/import-handler.js` handles guest requests, input limits, caching, and safe errors. `worker/index.ts` mounts the API and serves the app's assets. `server/external-amazon-bridge.ts`, the separate adapter for the earlier external Amazon backend, is not mounted by the active Vite or Worker configuration; it is not a substitute for the current listing/product response contract.

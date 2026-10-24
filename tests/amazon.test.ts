@@ -9,7 +9,7 @@ import { parseListing } from '../src/lib/amazon.ts';
 import { createImportedItem, createLayout, parseWorkspace, placeItem } from '../src/lib/workspace.ts';
 
 const table = { product_results: { asin: 'B0F2ML48Y6', title: 'Oak dining table', price: '$176.99', extracted_price: 176.99, thumbnails: ['https://m.media-amazon.com/images/table.jpg'] }, product_details: { asin: 'B0F2ML48Y6', product_dimensions: '47.24"D x 47.24"W x 29.53"H' }, about_item: ['Round oak table'] };
-const request = (url = 'https://www.amazon.com/dp/B0F2ML48Y6', user = 'test-user') => new Request('https://furniture.example/api/products/import', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://furniture.example', ...(user ? { 'oai-authenticated-user-id': user } : {}) }, body: JSON.stringify({ url }) });
+const request = (url = 'https://www.amazon.com/dp/B0F2ML48Y6') => new Request('https://furniture.example/api/products/import', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://furniture.example' }, body: JSON.stringify({ url }) });
 
 test('Transport preserves the global fetch receiver required by Workers', async () => {
   const client = new SerpApiClient({ serpApiKey: 'test-key', serpTimeoutMs: 1000 }, { fetchImpl: function(this: unknown) {
@@ -87,13 +87,36 @@ test('An upstream variant mismatch never receives a registered model', () => {
   assert.throws(() => normalizeImport({ ...table, product_details: { asin: 'B012345678' } }, 'B0F2ML48Y6'), /different product variant/);
   assert.throws(() => normalizeImport({ product_results: { title: 'No confirmed ID' } }, 'B0F2ML48Y6'), /different product variant/);
 });
-test('Importer requires sign-in and same-origin JSON before using provider allowance', async () => {
+test('Guest imports require same-origin JSON and valid product links before provider use', async () => {
   let calls = 0;
   const handler = createImportHandler({ lookup: async () => { calls++; return normalizeImport(table, 'B0F2ML48Y6'); } });
-  assert.equal((await handler(request(undefined, ''))).status, 401);
   const cross = request(); cross.headers.set('Origin', 'https://evil.example'); assert.equal((await handler(cross)).status, 403);
+  const nonJson = request(); nonJson.headers.set('Content-Type', 'text/plain'); assert.equal((await handler(nonJson)).status, 415);
   const invalid = request('https://localhost/secret'); assert.equal((await handler(invalid)).status, 400);
   assert.equal(calls, 0);
+  const anonymous = request();
+  assert.equal(anonymous.headers.has('Cookie'), false);
+  assert.equal(anonymous.headers.has('Authorization'), false);
+  assert.equal(anonymous.headers.has('oai-authenticated-user-id'), false);
+  assert.equal((await handler(anonymous)).status, 200); assert.equal(calls, 1);
+});
+test('Guests can make more than eight uncached sequential imports without a shared request allowance', async () => {
+  let calls = 0;
+  const handler = createImportHandler({ lookup: async asin => {
+    calls++; return normalizeImport({ product_results: { asin, title: 'Furniture' } }, asin);
+  }, now: () => 1000 });
+  for (let i = 0; i < 12; i++) {
+    const anonymous = request(`https://www.amazon.com/dp/B${String(i).padStart(9, '0')}`);
+    assert.equal(anonymous.headers.has('Cookie'), false);
+    assert.equal(anonymous.headers.has('Authorization'), false);
+    assert.equal(anonymous.headers.has('oai-authenticated-user-id'), false);
+    const response = await handler(anonymous);
+    assert.equal(response.status, 200); assert.equal(response.headers.has('Retry-After'), false);
+    assert.equal((await response.json()).cached, false);
+  }
+  assert.equal(calls, 12);
+  assert.equal((await (await handler(request('https://www.amazon.com/dp/B000000000'))).json()).cached, true);
+  assert.equal(calls, 12);
 });
 test('Repeated and concurrent imports share a lookup, then expire after one hour', async () => {
   let calls = 0, clock = 1000;

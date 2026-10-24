@@ -65,12 +65,53 @@ export function parseListing(value: unknown): AmazonListing {
   }
   return p.colors === undefined ? p : { ...p, colors: parseColors(p.colors, p.asin) };
 }
+const importErrorMessages: Record<string, string> = {
+  SERVICE_ACCESS_FAILED: 'Amazon products are unavailable because of the app’s service configuration. Please try again shortly or contact the app owner.',
+  INVALID_LINK: 'Paste a full Amazon.com product link, including /dp/ and its product ID.',
+  SHORT_LINK: 'Open the short link in your browser, then copy the full Amazon.com product address.',
+  UNSUPPORTED_STORE: 'Amazon.com links are supported right now.',
+  PRODUCT_NOT_FOUND: 'We couldn’t find this product on Amazon. Check the link and try again.',
+  PRODUCT_MISMATCH: 'Amazon returned a different product variant. Try the link for the exact size and finish.',
+  INCOMPLETE_PRODUCT: 'Amazon returned incomplete product details. Try again shortly.',
+  RATE_LIMITED: 'Please wait a moment before importing this product again.',
+  LOOKUP_BUSY: 'A few products are loading. Try again shortly.',
+  SERPAPI_NOT_CONFIGURED: 'Amazon products are not configured yet. Please contact the app owner.',
+  SERPAPI_AUTH_FAILED: 'Amazon products are temporarily unavailable. Please contact the app owner.',
+  SERPAPI_QUOTA_EXCEEDED: 'The Amazon lookup allowance has been reached. Please try again later.',
+  SERPAPI_PROCESSING: 'Amazon is still preparing the product details. Try again shortly.',
+  SERPAPI_TIMEOUT: 'The Amazon lookup took too long. Please try again.',
+  SERPAPI_UNAVAILABLE: 'Could not reach Amazon. Please try again shortly.',
+};
+function importServiceError(status: number, data: unknown): ImportError {
+  const rawCode = record(data) && record(data.error) ? data.error.code : null;
+  const code = status === 401 || status === 403 ? 'SERVICE_ACCESS_FAILED'
+    : typeof rawCode === 'string' && Object.hasOwn(importErrorMessages, rawCode) ? rawCode
+    : status === 429 ? 'RATE_LIMITED' : 'IMPORT_FAILED';
+  return new ImportError(importErrorMessages[code] || 'We couldn’t import this product. Please try again shortly.', code);
+}
 export async function importAmazonProduct(url: string, signal?: AbortSignal): Promise<{ listing: AmazonListing; product: FurnitureProduct | null }> {
-  const response = await fetch(import.meta.env?.VITE_PRODUCT_API_URL || '/api/products/import', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }), signal,
-  });
+  signal?.throwIfAborted();
+  let response: Response;
+  try {
+    response = await fetch(import.meta.env?.VITE_PRODUCT_API_URL || '/api/products/import', {
+      method: 'POST', credentials: 'omit', redirect: 'error',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }), signal,
+    });
+  } catch (error) {
+    signal?.throwIfAborted();
+    if (error instanceof Error && error.name === 'AbortError') throw error;
+    throw new ImportError('Could not reach Amazon. Check your connection and try again.', 'IMPORT_UNAVAILABLE');
+  }
   let data;
-  try { data = await response.json(); } catch { throw new Error('The product service is unavailable. Please try again shortly.'); }
-  if (!response.ok) throw new ImportError(typeof data.error?.message === 'string' ? data.error.message : 'We couldn’t import this product.', data.error?.code || 'IMPORT_FAILED');
+  try { data = await response.json(); }
+  catch (error) {
+    signal?.throwIfAborted();
+    if (error instanceof Error && error.name === 'AbortError') throw error;
+    if (!response.ok) throw importServiceError(response.status, null);
+    throw new ImportError('The product service is unavailable. Please try again shortly.', 'INVALID_IMPORT_RESPONSE');
+  }
+  signal?.throwIfAborted();
+  if (!response.ok) throw importServiceError(response.status, data);
+  if (!record(data)) throw new ImportError('The importer returned incomplete product details. Please try again.', 'INVALID_IMPORT_RESPONSE');
   return { listing: parseListing(data.listing), product: data.product === null ? null : parseProduct(data.product) };
 }

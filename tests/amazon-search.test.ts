@@ -19,7 +19,7 @@ const providerFixture = () => ({
 function request(body: unknown = input, overrides: { method?: string; headers?: Record<string, string>; raw?: string } = {}) {
   const method = overrides.method || 'POST';
   return new Request('https://furniture.example/api/products/search', {
-    method, headers: { 'Content-Type': 'application/json', Origin: 'https://furniture.example', 'oai-authenticated-user-id': 'test-user', ...overrides.headers },
+    method, headers: { 'Content-Type': 'application/json', Origin: 'https://furniture.example', ...overrides.headers },
     ...(method === 'GET' ? {} : { body: overrides.raw ?? JSON.stringify(body) }),
   });
 }
@@ -146,18 +146,21 @@ test('Search transport sends only supported Amazon search parameters with server
   assert.doesNotMatch(JSON.stringify(response), /PRIVATE_TEST_VALUE/);
 });
 
-test('Method, origin, identity, content type and validation are checked before provider use', async () => {
+test('Guest searches require valid method, origin, content type and input before provider use', async () => {
   let calls = 0;
   const handler = createSearchHandler({ search: async search => { calls++; return result(search); } });
   assert.equal((await handler(request(input, { method: 'GET' }))).status, 405);
   assert.equal((await handler(request(input, { headers: { Origin: 'https://evil.example' } }))).status, 403);
-  assert.equal((await handler(request(input, { headers: { 'oai-authenticated-user-id': '' } }))).status, 401);
   assert.equal((await handler(request(input, { headers: { 'Content-Type': 'text/plain' } }))).status, 415);
   assert.equal((await handler(request(input, { headers: { 'Content-Type': 'application/jsonp' } }))).status, 415);
   for (const body of [null, {}, { q: 'x' }, { q: 'table', page: 11 }]) assert.equal((await handler(request(body))).status, 400);
   assert.equal((await handler(request(input, { raw: '{' }))).status, 400);
   assert.equal(calls, 0);
-  assert.equal((await handler(request())).status, 200); assert.equal(calls, 1);
+  const anonymous = request();
+  assert.equal(anonymous.headers.has('Cookie'), false);
+  assert.equal(anonymous.headers.has('Authorization'), false);
+  assert.equal(anonymous.headers.has('oai-authenticated-user-id'), false);
+  assert.equal((await handler(anonymous)).status, 200); assert.equal(calls, 1);
 });
 
 test('Declared and streamed request bodies are bounded to 4 KB without provider calls', async () => {
@@ -185,22 +188,27 @@ test('Concurrent identical searches coalesce and cache for one hour, with page-s
 test('Search cache keeps at most 100 query and page entries', async () => {
   let calls = 0;
   const handler = createSearchHandler({ search: async search => { calls++; return result(search); } });
-  for (let i = 0; i < 101; i++) assert.equal((await handler(request({ q: `table ${i}` }, { headers: { 'oai-authenticated-user-id': `user-${i}` } }))).status, 200);
+  for (let i = 0; i < 101; i++) assert.equal((await handler(request({ q: `table ${i}` }))).status, 200);
   assert.equal(calls, 101);
   assert.equal((await (await handler(request({ q: 'table 100' }))).json()).cached, true);
   await handler(request({ q: 'table 0' })); assert.equal(calls, 102);
 });
 
-test('Per-user lookup limits reset after one minute and cache hits do not spend allowance', async () => {
-  let calls = 0, clock = 1000;
-  const handler = createSearchHandler({ search: async search => { calls++; return result(search); }, now: () => clock });
-  for (let i = 0; i < 8; i++) assert.equal((await handler(request({ q: `table ${i}` }))).status, 200);
-  const limited = await handler(request({ q: 'ninth table' }));
-  assert.equal(limited.status, 429); assert.equal(limited.headers.get('Retry-After'), '60'); assert.equal(calls, 8);
-  assert.equal((await handler(request({ q: 'table 0' }))).status, 200); assert.equal(calls, 8);
-  assert.equal((await handler(request({ q: 'other user table' }, { headers: { 'oai-authenticated-user-id': 'different-user' } }))).status, 200);
-  clock += 60000;
-  assert.equal((await handler(request({ q: 'ninth table' }))).status, 200); assert.equal(calls, 10);
+test('Guests can make more than eight uncached sequential searches without a shared request allowance', async () => {
+  let calls = 0;
+  const handler = createSearchHandler({ search: async search => { calls++; return result(search); }, now: () => 1000 });
+  for (let i = 0; i < 12; i++) {
+    const anonymous = request({ q: `table ${i}` });
+    assert.equal(anonymous.headers.has('Cookie'), false);
+    assert.equal(anonymous.headers.has('Authorization'), false);
+    assert.equal(anonymous.headers.has('oai-authenticated-user-id'), false);
+    const response = await handler(anonymous);
+    assert.equal(response.status, 200); assert.equal(response.headers.has('Retry-After'), false);
+    assert.equal((await response.json()).cached, false);
+  }
+  assert.equal(calls, 12);
+  assert.equal((await (await handler(request({ q: 'table 0' }))).json()).cached, true);
+  assert.equal(calls, 12);
 });
 
 test('At most four distinct searches run, while duplicates can join an existing search', async () => {
@@ -251,8 +259,9 @@ test('Quota, configuration, timeout and malformed provider failures retain safe 
   assert.equal(missing.status, 503); assert.match(await missing.text(), /SERPAPI_NOT_CONFIGURED/);
 });
 
-test('Worker routes Amazon searches to authenticated search handling before static assets', async () => {
+test('Worker routes anonymous Amazon searches to search handling before static assets', async () => {
   let assetCalls = 0;
-  const response = await worker.fetch(request(input, { headers: { 'oai-authenticated-user-id': '' } }), { ASSETS: { fetch: async () => { assetCalls++; return new Response('asset'); } } });
-  assert.equal(response.status, 401); assert.equal(assetCalls, 0);
+  const response = await worker.fetch(request(), { ASSETS: { fetch: async () => { assetCalls++; return new Response('asset'); } } });
+  assert.equal(response.status, 503); assert.equal(assetCalls, 0);
+  assert.equal((await response.json()).error.code, 'SERPAPI_NOT_CONFIGURED');
 });

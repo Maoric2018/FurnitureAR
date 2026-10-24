@@ -89,7 +89,7 @@ export function parseAmazonSearchResults(value: unknown): AmazonSearchResults {
 }
 
 const errorMessages: Record<string, string> = {
-  SIGN_IN_REQUIRED: 'Sign in to search Amazon products. Your layouts stay on this device.',
+  SERVICE_ACCESS_FAILED: 'Amazon search is unavailable because of the app’s service configuration. Please try again shortly or contact the app owner.',
   INVALID_QUERY: 'Enter a search between 2 and 200 characters.',
   INVALID_PAGE: 'Choose a search page between 1 and 10.',
   INVALID_SEARCH: 'Enter a search between 2 and 200 characters and a page from 1 to 10.',
@@ -106,7 +106,7 @@ const errorMessages: Record<string, string> = {
 
 function serviceError(status: number, data: unknown): ImportError {
   const rawCode = record(data) && record(data.error) ? data.error.code : null;
-  const code = status === 401 ? 'SIGN_IN_REQUIRED'
+  const code = status === 401 || status === 403 ? 'SERVICE_ACCESS_FAILED'
     : typeof rawCode === 'string' && Object.hasOwn(errorMessages, rawCode) ? rawCode
     : status === 429 ? 'RATE_LIMITED' : 'SEARCH_FAILED';
   return new ImportError(errorMessages[code] || 'Amazon search is unavailable. Please try again shortly.', code);
@@ -141,7 +141,7 @@ export async function searchAmazonProducts(q: string, page = 1, signal?: AbortSi
   let response: Response;
   try {
     response = await fetch(import.meta.env?.VITE_PRODUCT_SEARCH_API_URL || '/api/products/search', {
-      method: 'POST', credentials: 'same-origin', redirect: 'error',
+      method: 'POST', credentials: 'omit', redirect: 'error',
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: query, page }), signal,
     });
   } catch (error) {

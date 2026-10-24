@@ -1,29 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Box, ExternalLink, ImageOff, LoaderCircle, Search, Star } from 'lucide-react';
-import { ImportError, importAmazonProduct } from '../lib/amazon';
+import { importAmazonProduct } from '../lib/amazon';
 import { searchAmazonProducts } from '../lib/amazon-search';
 import type { AmazonSearchProduct, AmazonSearchResults } from '../lib/amazon-search';
 import { createImportedItem } from '../lib/workspace';
 import type { ProductItem } from '../lib/workspace';
 import Modal from './Modal';
 
-interface SearchFailure { message: string; needsSignIn: boolean; page: number }
-interface ProductFailure { asin: string; message: string; needsSignIn: boolean }
+interface SearchFailure { message: string; page: number }
+interface ProductFailure { asin: string; message: string }
 
 function ProductPhoto({ product }: { product: AmazonSearchProduct }) {
   const [failed, setFailed] = useState(false);
   return <div className="amazon-result-photo">{product.imageUrl && !failed
     ? <img src={product.imageUrl} alt={product.title} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)}/>
     : <div className="amazon-photo-missing"><ImageOff size={30}/><span>Photo unavailable</span></div>}</div>;
-}
-
-function SignIn({ query, url }: { query: string; url?: string }) {
-  return <a className="text-button" href="/signin-with-chatgpt?return_to=%2F" target="_top" onClick={() => {
-    try {
-      sessionStorage.setItem('furniture-ar:pending-search', query);
-      if (url) sessionStorage.setItem('furniture-ar:pending-link', url);
-    } catch { /* Storage is optional. */ }
-  }}>Sign in to continue<ArrowUpRight size={15}/></a>;
 }
 
 function priceText(product: AmazonSearchProduct) {
@@ -55,7 +46,7 @@ export default function AmazonSearch({ initialQuery, buttonLabel, onClose, onPro
   const runSearch = async (value: string, page = 1) => {
     const term = value.trim();
     cancelRequests(); setImporting(null); setProductError(null); setSearchError(null);
-    if (!term) { setSearching(null); setSearchError({ message: 'Enter a product to search for, such as a lamp or dining table.', needsSignIn: false, page: 1 }); return; }
+    if (!term) { setSearching(null); setSearchError({ message: 'Enter a product to search for, such as a lamp or dining table.', page: 1 }); return; }
     const controller = new AbortController();
     searchRequest.current = controller;
     let timedOut = false;
@@ -70,12 +61,11 @@ export default function AmazonSearch({ initialQuery, buttonLabel, onClose, onPro
         const seen = new Set(previous.products.map(product => product.asin));
         return { ...data, products: [...previous.products, ...data.products.filter(product => !seen.has(product.asin))] };
       });
-      try { sessionStorage.removeItem('furniture-ar:pending-search'); } catch { /* Storage is optional. */ }
     } catch (caught) {
       if (searchRequest.current !== controller) return;
       setSearchError({
         message: timedOut ? 'Amazon is taking longer than expected. Try again shortly.' : caught instanceof Error ? caught.message : 'We couldn’t search Amazon. Please try again.',
-        needsSignIn: caught instanceof ImportError && caught.code === 'SIGN_IN_REQUIRED', page,
+        page,
       });
     } finally {
       clearTimeout(timeout);
@@ -101,13 +91,11 @@ export default function AmazonSearch({ initialQuery, buttonLabel, onClose, onPro
       const imported = await importAmazonProduct(product.url, controller.signal);
       if (importRequest.current !== controller) return;
       const item = createImportedItem(imported.listing, imported.product);
-      try { sessionStorage.removeItem('furniture-ar:pending-link'); } catch { /* Storage is optional. */ }
       onProduct(item);
     } catch (caught) {
       if (importRequest.current !== controller) return;
       setProductError({ asin: product.asin,
         message: timedOut ? 'This product is taking longer than expected. Please try again.' : caught instanceof Error ? caught.message : 'We couldn’t open this product. Please try again.',
-        needsSignIn: caught instanceof ImportError && caught.code === 'SIGN_IN_REQUIRED',
       });
     } finally {
       clearTimeout(timeout);
@@ -132,7 +120,7 @@ export default function AmazonSearch({ initialQuery, buttonLabel, onClose, onPro
         {!results && !searchError && <div className="amazon-search-state"><Search size={30}/><h3>What would fit your room?</h3><p>Enter a product above, then tap Search to browse Amazon.</p></div>}
         {results && <div className="amazon-results-summary"><span role="status">{count ? `${count} ${count === 1 ? 'item' : 'items'} shown` : 'No matching items'} for <strong>“{results.query}”</strong></span><span className="amazon-model-hint"><Box size={13}/>Look for the AR model badge</span></div>}
         {results && !count && !searchError && <div className="amazon-search-state"><Search size={30}/><h3>Try a different search</h3><p>Use a broader phrase, such as “floor lamp” or “round dining table”.</p></div>}
-        {searchError?.page === 1 && <div className="amazon-search-state amazon-search-error"><Search size={28}/><h3>Search needs another try</h3><p role="alert">{searchError.message}</p>{searchError.needsSignIn ? <SignIn query={query}/> : <button type="button" className="button outlined" onClick={() => void runSearch(query)}>Try again</button>}</div>}
+        {searchError?.page === 1 && <div className="amazon-search-state amazon-search-error"><Search size={28}/><h3>Search needs another try</h3><p role="alert">{searchError.message}</p><button type="button" className="button outlined" onClick={() => void runSearch(query)}>Try again</button></div>}
         {!!count && <div className="amazon-result-grid">{results!.products.map(product => {
           const loading = importing === product.asin;
           const failure = productError?.asin === product.asin ? productError : null;
@@ -146,11 +134,11 @@ export default function AmazonSearch({ initialQuery, buttonLabel, onClose, onPro
               <div className="amazon-result-price">{priceText(product) ? <strong>{priceText(product)}</strong> : <span>Price unavailable</span>}<a href={product.url} target="_blank" rel="noreferrer" aria-label={`View ${product.title} on Amazon`}><ExternalLink size={14}/></a></div>
               {product.availability && <p className="amazon-result-availability">{product.availability}</p>}
               <button className={`button ${product.modelAvailable ? 'primary' : 'outlined'}`} type="button" aria-label={`${action}: ${product.title}`} disabled={!!importing} onClick={() => void chooseProduct(product)}>{loading ? 'Opening product…' : action}{loading ? <LoaderCircle size={15} className="spin"/> : <ArrowUpRight size={15}/>}</button>
-              {failure && <div className="amazon-product-error"><p role="alert">{failure.message}</p>{failure.needsSignIn && <SignIn query={results!.query} url={product.url}/>}</div>}
+              {failure && <div className="amazon-product-error"><p role="alert">{failure.message}</p></div>}
             </div>
           </article>;
         })}</div>}
-        {searchError && searchError.page > 1 && <div className="amazon-more-error"><p role="alert">{searchError.message}</p>{searchError.needsSignIn ? <SignIn query={results?.query ?? query}/> : <button className="button outlined" type="button" onClick={() => void runSearch(results?.query ?? query, searchError.page)}>Try loading more</button>}</div>}
+        {searchError && searchError.page > 1 && <div className="amazon-more-error"><p role="alert">{searchError.message}</p><button className="button outlined" type="button" onClick={() => void runSearch(results?.query ?? query, searchError.page)}>Try loading more</button></div>}
         {results?.nextPage && !searchError && <div className="amazon-load-more"><button type="button" className="button outlined" disabled={!!searching || !!importing} onClick={() => void runSearch(results.query, results.nextPage!)}>{searching === 'more' ? <><LoaderCircle size={16} className="spin"/>Finding more items…</> : 'Load more products'}</button></div>}
       </>}
     </div>

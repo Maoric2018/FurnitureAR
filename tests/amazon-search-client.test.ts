@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ImportError } from '../src/lib/amazon.ts';
+import { ImportError, importAmazonProduct } from '../src/lib/amazon.ts';
 import { parseAmazonSearchResults, searchAmazonProducts } from '../src/lib/amazon-search.ts';
 
 const product = () => ({
@@ -64,7 +64,7 @@ test('Search submits a normalized query and chosen page without browser API cred
   const mock = t.mock.method(globalThis, 'fetch', async (url: unknown, init?: RequestInit) => {
     assert.equal(url, '/api/products/search');
     assert.equal(init?.method, 'POST');
-    assert.equal(init?.credentials, 'same-origin');
+    assert.equal(init?.credentials, 'omit');
     assert.equal(init?.redirect, 'error');
     assert.deepEqual(init?.headers, { 'Content-Type': 'application/json' });
     assert.deepEqual(JSON.parse(init!.body as string), { q: 'oak table', page: 3 });
@@ -86,9 +86,10 @@ test('Invalid search queries and pages never spend a provider request', async t 
   assert.equal(mock.mock.calls.length, 0);
 });
 
-test('Search errors expose useful safe messages and preserve sign-in status without provider secrets', async t => {
+test('Search errors explain service access failures without asking guests to sign in or exposing provider secrets', async t => {
   for (const [status, code, expected] of [
-    [401, 'SIGN_IN_REQUIRED', 'SIGN_IN_REQUIRED'],
+    [401, 'SIGN_IN_REQUIRED', 'SERVICE_ACCESS_FAILED'],
+    [403, 'ORIGIN_NOT_ALLOWED', 'SERVICE_ACCESS_FAILED'],
     [400, 'INVALID_SEARCH', 'INVALID_SEARCH'],
     [429, 'UNKNOWN', 'RATE_LIMITED'],
     [503, 'SERPAPI_QUOTA_EXCEEDED', 'SERPAPI_QUOTA_EXCEEDED'],
@@ -100,12 +101,13 @@ test('Search errors expose useful safe messages and preserve sign-in status with
       assert.ok(error instanceof ImportError);
       assert.equal(error.code, expected);
       assert.ok(!`${error.message} ${error.code}`.includes('SECRET'));
+      assert.doesNotMatch(error.message, /sign in|log in/i);
       return true;
     });
     mock.mock.restore();
   }
   const mock = t.mock.method(globalThis, 'fetch', async () => new Response('<html>Sign in</html>', { status: 401 }));
-  await assert.rejects(searchAmazonProducts('oak table'), error => error instanceof ImportError && error.code === 'SIGN_IN_REQUIRED');
+  await assert.rejects(searchAmazonProducts('oak table'), error => error instanceof ImportError && error.code === 'SERVICE_ACCESS_FAILED');
   mock.mock.restore();
   t.mock.method(globalThis, 'fetch', async () => { throw new Error('https://secret.invalid?api_key=SECRET'); });
   await assert.rejects(searchAmazonProducts('oak table'), error => error instanceof ImportError && error.code === 'SEARCH_UNAVAILABLE' && !error.message.includes('SECRET'));
@@ -147,4 +149,52 @@ test('Aborted searches preserve cancellation before fetch, during fetch, and whi
     start(stream) { reading.abort(); stream.error(reading.signal.reason); },
   })));
   await assert.rejects(searchAmazonProducts('oak table', 1, reading.signal), error => error === reading.signal.reason);
+});
+
+test('Product imports omit guest cookies and credentials while preserving listing details', async t => {
+  const controller = new AbortController();
+  const listing = {
+    asin: 'B0F2ML48Y6', title: 'Oak dining table', brand: null,
+    url: 'https://www.amazon.com/dp/B0F2ML48Y6', images: [], price: null,
+    availability: null, features: [], dimensionText: null, dimensions: null,
+    retrievedAt: '2026-10-24T15:45:00.000Z', modelNote: null,
+  };
+  t.mock.method(globalThis, 'fetch', async (url: unknown, init?: RequestInit) => {
+    assert.equal(url, '/api/products/import');
+    assert.equal(init?.method, 'POST');
+    assert.equal(init?.credentials, 'omit');
+    assert.equal(init?.redirect, 'error');
+    assert.deepEqual(init?.headers, { 'Content-Type': 'application/json' });
+    assert.deepEqual(JSON.parse(init!.body as string), { url: listing.url });
+    assert.equal(init?.signal, controller.signal);
+    return Response.json({ listing, product: null });
+  });
+  assert.deepEqual(await importAmazonProduct(listing.url, controller.signal), { listing, product: null });
+});
+
+test('Guest import access errors and provider failures display safe retry messages', async t => {
+  for (const [status, code, expected] of [
+    [401, 'SIGN_IN_REQUIRED', 'SERVICE_ACCESS_FAILED'],
+    [403, 'ORIGIN_NOT_ALLOWED', 'SERVICE_ACCESS_FAILED'],
+    [400, 'INVALID_LINK', 'INVALID_LINK'],
+    [502, 'SERPAPI_AUTH_FAILED', 'SERPAPI_AUTH_FAILED'],
+    [500, 'api_key=SECRET', 'IMPORT_FAILED'],
+    [500, '__proto__', 'IMPORT_FAILED'],
+  ] as const) {
+    for (const response of [
+      Response.json({ error: { code, message: 'Sign in at https://secret.invalid?api_key=SECRET' } }, { status }),
+      ...(status === 401 || status === 403 ? [new Response('<html>Sign in SECRET</html>', { status })] : []),
+    ]) {
+      const mock = t.mock.method(globalThis, 'fetch', async () => response);
+      await assert.rejects(importAmazonProduct('https://www.amazon.com/dp/B0F2ML48Y6'), error => {
+        assert.ok(error instanceof ImportError);
+        assert.equal(error.code, expected);
+        assert.doesNotMatch(`${error.message} ${error.code}`, /SECRET|sign in|log in/i);
+        return true;
+      });
+      mock.mock.restore();
+    }
+  }
+  t.mock.method(globalThis, 'fetch', async () => { throw new Error('https://secret.invalid?api_key=SECRET'); });
+  await assert.rejects(importAmazonProduct('https://www.amazon.com/dp/B0F2ML48Y6'), error => error instanceof ImportError && error.code === 'IMPORT_UNAVAILABLE' && !error.message.includes('SECRET'));
 });

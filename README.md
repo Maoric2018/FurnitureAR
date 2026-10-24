@@ -46,13 +46,13 @@ Color discovery also works for listings without a model, but does not create new
 
 ## AR
 
-Open the HTTPS deployment in Safari on iPhone or Chrome on an ARCore-compatible Android phone. Product import requires ChatGPT sign-in on the hosted site. The local preview uses the Sites development sign-in. A plain HTTP LAN development URL will not enable WebXR.
+Open the HTTPS deployment in Safari on iPhone or Chrome on an ARCore-compatible Android phone. Amazon search and product import work for guests without a ChatGPT or Amazon account. The app has no per-user API request quota. A plain HTTP LAN development URL will not enable WebXR. If the hosting platform applies a separate private-site access gate, its audience must be public for guests to reach the app.
 
 - Single products use the selected finish’s GLB and material colors at actual scale.
 - Layouts load each selected variant and export one combined GLB with independent per-piece materials, preserving colors, positions, and rotations in meters. Its floor stays at y=0.
 - The phone places the **whole arrangement as one group**. Edit relative positions in the floor plan, then reopen AR. Individual object movement inside the AR session and scanned-room persistence are not implemented.
 - `<model-viewer>` uses WebXR and iOS Quick Look. Single-product WebXR has live finish controls for finishes that share the currently selected GLB; choose finishes with a different GLB before opening AR. On iPhone, choose the finish before opening Quick Look; native Quick Look cannot display the app’s buttons. To change it, return to the app and reopen AR.
-- Runtime material overrides use automatically generated USDZ, ignoring any supplied `iosSrc`, so the exported solid colors follow the selection. Dedicated unmodified variants can use their matching prebuilt USDZ. Scene Viewer is omitted because external model fetches cannot access a private site's authenticated assets.
+- Runtime material overrides use automatically generated USDZ, ignoring any supplied `iosSrc`, so the exported solid colors follow the selection. Dedicated unmodified variants can use their matching prebuilt USDZ. The implemented AR paths are WebXR and Quick Look; Scene Viewer remains disabled.
 - AR scale is locked. The app checks GLB bounds against product dimensions before enabling AR. For layouts it validates each constituent model too.
 - Material changes and GLB/USDZ export are covered by automated tests. Live WebXR placement and iPhone Quick Look remain **untested on a physical device**. A compatible phone is required to verify camera tracking. AR is a visual guide; confirm purchase-critical measurements with a tape measure.
 
