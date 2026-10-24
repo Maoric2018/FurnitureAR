@@ -2,12 +2,12 @@
 
 A mobile web app with two ways to plan furniture:
 
-- **One product:** search Amazon or paste a link, inspect its 3D model, choose a finish, preview it in AR, and save it or add it to a room.
-- **A whole room:** create a named layout, find products through search or links, move and rotate pieces on a floor plan, choose each piece’s finish, then view the complete arrangement in 3D or AR.
+- **One product:** search Amazon or paste a link, inspect its 3D model, choose a finish, and preview it in AR. This flow does not save products.
+- **A whole room:** choose manual room dimensions or a LiDAR scan to create a named layout, find products through search or links, move and rotate pieces on a floor plan, choose each piece’s finish, then view the complete arrangement in 3D or AR.
 
-The home screen is a workspace. **Search Amazon by keyword** or paste an **Amazon.com product link** to import real product details. Search opens a photo-card list with prices and ratings when supplied, model-availability labels, and pagination. Selecting a result loads its full listing through the existing importer. The table and lamp supplied by the project team have approximate 3D previews. Other products can be saved with their details; AR and room placement remain unavailable until a matching model exists. No unrelated placeholder is substituted.
+The home screen is a workspace. **Search Amazon by keyword** or paste an **Amazon.com product link** to import real product details. Search opens a photo-card list with prices and ratings when supplied, model-availability labels, and pagination. Selecting a result loads its full listing through the existing importer. The table and lamp supplied by the project team have approximate 3D previews. Other products can be viewed with their details; AR and room placement remain unavailable until a matching model exists. No unrelated placeholder is substituted.
 
-Search is also available in Saved items and the room editor. It returns the products supplied for each Amazon search page, rather than attempting to download the entire catalog. Search results do not guarantee current stock; confirm price, availability, size, and finish on Amazon. Product search and import share the configured SerpApi account allowance; search runs only on submission or pagination, not on every keystroke.
+Search is also available inside each room layout. It returns the products supplied for each Amazon search page, rather than attempting to download the entire catalog. Search results do not guarantee current stock; confirm price, availability, size, and finish on Amazon. Product search and import share the configured SerpApi account allowance; search runs only on submission or pagination, not on every keystroke.
 
 ## Run
 
@@ -32,13 +32,13 @@ Layouts save automatically in this browser, including names, room dimensions, so
 
 A room supports up to 30 pieces. Floor-plan units are meters. The editor keeps rotated footprints within room bounds when the item fits. Enter dimensions manually, or import a LiDAR room scan with walls, openings, and existing furniture. Real AR alignment is performed on the phone.
 
-Saved individual products form a separate library and can be reused across layouts when they have models. Saving or adding a product keeps its selected finish; duplicated pieces and layouts retain their choices and can then be changed independently. Persistence is **local to the current browser/device**, with no cross-device or account sync. Existing v1 favorites remain untouched in their original storage key; the new workspace uses `furniture-ar:workspace:v2`. Previously saved Little Tree placeholders still reopen with their approximate finish palette.
+Products are saved only as part of a layout. Single-product previews are temporary. Adding a product to a layout keeps its selected finish; duplicated pieces and layouts retain their choices and can then be changed independently. Persistence is **local to the current browser/device**, with no cross-device or account sync. Existing v1 favorites remain untouched in their original storage key; the new workspace uses `furniture-ar:workspace:v2`. Previously saved Little Tree placeholders still reopen with their approximate finish palette.
 
 ## Scan your room
 
-Use the native [Furniture AR Scan companion](./ios/FurnitureARScan/README.md) on a LiDAR iPhone or iPad (including iPhone 16 Pro). It uses Apple RoomPlan, then opens the website or shares a room JSON file. Import it from the overview, layout list, or editor. Review the measured outline before creating the layout.
+Use the native [Furniture AR Scan companion](./ios/FurnitureARScan/README.md) on a LiDAR iPhone or iPad (including iPhone 16 Pro). It uses Apple RoomPlan, then opens the website or shares a room JSON file. Choose **New layout → Scan your room** to open the installed scanner or choose a room file. **Enter room size** is the manual alternative. Review the measured outline before creating the floor plan. Existing scanned layouts can replace their scan from the editor.
 
-Existing objects appear as fixed, hatched footprints. Select one to correct its measurements, name, position, or rotation; add missed objects or remove false detections. New furniture remains movable. Overlaps with existing furniture, wall crossings, and doorway access warnings appear in the editor. Corrections and scans persist with the layout and participate in Undo and duplication. Incomplete wall geometry requires rescanning. All measurements and overlap warnings are estimates.
+Existing objects appear as fixed, hatched footprints. Select one to correct its measurements, position, or rotation; add missed objects or remove false detections. New furniture remains movable. Overlaps with existing furniture, wall crossings, and doorway access warnings appear in the editor. Corrections and scans persist with the layout and participate in Undo and duplication. Incomplete wall geometry requires rescanning. All measurements and overlap warnings are estimates.
 
 The companion is an Xcode development project, not an App Store release. See [setup instructions](./public/room-scanner.html) or the companion README for signing and installing it. Camera images remain on the phone; the export contains only measurements and labels. The optional web handoff uses a URL fragment, with a file-sharing fallback for larger scans. The website does not directly access LiDAR, sync layouts, or automatically anchor later AR previews to the scan.
 
@@ -80,7 +80,8 @@ The same-origin route runs in the Cloudflare Worker for local development and ho
 
 ## Source map
 
-- `src/App.tsx`: workspace overview, layouts, saved library, creation and navigation.
+- `src/App.tsx`: workspace overview, layouts, scan handoff and navigation.
+- `src/components/NewLayout.tsx`: manual room dimensions or room scan entry.
 - `src/components/LinkInput.tsx`: Amazon product-link entry and importer connection.
 - `src/components/PreviewModal.tsx`: listing details and individual product/AR preview.
 - `src/components/FinishPicker.tsx`: named finish choices and approximate-preview labels.

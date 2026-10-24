@@ -19,6 +19,7 @@ export interface RoomLayout {
   id: string; name: string; roomType: string; width: number; depth: number;
   items: PlacedItem[]; updatedAt: string; survey?: RoomSurvey;
 }
+// Keep legacy library data readable; new products are saved only within layouts.
 export interface Workspace { layouts: RoomLayout[]; items: ProductItem[] }
 export const WORKSPACE_KEY = 'furniture-ar:workspace:v2';
 export const placeholderProduct: FurnitureProduct = {

@@ -1,16 +1,16 @@
 import { useCallback, useRef, useState } from 'react';
-import { ArrowUpRight, Bookmark, Check, ExternalLink, FolderPlus, ImageOff, Plus, RotateCcw, ScanLine } from 'lucide-react';
+import { ArrowUpRight, ExternalLink, ImageOff, RotateCcw, ScanLine } from 'lucide-react';
 import Modal from './Modal';
 import { Viewer } from './Viewer';
 import type { ViewerHandle } from './Viewer';
-import type { ProductItem, RoomLayout } from '../lib/workspace';
+import type { ProductItem } from '../lib/workspace';
 import { availableItemVariants, placeholderProduct, sourceLabel } from '../lib/workspace';
 import { dimension, getVariant } from '../lib/products';
 import type { Unit } from '../lib/products';
 import FinishPicker from './FinishPicker';
-interface Props {item:ProductItem;layouts:RoomLayout[];saved:boolean;onVariant:(id:string)=>void;onSave:()=>void;onAdd:(id:string)=>void;onNew:()=>void;onClose:()=>void;onUnavailable:()=>void;unit:Unit;onUnit:(unit:Unit)=>void}
-export default function PreviewModal({item,layouts,saved,onVariant,onSave,onAdd,onNew,onClose,onUnavailable,unit,onUnit}:Props){
-  const viewer=useRef<ViewerHandle>(null),[ready,setReady]=useState(false),[status,setStatus]=useState(''),[choosing,setChoosing]=useState(false);
+interface Props {item:ProductItem;onVariant:(id:string)=>void;onClose:()=>void;onUnavailable:()=>void;unit:Unit;onUnit:(unit:Unit)=>void}
+export default function PreviewModal({item,onVariant,onClose,onUnavailable,unit,onUnit}:Props){
+  const viewer=useRef<ViewerHandle>(null),[ready,setReady]=useState(false),[status,setStatus]=useState('');
   const [view,setView]=useState<'3d'|'photo'>(item.product?'3d':'photo'),[photo,setPhoto]=useState(0),[imageFailed,setImageFailed]=useState(false);
   const onReady=useCallback((value:boolean)=>setReady(value),[]),onStatus=useCallback((value:string)=>setStatus(value),[]);
   const product=item.product,listing=item.listing,variants=availableItemVariants(item);
@@ -32,18 +32,14 @@ export default function PreviewModal({item,layouts,saved,onVariant,onSave,onAdd,
       {listing&&<div className="product-view-options">{product&&<button className={view==='3d'?'active':''} onClick={()=>{setView('3d');setStatus('');}}>3D model</button>}{images.length>0&&<button className={view==='photo'?'active':''} onClick={()=>setView('photo')}>Product photos</button>}{view==='photo'&&images.length>1&&<button aria-label="Next product photo" onClick={()=>{setPhoto(i=>(i+1)%images.length);setImageFailed(false);}}>Next photo <ArrowUpRight size={14}/></button>}</div>}
     </div>
     <div className="product-panel">
-      <div className="overline">{listing?.brand||'SINGLE PRODUCT'}</div><h2 className={listing?'listing-title':''}>{item.name}</h2>
+      <div className="overline">{listing?.brand||'SINGLE PRODUCT'}</div><h2 className={listing?'listing-title':''} title={item.name}>{item.name}</h2>
       <a className="source-link" href={productUrl} target="_blank" rel="noreferrer">{sourceLabel(productUrl)} <ExternalLink size={12}/></a>
-      {listing&&<div className="listing-price">{changedColor&&<small>Imported color price & availability</small>}{listing.price?<strong>{new Intl.NumberFormat('en-US',{style:'currency',currency:listing.price.currency}).format(listing.price.amount)}</strong>:<span>Price unavailable</span>}{listing.availability&&<span>{listing.availability}</span>}<small>{changedColor?'These details apply to the original imported color.':'Price & availability at import.'} <a href={productUrl} target="_blank" rel="noreferrer">Check the selected color on Amazon <ExternalLink size={11}/></a></small></div>}
-      <p className="preview-disclosure">{listing?(product?listing.modelNote:'Product details imported. A matching 3D model is not available yet. You can save this item while model generation is being connected.'):isSample?'Sample table with approximate color previews. Live listing colors and availability have not been checked. Your original link stays attached.':product?.description}</p>
+      <p className="preview-disclosure">{listing?(product?listing.modelNote:'A matching 3D model is not available for this product yet. You can still view its photos and dimensions.'):isSample?'Sample table with approximate color previews. Live listing colors and availability have not been checked. Your original link stays attached.':product?.description}</p>
       {product&&variant&&<FinishPicker variants={variants} selected={variant} onChange={chooseVariant} listing={listing}/>}
       {!product&&listing&&<div className="listing-colors"><strong>Amazon colors</strong>{listing.colors?.status==='observed'&&listing.colors.options.length?<><p>{listing.colors.options.map(option=>option.name).join(' · ')}</p><small>Listed at import. Color previews need a matching 3D model.</small></>:<p>Amazon hasn’t confirmed color options for this item.</p>}</div>}
       <div className="dimension-heading"><span>{product?'Model dimensions':'Listed dimensions'}</span><div className="unit-toggle"><button aria-pressed={unit==='cm'} onClick={()=>onUnit('cm')}>cm</button><button aria-pressed={unit==='in'} onClick={()=>onUnit('in')}>in</button></div></div>
       <div className="dimension-values">{(['width','depth','height'] as const).map(key=><div key={key}><span>{key}</span><strong>{dimensions?.[key]!=null?dimension(dimensions[key]!,unit):'—'}{dimensions?.[key]!=null&&<small>{unit}</small>}</strong></div>)}</div>
-      {listing?.dimensionText&&<p className="listing-measurements"><strong>Amazon lists</strong> {listing.dimensionText}</p>}
-      {product?<><button className="button primary" disabled={view==='3d'&&!ready} onClick={()=>{if(view==='photo'){setView('3d');setStatus('');}else viewer.current?.startAR();}}><ScanLine size={18}/>{view==='photo'?'Open 3D preview':ready?'View in your room':status?'AR unavailable':'Loading model…'}<ArrowUpRight size={17}/></button><button className="button secondary" onClick={()=>setChoosing(!choosing)}><FolderPlus size={17}/>Add to a layout</button></>:<div className="model-pending"><ScanLine size={18}/><span>3D & AR will be available when this product has a model.</span></div>}
-      <button className="text-button save-item" onClick={onSave}>{saved?<Check size={15}/>:<Bookmark size={15}/>} {saved?'Saved to your items':'Save item'}</button>
-      {choosing&&product&&<div className="layout-picker"><span>CHOOSE A LAYOUT</span>{layouts.map(room=><button key={room.id} onClick={()=>onAdd(room.id)}>{room.name}<ArrowUpRight size={14}/></button>)}<button onClick={onNew}><Plus size={15}/>Create a new layout</button></div>}
+      {product?<button className="button primary" disabled={view==='3d'&&!ready} onClick={()=>{if(view==='photo'){setView('3d');setStatus('');}else viewer.current?.startAR();}}><ScanLine size={18}/>{view==='photo'?'Open 3D preview':ready?'View in your room':status?'AR unavailable':'Loading model…'}<ArrowUpRight size={17}/></button>:<div className="model-pending"><ScanLine size={18}/><span>3D & AR will be available when this product has a model.</span></div>}
       {status&&view==='3d'&&<p className="status-text" role="status">{status}</p>}{variants.length>1&&<p className="color-ar-note">On iPhone, choose a color before opening AR. To change it, return here.</p>}{product&&<p className="ar-footnote">Fixed model scale · iPhone & Android</p>}
     </div>
   </div></Modal>;
