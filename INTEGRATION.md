@@ -1,6 +1,6 @@
 # Connect the Amazon importer
 
-The product preview and multi-item layout editor are ready. Your service turns a product URL into the product below. Without the endpoint, every valid HTTP/HTTPS link resolves to the same placeholder chair; the original link is retained with each item.
+The product preview and multi-item layout editor are ready. Your service turns a product URL into the product below. Without the endpoint, every valid HTTP/HTTPS link resolves to the same Little Tree oak table; the original link is retained with each item.
 
 ## Endpoint
 
@@ -39,6 +39,8 @@ Response (`200`, `Content-Type: application/json`):
   }
 }
 ```
+
+The optional `footprint` field accepts `"ellipse"` for round/oval furniture or `"rectangle"` (the default). It controls floor-plan rendering and room-boundary checks.
 
 `category` must be `Seating`, `Tables`, `Lighting`, or `Storage`. Dimensions are numbers in **meters**, greater than zero, at most 20. Each variant needs a unique ID, name, six-digit hex color, and valid GLB URL. Optional `iosSrc` can point to a prebuilt USDZ. The UI accepts same-origin paths beginning with one `/` or HTTPS model URLs.
 

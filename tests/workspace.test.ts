@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { Box3, Vector3 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { USDZExporter } from 'three/addons/exporters/USDZExporter.js';
+import { catalog, dimensionsMatch, parseProduct } from '../src/lib/products.ts';
 import { arrangeModels } from '../src/lib/layout-model.ts';
 import { clampPlacement, createLayout, createProductItem, duplicateLayout, normalizeProductLink, parseWorkspace, placeItem, placeholderProduct } from '../src/lib/workspace.ts';
 
@@ -47,10 +48,11 @@ test('Saved workspace round-trips names, source links, positions and rotations',
 test('Combined 3D arrangement preserves floor-plan coordinates, rotation and meter dimensions',async()=>{
   const bytes=await readFile(new URL('../public/models/arc-chair-oat.glb',import.meta.url));
   const model=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
-  let room=placeItem(placeItem(createLayout('Room'),createProductItem('example.com/a')),createProductItem('example.com/b'));
+  const chair={...catalog[0],variants:[catalog[0].variants[1]]};
+  let room=placeItem(placeItem(createLayout('Room'),createProductItem('example.com/a',chair)),createProductItem('example.com/b',chair));
   room.items[0]={...room.items[0],x:-1,z:0,rotation:0};
   room.items[1]={...room.items[1],x:1,z:0,rotation:90};
-  const scene=arrangeModels(room.items,new Map([[placeholderProduct.variants[0].modelSrc,model.scene]]));
+  const scene=arrangeModels(room.items,new Map([[chair.variants[0].modelSrc,model.scene]]));
   assert.equal(scene.children.length,2);assert.equal(scene.children[0].position.x,-1);assert.equal(scene.children[1].position.x,1);
   assert.equal(scene.children[1].rotation.y,-Math.PI/2);
   const box=new Box3().setFromObject(scene,true),size=box.getSize(new Vector3());
@@ -58,4 +60,43 @@ test('Combined 3D arrangement preserves floor-plan coordinates, rotation and met
   assert.ok(Math.abs(size.y-.81)<.0001);assert.ok(Math.abs(box.min.y)<.0001);
   const usdz=await new USDZExporter().parseAsync(scene);
   assert.equal(usdz[0],0x50);assert.equal(usdz[1],0x4b);assert.ok(usdz.length>1000);
+});
+
+test('Round footprints keep the same clearance when rotated',()=>{
+  const room=createLayout('Dining room','Dining room',3,3);
+  const item={...createProductItem('example.com/table'),x:100,z:100,rotation:45};
+  const placed=clampPlacement(item,room);
+  const limit=1.5-placeholderProduct.dimensions.width/2;
+  assert.ok(Math.abs(placed.x-limit)<1e-8);
+  assert.ok(Math.abs(placed.z-limit)<1e-8);
+  const rectangular=clampPlacement({...item,product:{...item.product,footprint:'rectangle'}},room);
+  assert.ok(rectangular.x<placed.x);
+  assert.throws(()=>parseProduct({...placeholderProduct,footprint:'triangle'}));
+});
+test('New tables start spaced apart and survive saving with their round footprint',()=>{
+  let room=placeItem(createLayout('Dining room'),createProductItem('example.com/a'));
+  room=placeItem(room,createProductItem('example.com/b'));
+  assert.ok(room.items[1].x-room.items[0].x>placeholderProduct.dimensions.width);
+  assert.equal(parseWorkspace(JSON.parse(JSON.stringify({layouts:[room],items:[]}))).layouts[0].items[0].product.footprint,'ellipse');
+});
+test('Supplied oak table preserves meter dimensions, floor alignment and embedded wood textures',async()=>{
+  const bytes=await readFile(new URL(`../public${placeholderProduct.variants[0].modelSrc}`,import.meta.url));
+  const metadata=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString());
+  assert.equal(metadata.images.length,3);
+  assert.ok(metadata.images.every((image:{bufferView?:number;uri?:string})=>typeof image.bufferView==='number'&&!image.uri));
+  assert.ok(metadata.materials.some((material:{pbrMetallicRoughness?:{baseColorTexture?:unknown};normalTexture?:unknown})=>material.pbrMetallicRoughness?.baseColorTexture&&material.normalTexture));
+  // Geometry is decoded by the actual loader; image decoding/rendering is checked in the browser.
+  const loader=new GLTFLoader().register(()=>({name:'geometry-only-test',loadTexture:async()=>null}));
+  const model=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+  const bounds=new Box3().setFromObject(model.scene,true),size=bounds.getSize(new Vector3()),center=bounds.getCenter(new Vector3());
+  assert.equal(dimensionsMatch(size,placeholderProduct.dimensions),true);
+  for(const [actual,expected] of [[size.x,1.199896],[size.y,.750062],[size.z,1.199896]]) assert.ok(Math.abs(actual-expected)<.0001);
+  assert.ok(Math.abs(bounds.min.y)<.0001);
+  assert.ok(Math.abs(center.x)<.0001&&Math.abs(center.z)<.0001);
+  const item={...createProductItem('example.com/table'),x:.4,z:-.7,rotation:45};
+  const scene=arrangeModels([item],new Map([[item.product.variants[0].modelSrc,model.scene]]));
+  const placed=new Box3().setFromObject(scene,true),placedCenter=placed.getCenter(new Vector3());
+  assert.ok(Math.abs(placedCenter.x-.4)<.0001&&Math.abs(placedCenter.z+.7)<.0001);
+  assert.ok(Math.abs(placed.min.y)<.0001);
+  assert.ok(Math.abs(placed.getSize(new Vector3()).x-size.x)<.001);
 });

@@ -5,7 +5,7 @@ A mobile web app with two ways to plan furniture:
 - **One product:** paste a link, inspect its 3D model, preview it in AR, and save it or add it to a room.
 - **A whole room:** create a named layout, add multiple links, move and rotate pieces on a floor plan, then view the complete arrangement in 3D or AR.
 
-The home screen is a workspace. There is no public sample catalog. **Every valid HTTP/HTTPS product link currently loads the same lounge chair**, preserving the original URL. The placeholder is clearly identified in the preview. No product page is fetched until the real importer is configured.
+The home screen is a workspace. There is no public sample catalog. **Every valid HTTP/HTTPS product link currently loads the same Little Tree oak table**, preserving the original URL. The placeholder is clearly identified in the preview. No product page is fetched until the real importer is configured.
 
 ## Run
 
@@ -41,9 +41,15 @@ Open the HTTPS deployment in Safari on iPhone or Chrome on an ARCore-compatible 
 - AR scale is locked. The app checks GLB bounds against product dimensions before enabling AR. For layouts it validates each constituent model too.
 - A compatible physical phone is required to verify camera tracking. AR is a visual guide; confirm purchase-critical measurements with a tape measure.
 
+## Current table model
+
+`public/models/little-tree-oak-table.glb` is the user-supplied file, preserved without rescaling or changing its textures. Its embedded metadata specifies a 1.199896 m diameter and 0.750062 m height (displayed as 120 × 120 × 75 cm). Geometry is centered on X/Z with its base at Y=0. The model describes itself as a photo-based reconstruction: overall dimensions follow the listing, with some hidden construction details estimated. These measurements come from the supplied file, not a new independent product verification.
+
+All new product links use this table. Previously saved products retain their original models. Round furniture uses an elliptical footprint in the floor plan and in room-boundary checks.
+
 ## Connect your friend's importer
 
-See [INTEGRATION.md](./INTEGRATION.md). Set `VITE_PRODUCT_API_URL` in `.env.local`, then rebuild. Without it, all links resolve to the same chair without making external product requests. Never put credentials in public Vite variables.
+See [INTEGRATION.md](./INTEGRATION.md). Set `VITE_PRODUCT_API_URL` in `.env.local`, then rebuild. Without it, all links resolve to the same oak table without making external product requests. Never put credentials in public Vite variables.
 
 The current prototype selects the first variant returned for each product. Product models must already be scaled to verified dimensions; a URL or photo alone does not provide accurate geometry.
 
@@ -65,4 +71,4 @@ Original furniture GLBs are retained as development fixtures; the UI exposes onl
 
 ## Credits
 
-The room photograph is from [Unsplash](https://images.unsplash.com/photo-1600210492486-724fe5c67fb0), downloaded as a local UI asset. It illustrates the room-planning entry point and is not a saved user layout. Sample model geometry is original and CC0-1.0. Package licenses apply to dependencies. AR support uses Google's [model-viewer](https://modelviewer.dev/docs/index.html).
+The room photograph is from [Unsplash](https://images.unsplash.com/photo-1600210492486-724fe5c67fb0), downloaded as a local UI asset. It illustrates the room-planning entry point and is not a saved user layout. The original procedural fixture geometry is CC0-1.0; this does not apply to the separately supplied Little Tree table. Package licenses apply to dependencies. AR support uses Google's [model-viewer](https://modelviewer.dev/docs/index.html).

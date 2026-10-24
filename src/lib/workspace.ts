@@ -1,4 +1,4 @@
-import { catalog, parseProduct } from './products';
+import { parseProduct } from './products';
 import type { FurnitureProduct } from './products';
 
 export interface ProductItem {
@@ -16,9 +16,12 @@ export interface RoomLayout {
 export interface Workspace { layouts: RoomLayout[]; items: ProductItem[] }
 export const WORKSPACE_KEY = 'furniture-ar:workspace:v2';
 export const placeholderProduct: FurnitureProduct = {
-  ...catalog[0], name:'Lounge chair', tagline:'A preview for your space.',
-  description:'A lounge chair with upholstered arms and a walnut base.',
-  variants:[catalog[0].variants[1]],
+  id:'little-tree-oak-table', name:'Little Tree oak table', category:'Tables',
+  tagline:'A round table. Room to gather.',
+  description:'A round dining table in an oak finish with a sculptural cross pedestal.',
+  dimensions:{width:1.199896,height:.750062,depth:1.199896},
+  material:'Oak finish', background:'#e9dfd0', footprint:'ellipse',
+  variants:[{id:'oak',name:'Oak',color:'#b68d5d',modelSrc:'/models/little-tree-oak-table.glb'}],
 };
 export function normalizeProductLink(value: string): string {
   const input=value.trim();
@@ -41,14 +44,15 @@ export function createLayout(name: string, roomType='Living room', width=5, dept
 export function clampPlacement(item: PlacedItem, room: Pick<RoomLayout,'width'|'depth'>): PlacedItem {
   const rotation=((item.rotation%360)+360)%360, radians=rotation*Math.PI/180;
   const {width,depth}=item.product.dimensions;
-  const extentX=(Math.abs(Math.cos(radians))*width+Math.abs(Math.sin(radians))*depth)/2;
-  const extentZ=(Math.abs(Math.sin(radians))*width+Math.abs(Math.cos(radians))*depth)/2;
+  const cos=Math.cos(radians),sin=Math.sin(radians),round=item.product.footprint==='ellipse';
+  const extentX=(round?Math.hypot(cos*width,sin*depth):Math.abs(cos)*width+Math.abs(sin)*depth)/2;
+  const extentZ=(round?Math.hypot(sin*width,cos*depth):Math.abs(sin)*width+Math.abs(cos)*depth)/2;
   const limitX=Math.max(0,room.width/2-extentX),limitZ=Math.max(0,room.depth/2-extentZ);
   return {...item,rotation,x:Math.max(-limitX,Math.min(limitX,item.x)),z:Math.max(-limitZ,Math.min(limitZ,item.z))};
 }
 export function placeItem(room:RoomLayout, item:ProductItem): RoomLayout {
   if(room.items.length>=30) throw new Error('This layout has 30 pieces. Start another layout to add more.');
-  const index=room.items.length, spacing=1.05;
+  const index=room.items.length, spacing=Math.max(item.product.dimensions.width,item.product.dimensions.depth)+.2;
   const columns=Math.max(1,Math.floor(room.width/spacing));
   const x=(index%columns)*spacing-(Math.min(columns,3)-1)*spacing/2;
   const z=Math.floor(index/columns)*spacing-room.depth/4;
