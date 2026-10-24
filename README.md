@@ -1,8 +1,13 @@
 # Furniture AR
 
-A mobile-first furniture preview app built for a hackathon. Browse six original furniture models in eighteen finishes, inspect them in 3D, switch centimeters/inches, save a shortlist on your device, and place a piece in your room at its modeled size.
+A mobile web app with two ways to plan furniture:
 
-## Run locally
+- **One product:** paste a link, inspect its 3D model, preview it in AR, and save it or add it to a room.
+- **A whole room:** create a named layout, add multiple links, move and rotate pieces on a floor plan, then view the complete arrangement in 3D or AR.
+
+The home screen is a workspace. There is no public sample catalog. **Every valid HTTP/HTTPS product link currently loads the same lounge chair**, preserving the original URL. The placeholder is clearly identified in the preview. No product page is fetched until the real importer is configured.
+
+## Run
 
 Requires Node.js 22.12+ (or a supported newer version).
 
@@ -11,58 +16,53 @@ npm install
 npm run dev
 ```
 
-Open the printed localhost URL. For a production build:
-
 ```sh
+npm test
 npm run build
 npm run preview
 ```
 
-## Try AR on a phone
+## Room layouts
 
-1. Open the deployed **HTTPS** site in Safari on iPhone, or Chrome on an ARCore-compatible Android phone. The initial Sites deployment is private; sign in as the owner to access it.
-2. Select a sample and a finish, then tap **View in your room**.
-3. Allow camera access if asked. Slowly move the phone over a well-lit floor, then position the piece. Drag to move and use two fingers to rotate.
-4. Scaling is locked to the model's actual meter dimensions. Use a tape measure before buying: phone tracking is an approximation.
+Layouts save automatically in this browser, including names, room dimensions, source links, product metadata, positions, and rotations. Create, reopen, rename, duplicate, or delete layouts. Deletion offers Undo. Editing supports undo, pointer/touch dragging, arrow-key nudges (Shift for larger steps), and R to rotate. Selected pieces also have position sliders, rotation, duplicate, and remove controls. Room dimensions can be changed after creation.
 
-The app uses Google's [`<model-viewer>`](https://modelviewer.dev/docs/index.html) with WebXR on supported Android browsers and Apple's Quick Look on iOS. Quick Look generates a USDZ from the selected GLB on demand. Desktop and unsupported phones retain the interactive 3D preview and receive phone guidance. AR requires a physical compatible phone and a secure origin; opening the dev server's plain HTTP network address on your phone will not enable WebXR. Test on the HTTPS deployment. Native camera tracking has to be verified on a real device.
+A room supports up to 30 pieces. Floor-plan units are meters. The editor keeps rotated footprints within room bounds when the item fits. The layout is a planning surface, not a scan of the physical room: enter its dimensions yourself. Real AR alignment is performed on the phone.
 
-We intentionally use `ar-modes="webxr quick-look"`. Both routes can use model data already loaded in the authenticated page. Android Scene Viewer is omitted because its external fetch cannot load models behind the initial private site's login. If you later enable Scene Viewer, its model URLs must be publicly fetchable over HTTPS, with appropriate CORS headers.
+Saved individual products form a separate library and can be reused across layouts. Persistence is **local to the current browser/device**, with no cross-device or account sync. Existing v1 favorites remain untouched in their original storage key; the new workspace uses `furniture-ar:workspace:v2`.
 
-## Amazon integration handoff
+## AR
 
-Amazon import is an explicit placeholder until your friend's backend is ready. A valid Amazon link opens a sample chair with a prominent notice; it does **not** claim to recreate or scrape the linked product. No Amazon request is made in demo mode.
+Open the HTTPS deployment in Safari on iPhone or Chrome on an ARCore-compatible Android phone. The site is private and requires the owner's ChatGPT login. A plain HTTP LAN development URL will not enable WebXR.
 
-See [INTEGRATION.md](./INTEGRATION.md) for the exact endpoint contract and sample response. Set `VITE_PRODUCT_API_URL` in `.env.local`, then rebuild. This is a frontend app: implement that endpoint in your friend's service or a server deployment. Never put private API keys in frontend environment variables.
+- Single products use their GLB at actual scale.
+- Layouts load their constituent models and export one combined GLB, preserving positions and rotations in meters. Its floor stays at y=0.
+- The phone places the **whole arrangement as one group**. Edit relative positions in the floor plan, then reopen AR. Individual object movement inside the AR session and scanned-room persistence are not implemented.
+- `<model-viewer>` uses WebXR and iOS Quick Look (USDZ generated on demand). Scene Viewer is omitted because external model fetches cannot access a private site's authenticated assets.
+- AR scale is locked. The app checks GLB bounds against product dimensions before enabling AR. For layouts it validates each constituent model too.
+- A compatible physical phone is required to verify camera tracking. AR is a visual guide; confirm purchase-critical measurements with a tape measure.
 
-A product photo or Amazon URL alone is not enough for dimensionally accurate AR. The importer must supply a real 3D model scaled to verified product dimensions. Our six models are deliberately fictional samples.
+## Connect your friend's importer
 
-## Project map
+See [INTEGRATION.md](./INTEGRATION.md). Set `VITE_PRODUCT_API_URL` in `.env.local`, then rebuild. Without it, all links resolve to the same chair without making external product requests. Never put credentials in public Vite variables.
 
-- `src/App.tsx`: browse/search, link flow, saved collection and guidance.
-- `src/components/Viewer.tsx`: 3D rendering, device detection, AR activation, floor placement, fixed scale, load errors, and tracking events.
-- `src/components/ProductDetail.tsx`: finish selection, dimensions and AR controls.
-- `src/lib/products.ts`: data types, URL validation and backend adapter.
-- `src/data/catalog.json`: sample furniture, dimensions in meters and finishes.
-- `scripts/generate-models.mjs`: deterministic Three.js geometry generation.
-- `public/models/`: self-contained GLBs; no third-party model-host dependency.
-- `tests/products.test.ts`: importer contract, input validation, actual GLB geometry bounds, floor origin and USDZ export.
+The current prototype selects the first variant returned for each product. Product models must already be scaled to verified dimensions; a URL or photo alone does not provide accurate geometry.
 
-## Verification
+## Source map
 
-```sh
-npm test
-npm run build
-# Only when changing model construction or catalog dimensions:
-npm run models
-```
+- `src/App.tsx`: workspace overview, layouts, saved library, creation and navigation.
+- `src/components/LinkInput.tsx`: universal product-link entry and importer connection.
+- `src/components/PreviewModal.tsx`: individual product/AR preview.
+- `src/components/RoomEditor.tsx`: arrangement editing and undo.
+- `src/components/FloorPlan.tsx`: dimensioned SVG plan with touch, pointer and keyboard controls.
+- `src/components/LayoutViewer.tsx`: whole-layout 3D/AR preview and temporary asset lifecycle.
+- `src/lib/layout-model.ts`: model loading, geometry checks and combined scene export.
+- `src/lib/workspace.ts`: workspace types, validation, persistence and layout operations.
+- `src/components/Viewer.tsx`: fixed-scale AR activation, tracking, errors and capability fallback.
+- `src/lib/products.ts`: importer schema and geometry dimension validation.
+- `tests/`: model dimensions, importer contract, input validation, layout persistence and combined-scene transforms/USDZ export.
 
-Models are built with baked dimensions in meters, centered at x/z=0, floor at y=0, facing +Z. AR scale never depends on CSS or a guessed unit conversion. The automated checks reload every GLB and inspect its actual bounding box.
+Original furniture GLBs are retained as development fixtures; the UI exposes only the one placeholder model. They can be regenerated with `npm run models`.
 
-## Scope and storage
+## Credits
 
-- One furniture piece is placed per AR session. Cross-session room persistence and multi-item room layouts are not implemented.
-- Favorites and preferred units are stored in this browser's local storage. There is no account/backend requirement for them and no cross-device sync.
-- Camera access is handled by the browser/system AR viewer; this application has no camera upload or recording endpoint.
-- This is an installable-style web experience with a manifest; it does not promise offline AR or include a service worker.
-- All supplied sample 3D furniture geometry is original, generated for this project, and released under CC0-1.0. The interface and app code belong to this project. Package licenses apply to dependencies.
+The room photograph is from [Unsplash](https://images.unsplash.com/photo-1600210492486-724fe5c67fb0), downloaded as a local UI asset. It illustrates the room-planning entry point and is not a saved user layout. Sample model geometry is original and CC0-1.0. Package licenses apply to dependencies. AR support uses Google's [model-viewer](https://modelviewer.dev/docs/index.html).

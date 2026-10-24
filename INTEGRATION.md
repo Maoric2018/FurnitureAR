@@ -1,6 +1,6 @@
 # Connect the Amazon importer
 
-The UI and AR engine are ready. Your service only needs to turn an Amazon URL into the product below.
+The product preview and multi-item layout editor are ready. Your service turns a product URL into the product below. Without the endpoint, every valid HTTP/HTTPS link resolves to the same placeholder chair; the original link is retained with each item.
 
 ## Endpoint
 
@@ -52,8 +52,8 @@ Response (`200`, `Content-Type: application/json`):
 - Do not return an image URL in `modelSrc`. Product photos need a separate 3D reconstruction pipeline and reliable physical dimensions first.
 - Return non-2xx on failures. The UI handles errors, malformed responses and a 25-second timeout.
 
-The UI currently allows common Amazon regional domains plus `amzn.to` and `a.co`. Server validation is still necessary. Short-link resolution and any product fetch occur on your backend; restrict allowed redirect hosts and block internal network targets.
+The UI now accepts arbitrary valid HTTP/HTTPS links, including links without a scheme (normalized to HTTPS). Your backend must enforce the retailers it supports and return an appropriate error for others. Short-link resolution and product fetches belong on your backend; restrict redirects and block internal network targets. The legacy Amazon-specific validator is retained for backend-adapter tests but is not used by the new link flow.
 
 ## Frontend connection point
 
-`src/lib/products.ts` exports `importProduct(url, endpoint, signal)`, `parseProduct()`, and `FurnitureProduct`. `src/App.tsx` calls it only when the endpoint is configured. No other changes are required for the happy path.
+`src/lib/products.ts` exports `importProduct(url, endpoint, signal)`, `parseProduct()`, and `FurnitureProduct`. `src/components/LinkInput.tsx` calls it only when the endpoint is configured. Both individual previews and room layouts use this component. `src/lib/workspace.ts` wraps the result with a unique item ID and source link. The current UI chooses the first returned variant; the layout exporter loads that same GLB. No other changes are required for the happy path.

@@ -51,6 +51,8 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSr
     };
     viewer.addEventListener('load',loaded); viewer.addEventListener('error',error);
     viewer.addEventListener('ar-status',status); viewer.addEventListener('ar-tracking',tracking);
+    // Load the AR engine only when a preview is opened, keeping the workspace light.
+    void import('@google/model-viewer').catch(error);
     if (viewer.loaded) loaded();
     return () => { viewer.removeEventListener('load',loaded); viewer.removeEventListener('error',error); viewer.removeEventListener('ar-status',status); viewer.removeEventListener('ar-tracking',tracking); };
   },[src,attempt,onReady,onStatus,expectedDimensions]);

@@ -1,1 +1,1 @@
-{"name":"Furniture AR","short_name":"Furniture AR","description":"See how furniture fits in your space.","start_url":"/","display":"standalone","background_color":"#f8f7f3","theme_color":"#294f3f","icons":[{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
+{"name":"Furniture AR","short_name":"Furniture AR","description":"Preview furniture and save room layouts.","start_url":"/","display":"standalone","background_color":"#f8f7f3","theme_color":"#292e26","icons":[{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
