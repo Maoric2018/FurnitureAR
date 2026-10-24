@@ -44,3 +44,17 @@ The room scanner was merged with the newer GitHub Amazon search and observed-col
 - A real Amazon search opened the Govee floor-lamp listing with its photo and the honest disabled-generator message. After restarting the local preview without any SerpApi key configured, a differently formatted link for the same ASIN returned the persisted product snapshot with `cached: true` and the same retrieval timestamp. No geometry was generated for that live product.
 - Independent review caught and resolved a cross-Worker race where a late pending result could overwrite ready metadata. Conditional R2 writes now preserve the completed result. It also verified completion updates a previously saved item even when a fresh preview has a different ID.
 - Changed files and the browser build contain no configured API credentials. The actual image-to-GLB adapter remains a dummy. Hosted storage and publication remain unverified because the existing Sites project is inaccessible through the connected account.
+
+
+## SAM 3D integration merge — 2026-10-24
+
+Merged the real Runpod image-to-GLB adapter and the camera studio onto upstream `6ae0214` (exact-ASIN cache), preserving guest Amazon browsing, room scanning, finish selection and all 30 supplied catalog models.
+
+- `npm test`: 175 passed, including provider routing/idempotency, user-isolated camera jobs, cache persistence/concurrency, unsafe inputs, real vertex bounds and scale gating.
+- `npm run build`: passed (TypeScript, Worker and browser bundles).
+- Real cloud run through the new Amazon adapter and model service: ASIN `B074XPNS3Z`, 79.597 seconds, 7,452,876-byte GLB, SHA-256 `938678df7240bc3a30c8acd1740c65498a8fa9dcece563a415e0b8d71e4598bc`. A new model-service instance reused the cached result without another lookup or generation.
+- The live run used the team's existing `03_lamp/source.json` product/photo record and downloaded its Amazon CDN photo. No fresh SerpApi lookup was claimed: the current local configuration has no `SERPAPI_API_KEY`. Fresh Amazon search/import requires that server secret; camera generation uses only the two configured model secrets.
+- The real generated GLB and metadata were copied into local R2 through Wrangler for browser verification. The current product-link interface loaded and rendered the actual lamp, labeled cache reuse and reference dimensions, and disabled AR/layout placement because this source record has no real measurement. This was not a replacement demo asset.
+- The actual local Worker also retrieved the already-completed cloud job through its poll adapter, normalized the GLB, and rewrote its pending R2 record to ready; no second GPU generation was needed. Browser console errors: none.
+- The camera studio and room-scan entry points remain available in the merged interface. A narrow phone-width check showed all four navigation entries and no horizontal overflow. Physical camera permission, native RoomPlan, and AR tracking still require real-device checks over HTTPS; desktop rendering does not verify phone tracking.
+- Local verification files are ignored by Git under `verification/`. Model service credentials remain in ignored `.dev.vars`; the temporary HTTPS connection and existing Runpod process must stay active. No hosted deployment or remote Git push was performed.

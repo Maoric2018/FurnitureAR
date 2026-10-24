@@ -97,6 +97,7 @@ export function clampPlacement(item: PlacedItem, room: Pick<RoomLayout,'width'|'
   return {...item,rotation,x:Math.max(-limitX,Math.min(limitX,item.x)),z:Math.max(-limitZ,Math.min(limitZ,item.z))};
 }
 export function placeItem(room:RoomLayout, item:ProductItem): RoomLayout {
+  if(item.product?.scaleReference==='preview')throw new Error('This reference model needs a real measurement before room placement.');
   if (!item.product) throw new Error('This product needs a matching 3D model before it can be placed in a layout.');
   if(room.items.length>=30) throw new Error('This layout has 30 pieces. Start another layout to add more.');
   const index=room.items.length, spacing=Math.max(item.product.dimensions.width,item.product.dimensions.depth)+.2;

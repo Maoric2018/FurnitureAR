@@ -1,2 +1,6 @@
 # Server-only local secret. Copy this file to .dev.vars and add your key.
 SERPAPI_API_KEY=
+
+# SAM 3D: server-only HTTPS API, shared by Amazon imports and Photo to 3D.
+MODEL_API_URL=
+MODEL_API_KEY=

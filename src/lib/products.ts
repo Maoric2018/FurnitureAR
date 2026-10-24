@@ -15,6 +15,7 @@ export interface FurnitureProduct {
   dimensions: { width: number; height: number; depth: number };
   material: string; badge?: string; background: string;
   footprint?: 'rectangle' | 'ellipse';
+  scaleReference?: 'height' | 'width' | 'depth' | 'preview';
   variants: FurnitureVariant[];
 }
 export const catalog = catalogData as FurnitureProduct[];
@@ -84,6 +85,7 @@ export function parseProduct(value: unknown): FurnitureProduct {
   const dims = p.dimensions as Record<string, unknown> | undefined;
   const validText = (key: string) => typeof p[key] === 'string' && (p[key] as string).trim().length > 0;
   if (!['id','name','description','material','tagline'].every(validText) || !categories.includes(p.category as Category)
+      || (p.scaleReference !== undefined && !['height','width','depth','preview'].includes(p.scaleReference as string))
       || (p.footprint !== undefined && !['rectangle','ellipse'].includes(p.footprint as string))
       || !dims || !['width','height','depth'].every(k => typeof dims[k] === 'number' && Number.isFinite(dims[k]) && Number(dims[k]) > 0 && Number(dims[k]) <= 20)
       || !Array.isArray(p.variants) || !p.variants.length

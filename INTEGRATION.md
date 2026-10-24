@@ -125,7 +125,7 @@ Search and import require neither a signed-in user header nor a session cookie. 
 
 Sites' hosting audience is independent of these API routes. A public Site can serve anonymous visitors; an owner-private Site can still require sign-in before the app loads. Guest browsing on a hosted copy requires a public hosting audience as well as this version of the source.
 
-SAM 3D generation is a separate local experiment. The active route now has a generator adapter and persistent model cache, but the adapter deliberately returns `not_configured` until a real conversion service is connected. It does not run the experiment or fabricate a GLB.
+SAM 3D generation now uses the existing Runpod GPU through the server-only `MODEL_API_URL` and `MODEL_API_KEY`. The active Amazon route uses the start/poll adapter and persistent model cache; the camera studio uses a separate owner-bound upload gateway to the same service. Missing configuration returns `not_configured`. See [MODEL_GENERATION.md](MODEL_GENERATION.md) and [PHOTO_TO_3D.md](PHOTO_TO_3D.md).
 
 ## Code entry points
 

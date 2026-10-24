@@ -1,3 +1,5 @@
+import { validateGeneratedModel } from './generated-model-validation.js';
+export { validateGeneratedModel } from './generated-model-validation.js';
 import { createImporter } from './amazon-import.js';
 import { ApiError } from './partner/errors.js';
 import { modelGenerator } from './model-generator.js';
@@ -6,7 +8,6 @@ import { parseProduct } from '../src/lib/products.ts';
 
 const HOUR = 3600000;
 const POLL_MS = 3000;
-const MAX_GLB_BYTES = 25 * 1024 * 1024;
 const MAX_METADATA_BYTES = 256 * 1024;
 const root = asin => `generated-models/amazon-com/${asin}`;
 const canonicalUrl = asin => `https://www.amazon.com/dp/${asin}`;
@@ -24,48 +25,14 @@ function imageUrl(listing) {
   }) ?? null;
 }
 
-// Validate the GLB container before making it a public model. This catches
-// truncation, non-GLB responses and models that depend on external asset URLs.
-// A future provider remains responsible for valid geometry and its true scale.
-export function validateGeneratedModel(result) {
-  const bytes = result?.glb;
-  if (!(bytes instanceof Uint8Array) || bytes.byteLength < 20 || bytes.byteLength > MAX_GLB_BYTES) throw new Error('Invalid GLB size.');
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  if (view.getUint32(0, true) !== 0x46546c67 || view.getUint32(4, true) !== 2 || view.getUint32(8, true) !== bytes.byteLength) throw new Error('Invalid GLB header.');
-  let offset = 12, doc, binaryLength = null, chunks = 0;
-  while (offset < bytes.byteLength) {
-    if (offset + 8 > bytes.byteLength) throw new Error('Truncated GLB chunk.');
-    const length = view.getUint32(offset, true), kind = view.getUint32(offset + 4, true);
-    offset += 8;
-    if (length % 4 || offset + length > bytes.byteLength) throw new Error('Invalid GLB chunk.');
-    if (chunks === 0 && kind === 0x4e4f534a) {
-      doc = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(offset, offset + length)));
-    } else if (chunks === 1 && kind === 0x004e4942) binaryLength = length;
-    else throw new Error('Unsupported GLB chunk.');
-    offset += length; chunks++;
-  }
-  if (doc?.asset?.version !== '2.0' || !Array.isArray(doc.meshes) || !doc.meshes.length
-      || !Array.isArray(doc.scenes) || !doc.scenes.length) throw new Error('GLB has no scene geometry.');
-  const embedded = value => typeof value === 'string' && /^data:[a-z0-9.+\-/]+;base64,[a-z0-9+/]*={0,2}$/i.test(value);
-  if (doc.buffers !== undefined && !Array.isArray(doc.buffers)) throw new Error('Invalid GLB buffers.');
-  for (const [index, buffer] of (doc.buffers ?? []).entries()) {
-    if (!Number.isInteger(buffer.byteLength) || buffer.byteLength <= 0) throw new Error('Invalid GLB buffer.');
-    if (buffer.uri !== undefined) { if (!embedded(buffer.uri)) throw new Error('External GLB buffer.'); }
-    else if (index !== 0 || binaryLength === null || buffer.byteLength > binaryLength || binaryLength - buffer.byteLength > 3) throw new Error('Missing GLB buffer.');
-  }
-  if (doc.images !== undefined && !Array.isArray(doc.images)) throw new Error('Invalid GLB images.');
-  for (const image of doc.images ?? []) {
-    if (image.uri !== undefined) { if (!embedded(image.uri)) throw new Error('External GLB image.'); }
-    else if (!Number.isInteger(image.bufferView) || !doc.bufferViews?.[image.bufferView]) throw new Error('Missing embedded image.');
-  }
-  if (!result.dimensions || !['width', 'height', 'depth'].every(name => Number.isFinite(result.dimensions[name]) && result.dimensions[name] > 0 && result.dimensions[name] <= 20)) throw new Error('Invalid model dimensions.');
-  return bytes;
-}
 
 function publicValue(record, cached = false) {
   const model = { status: record.status };
   if (record.status === 'ready') model.source = cached ? 'cache' : record.source;
-  if (record.status === 'pending') model.retryAfterMs = POLL_MS;
+  if (record.status === 'pending') {
+    model.retryAfterMs = POLL_MS;
+    if (['preparing', 'reconstructing', 'texturing', 'exporting'].includes(record.stage)) model.stage = record.stage;
+  }
   return { listing: record.listing, product: record.status === 'ready' ? record.product : null, model, cached };
 }
 
@@ -77,6 +44,7 @@ function generatedProduct(listing, result, hash) {
     category: ['Seating', 'Tables', 'Lighting', 'Storage'].includes(result.category) ? result.category : 'Storage',
     tagline: listing.brand || 'Amazon product', description: listing.features?.[0] || 'Generated from the Amazon product image. Verify its appearance and measurements before buying.',
     dimensions: { width: result.dimensions.width, height: result.dimensions.height, depth: result.dimensions.depth },
+    ...(result.scaleReference ? { scaleReference: result.scaleReference } : {}),
     material: cleanText(result.material, 'Generated product appearance'), background: '#e9ede5', footprint: 'rectangle',
     variants: [{ id: asin, asin, productUrl: canonicalUrl(asin),
       name: cleanText(selectedColor?.name, cleanText(result.colorName, 'Original appearance')),
@@ -180,7 +148,8 @@ export function createModelService({ lookup, generator = modelGenerator, now = D
       return publicValue(registered, cached);
     }
     if (!storageAvailable) return publicValue(envelope(asin, value, 'storage_unavailable'), cached);
-    if (fresh && record.generatorVersion === version && ['not_configured', 'no_image'].includes(record.status)) return publicValue(record, true);
+    if (fresh && record.generatorVersion === version && ['not_configured', 'no_image'].includes(record.status)
+      && !(record.status === 'not_configured' && env.MODEL_API_URL && env.MODEL_API_KEY)) return publicValue(record, true);
 
     const input = { asin, url: canonicalUrl(asin), imageUrl: imageUrl(value.listing), listing: value.listing,
       idempotencyKey: `furniture-ar:amazon-com:${asin}:${version}` };
@@ -210,10 +179,10 @@ export function createModelService({ lookup, generator = modelGenerator, now = D
     const controller = new AbortController(); let timer;
     try {
       result = await Promise.race([
-        Promise.resolve().then(() => existingJob ? generator.poll({ ...input, jobId: record.jobId, signal: controller.signal }) : generator.start({ ...input, signal: controller.signal })),
+        Promise.resolve().then(() => existingJob ? generator.poll({ ...input, jobId: record.jobId, signal: controller.signal }, env) : generator.start({ ...input, signal: controller.signal }, env)),
         new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('Model adapter timed out.')); }, timeoutMs); }),
       ]);
-    } catch { result = { status: 'failed' }; }
+    } catch { result = existingJob ? { status: 'pending', jobId: record.jobId, stage: record.stage } : { status: 'failed' }; }
     finally { clearTimeout(timer); }
     try {
       if (result?.status === 'ready') {
@@ -226,13 +195,15 @@ export function createModelService({ lookup, generator = modelGenerator, now = D
           customMetadata: { asin, amazonUrl: input.url },
         });
         const ready = { ...next, status: 'ready', source: 'generated', hash,
-          listing: { ...next.listing, modelNote: 'Approximate model generated from the product image. Its dimensions describe the generated geometry; verify appearance and measurements against the selected Amazon listing before buying.' },
+          listing: { ...next.listing, modelNote: result.scaleReference === 'preview'
+            ? 'Approximate photo-generated model at a reference height of 1 m. This listing has no usable measurement, so AR and room placement are unavailable.'
+            : `Approximate model generated from the product image.${result.scaleReference ? ` Scale uses the listed ${result.scaleReference}; other dimensions follow the reconstructed proportions.` : ''} Verify appearance and measurements before buying.` },
           product: generatedProduct(value.listing, result, hash) };
         const written = await writeRecord(bucket, ready, intent);
         return publicValue(written.record, cached || written.conflict);
       }
       if (result?.status === 'pending' && typeof result.jobId === 'string' && result.jobId.length > 0 && result.jobId.length <= 500) {
-        Object.assign(next, { status: 'pending', jobId: result.jobId, nextPollAt: now() + POLL_MS });
+        Object.assign(next, { status: 'pending', jobId: result.jobId, stage: result.stage, nextPollAt: now() + POLL_MS });
       } else next.status = result?.status === 'not_configured' ? 'not_configured' : 'failed';
       const written = await writeRecord(bucket, next, intent);
       return publicValue(written.record, cached || written.conflict);

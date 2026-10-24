@@ -16,7 +16,8 @@ Requires Node.js 22.12+ (or a supported newer version).
 ```sh
 npm ci
 cp .dev.vars.example .dev.vars
-# Add the supplied SerpApi key to .dev.vars (server-only).
+# Add SERPAPI_API_KEY for Amazon search/import and MODEL_API_URL + MODEL_API_KEY for SAM 3D.
+# These are server-only values. Preserve an existing .dev.vars instead of overwriting it.
 npm run dev
 ```
 
@@ -30,7 +31,13 @@ npm run preview
 
 Amazon selections share a persistent model cache, keyed by marketplace and exact ASIN rather than tracking parameters in a product link. A completed model is reused before calling SerpApi or the generator again. Its GLB and product-link metadata live under `generated-models/amazon-com/<ASIN>/` in the website's R2 storage. Local development uses persistent local R2 storage; deployed storage is shared across visitors and devices.
 
-The image-to-GLB generator is deliberately a disabled adapter for now. It receives the verified product's photo and supports both immediate results and jobs that finish later. No sample shape is substituted for an unknown product. See [generator integration and storage](MODEL_GENERATION.md) for the adapter contract, cache layout, and deployment requirements. Stored prices, stock, and colors are snapshots; the cache does not continuously refresh Amazon availability.
+The image-to-GLB adapter now calls the team’s existing SAM 3D Runpod service. An uncached product photo starts an asynchronous job; the preview shows its real stage, then loads and persists the generated GLB. Known registered models and completed cached models are still reused. No sample shape is substituted for an unknown product. See [generator integration and storage](MODEL_GENERATION.md) for the adapter contract, cache layout, and deployment requirements. Stored prices, stock, and colors are snapshots; the cache does not continuously refresh Amazon availability.
+
+## Camera → GLB → AR
+
+Choose **Photo to 3D** or **Open camera**, sign in, capture/upload a photo, and press **Generate 3D model**. The model runs on the existing GPU; a real status animation tracks preparation, reconstruction and export. Enter a measured height before placing the generated model in AR, or download its GLB. See [PHOTO_TO_3D.md](./PHOTO_TO_3D.md) and [the Runpod service](./services/sam3d/README.md).
+
+For Amazon models, scale uses the first available labeled height, width or depth while preserving proportions. Without a usable measurement, the model is a clearly labeled 1 m reference preview; AR and room placement stay unavailable. A single photo cannot determine real dimensions.
 
 ## Room layouts
 
@@ -82,7 +89,7 @@ Amazon ASIN B0F2ML48Y6 and the six registered table finish ASINs listed in [INTE
 
 The partner’s SerpApi implementation is integrated into `POST /api/products/import` and `POST /api/products/search`. See [INTEGRATION.md](./INTEGRATION.md) for setup, request/response details, material variants, supported links, limitations, and model provenance. The API key is a server secret; it is never bundled into the phone app.
 
-The same-origin route runs in the Cloudflare Worker for local development and hosted deployment. SAM 3D generation remains a separate [local experiment](./experiments/README.md) and is not connected to live imports yet. Product photos and URLs alone do not provide accurate geometry. See [VALIDATION.md](./VALIDATION.md) for the tested behavior and remaining limits.
+The same-origin route runs in the Cloudflare Worker for local development and hosted deployment. SAM 3D generation is connected to live imports through `server/model-generator.js` and to camera uploads through [Photo to 3D](./PHOTO_TO_3D.md). The [older local experiment](./experiments/README.md) is retained for reference. Product photos and URLs alone do not provide accurate geometry. See [VALIDATION.md](./VALIDATION.md) for the tested behavior and remaining limits.
 
 ## Source map
 
@@ -101,7 +108,7 @@ The same-origin route runs in the Cloudflare Worker for local development and ho
 - `src/lib/amazon.ts`: live listing validation and import request.
 - `src/lib/amazon-search.ts`: search result validation and keyword-search requests.
 - `server/`: adapted partner transport, normalizer, importer, caching and access checks.
-- `server/model-generator.js`: disabled photo-to-GLB adapter and future provider contract.
+- `server/model-generator.js`: live SAM 3D start/poll adapter for the Amazon cache; `server/sam3d-glb.js` preserves proportions and establishes metric bounds.
 - `server/model-service.js`: exact-product model resolution, persistent files, and generation status.
 - `worker/index.ts`: hosted API route and static asset serving.
 - `tests/`: dimensions, importer contracts, input validation, finish persistence, material isolation/restoration and combined GLB/USDZ colors and transforms.

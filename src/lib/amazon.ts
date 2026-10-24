@@ -10,6 +10,7 @@ export interface AmazonModel {
   status: 'ready' | 'not_configured' | 'pending' | 'failed' | 'storage_unavailable' | 'no_image';
   source?: 'registered' | 'generated' | 'cache';
   retryAfterMs?: number;
+  stage?: 'preparing' | 'reconstructing' | 'texturing' | 'exporting';
 }
 export interface AmazonProductResult { listing: AmazonListing; product: FurnitureProduct | null }
 export interface AmazonListing {
@@ -30,10 +31,12 @@ const record = (value: unknown): value is Record<string, unknown> => !!value && 
 export function parseAmazonModel(value: unknown): AmazonModel {
   if (!record(value) || !['ready', 'not_configured', 'pending', 'failed', 'storage_unavailable', 'no_image'].includes(value.status as string)
       || (value.source !== undefined && !['registered', 'generated', 'cache'].includes(value.source as string))
+      || (value.stage !== undefined && !['preparing','reconstructing','texturing','exporting'].includes(value.stage as string))
       || (value.retryAfterMs !== undefined && (typeof value.retryAfterMs !== 'number' || !Number.isInteger(value.retryAfterMs) || value.retryAfterMs < 0 || value.retryAfterMs > 300000))) {
     throw new ImportError('The model service returned incomplete details. Please try again.', 'INVALID_MODEL_RESPONSE');
   }
   return { status: value.status as AmazonModel['status'],
+    ...(value.stage !== undefined ? { stage: value.stage as AmazonModel['stage'] } : {}),
     ...(value.source !== undefined ? { source: value.source as AmazonModel['source'] } : {}),
     ...(value.retryAfterMs !== undefined ? { retryAfterMs: value.retryAfterMs as number } : {}) };
 }

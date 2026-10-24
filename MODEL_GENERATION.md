@@ -1,6 +1,6 @@
 # Amazon photo-to-GLB integration
 
-The product-selection path is ready for a generator, but the converter itself remains deliberately disabled. `server/model-generator.js` is the integration point. It must not return an unrelated demo model for an Amazon listing.
+The product-selection path now uses the real SAM 3D service through `server/model-generator.js`. It downloads the verified Amazon CDN photo (maximum 8 MiB), submits a private asynchronous job, polls its actual stage, and normalizes the returned GLB before caching. The existing exact-ASIN cache and registered models take priority. No demo model is substituted.
 
 ## Selection and reuse
 
@@ -35,18 +35,26 @@ Publishing the current Sites project provisions its declared storage binding. If
 
 Cloudflare documents the [R2 Worker binding and object API](https://developers.cloudflare.com/r2/api/workers/workers-api-reference/) and [persistent local development data](https://developers.cloudflare.com/workers/local-development/local-data/).
 
-## Connecting the converter
+## SAM 3D configuration
 
-Replace the exported `modelGenerator` adapter's implementation while keeping its versioned start/poll contract. Input includes the exact ASIN, canonical product URL, chosen photo URL, full imported listing, a stable idempotency key, and an `AbortSignal`. The generator must use that key when submitting work to prevent duplicate jobs across Worker instances. Repeated requests within one Worker are coalesced. Conditional R2 writes coordinate short job leases and prevent a late pending response from replacing a completed model; the provider idempotency key covers retries after a crash or expired lease.
+Set `MODEL_API_URL` and `MODEL_API_KEY` in the ignored `.dev.vars` locally, or in server runtime secrets for deployment. These are the same settings as the camera studio. The current temporary HTTPS connection must remain running alongside the existing Runpod service. If its address changes, update the URL and restart the website; credentials never enter the frontend. Fresh Amazon searches/imports also need `SERPAPI_API_KEY`.
+
+The adapter converts its stable versioned cache identity into the UUID-shaped idempotency key accepted by the Pod and uses a dedicated catalog owner. Camera jobs remain isolated to their signed-in owners. Amazon imports remain available to guests. The Pod limits the shared catalog to four new jobs per five minutes and four queued/running jobs overall. Temporary polling outages retain the accepted job instead of creating another. Actual inference failures stay failed for that idempotency key until provider retention expires (24 hours); inspect its private job logs before retrying.
+
+`server/sam3d-glb.js` reads actual static mesh positions and node transforms, retains embedded materials/binary data, and adds a uniform scale/translation. Height is preferred, then width, then depth. `product.scaleReference` records the chosen listing axis. With no usable axis it is `preview`: a reference height of 1 m, explicitly labeled, with AR/layout placement blocked. The other dimensions follow reconstructed proportions, not forced listing dimensions. Animated, skinned, externally referenced, invalid, or excessively complex meshes fail validation.
+
+## Adapter contract
+
+The exported `modelGenerator` implements a versioned `start(input, env)` / `poll(input, env)` contract. Runtime secrets are supplied in the second argument and are never stored in model metadata. Input includes the exact ASIN, canonical product URL, chosen photo URL, full imported listing, a stable idempotency key, and an `AbortSignal`. The generator must use that key when submitting work to prevent duplicate jobs across Worker instances. Repeated requests within one Worker are coalesced. Conditional R2 writes coordinate short job leases and prevent a late pending response from replacing a completed model; the provider idempotency key covers retries after a crash or expired lease.
 
 The adapter returns one of these results:
 
 ```ts
-// No converter is installed yet. This is the default.
+// The service URL/key is missing or invalid.
 { status: 'not_configured' }
 
 // A remote job has been accepted. poll receives its job ID.
-{ status: 'pending', jobId: 'provider-job-id' }
+{ status: 'pending', jobId: 'provider-job-id', stage: 'reconstructing' }
 
 // A successful conversion, from start or poll.
 {
@@ -63,7 +71,7 @@ The adapter returns one of these results:
 { status: 'failed' }
 ```
 
-Long conversions should be submitted as remote jobs; `start` and `poll` must finish within the 15-second adapter timeout and honor the supplied abort signal. Do not run GPU reconstruction inside the Worker or keep one HTTP request open for the full reconstruction. Keep provider credentials in server secrets and never embed them in model URLs or metadata. Pending jobs are polled at most once per three seconds on the server; the browser stops automatic checks after a bounded interval and offers a manual status check.
+Long conversions should be submitted as remote jobs; `start` and `poll` must finish within the 15-second adapter timeout and honor the supplied abort signal. Do not run GPU reconstruction inside the Worker or keep one HTTP request open for the full reconstruction. Keep provider credentials in server secrets and never embed them in model URLs or metadata. Pending jobs are polled at most once per three seconds on the server; the browser shows a stage animation, polls for up to twenty minutes, and then offers a manual status check.
 
 The GLB must be self-contained glTF 2.0 with embedded resources, no external resource URLs, and no more than 25 MiB. It must contain usable geometry in meters, Y up, with its base at Y=0 and its X/Z footprint centered. Returned dimensions describe the actual exported geometry. The existing viewer checks the model bounds before enabling AR; the cache does not stretch a model to hide incorrect scale. Listing dimensions remain separately labeled.
 
