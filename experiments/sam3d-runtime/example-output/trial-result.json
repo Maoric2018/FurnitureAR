@@ -1,0 +1,24 @@
+{
+  "seconds": 601.2,
+  "model": "preview.glb",
+  "bounds": [
+    [
+      -0.5005930066108704,
+      -0.3923995792865753,
+      -0.48371395468711853
+    ],
+    [
+      0.49988847970962524,
+      0.38900551199913025,
+      0.48438236117362976
+    ]
+  ],
+  "scale_verified": false,
+  "input": "sam3d-objects-mac/notebook/images/shutterstock_stylish_kidsroom_1640806567/image.png",
+  "mask": "20.png alpha channel",
+  "steps": 10,
+  "seed": 22,
+  "mesh_decode_device": "cpu",
+  "texture_size": 1024,
+  "texture_views": 24
+}

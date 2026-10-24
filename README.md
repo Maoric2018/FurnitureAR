@@ -64,7 +64,7 @@ Amazon ASIN B0F2ML48Y6 and the six registered table finish ASINs listed in [INTE
 
 The partner’s SerpApi implementation is integrated into `POST /api/products/import` and `POST /api/products/search`. See [INTEGRATION.md](./INTEGRATION.md) for setup, request/response details, material variants, supported links, limitations, and model provenance. The API key is a server secret; it is never bundled into the phone app.
 
-The same-origin route runs in the Cloudflare Worker for local development and hosted deployment. SAM 3D generation remains a separate local trial and is not connected to live imports yet. Product photos and URLs alone do not provide accurate geometry.
+The same-origin route runs in the Cloudflare Worker for local development and hosted deployment. SAM 3D generation remains a separate [local experiment](./experiments/README.md) and is not connected to live imports yet. Product photos and URLs alone do not provide accurate geometry. See [VALIDATION.md](./VALIDATION.md) for the tested behavior and remaining limits.
 
 ## Source map
 
@@ -86,7 +86,7 @@ The same-origin route runs in the Cloudflare Worker for local development and ho
 - `worker/index.ts`: hosted API route and static asset serving.
 - `tests/`: dimensions, importer contracts, input validation, finish persistence, material isolation/restoration and combined GLB/USDZ colors and transforms.
 
-Original procedural furniture GLBs remain as development fixtures and can be regenerated with `npm run models`. Live imports only associate the explicitly registered models above.
+Original procedural furniture GLBs remain as development fixtures and can be regenerated with `npm run models`. Live imports only associate the explicitly registered models above. The supplied table and lamp are independent of these procedural fixtures.
 
 ## Credits
 

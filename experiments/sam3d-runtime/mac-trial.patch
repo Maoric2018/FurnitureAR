@@ -1,0 +1,46 @@
+diff --git a/cli.py b/cli.py
+index 25be17f..f77ba49 100755
+--- a/cli.py
++++ b/cli.py
+@@ -347,6 +347,7 @@ def run_pipeline(
+     export_mode=DEFAULT_EXPORT_MODE,
+     game_target=DEFAULT_GAME_TARGET,
+     game_method=DEFAULT_GAME_METHOD,
++    seed=None,
+ ):
+     import torch as _t
+ 
+@@ -373,7 +374,8 @@ def run_pipeline(
+     pipeline = Inference(CONFIG, compile=False, low_memory_single_shot=True)
+     ok("Pipeline ready")
+ 
+-    seed = random.randint(0, 41)   # capped 0-41: 42 was observed to overflow fp16
++    if seed is None:
++        seed = random.randint(0, 41)   # capped 0-41: 42 was observed to overflow fp16
+     ok(f"Using seed {seed}")
+ 
+     hdr("OBJECT")
+diff --git a/sam3d_objects/pipeline/inference_pipeline_pointmap.py b/sam3d_objects/pipeline/inference_pipeline_pointmap.py
+index 25a520d..9a3bad6 100644
+--- a/sam3d_objects/pipeline/inference_pipeline_pointmap.py
++++ b/sam3d_objects/pipeline/inference_pipeline_pointmap.py
+@@ -273,7 +273,9 @@ class InferencePipelinePointMap(InferencePipeline):
+             with torch.no_grad():
+                 with torch.autocast(device_type=self.device.type, dtype=self.dtype):
+                     output = self.depth_model(loaded_image)
+-            pointmaps = output["pointmaps"]
++            # MoGe can return fp16 under MPS autocast, while Transform3d uses
++            # fp32 matrices. Keep geometry in fp32 for the camera conversion.
++            pointmaps = output["pointmaps"].float()
+             camera_convention_transform = (
+                 Transform3d()
+                 .rotate(camera_to_pytorch3d_camera(device=self.device).rotation)
+@@ -283,7 +285,7 @@ class InferencePipelinePointMap(InferencePipeline):
+             intrinsics = output.get("intrinsics", None)
+         else:
+             output = {}
+-            points_tensor = pointmap.to(self.device)
++            points_tensor = pointmap.to(device=self.device, dtype=torch.float32)
+             if loaded_image.shape != points_tensor.shape:
+                 # Interpolate points_tensor to match loaded_image size
+                 # loaded_image has shape [3, H, W], we need H and W

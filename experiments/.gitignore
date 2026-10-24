@@ -1,0 +1,10 @@
+/sam3d-objects-mac/
+/s3d_env/
+/sam3d-runtime/.hf/
+/sam3d-runtime/torch-cache/
+/sam3d-runtime/matplotlib/
+/sam3d-runtime/outputs/
+/sam3d-runtime/*.glb
+/sam3d-runtime/*.log
+/sam3d-runtime/preflight.json
+**/__pycache__/
