@@ -66,6 +66,8 @@ Open the HTTPS deployment in Safari on iPhone or Chrome on an ARCore-compatible 
 
 ## Supplied models
 
+The [30-model catalog](public/models/catalog/README.md) organizes the supplied 10-model and 20-model bundles into seating, tables/desks, storage, and beds. Its [JSON inventory](public/models/catalog/catalog.json) preserves the embedded product metadata, original filenames, archive provenance, dimensions, and SHA-256 checksums. GLB contents are unchanged. These additional assets are inventoried for integration; they are not yet registered with the live Amazon importer.
+
 `public/models/little-tree-oak-table.glb` is the user-supplied file, preserved without rescaling or changing its textures. Its embedded metadata specifies a 1.199896 m diameter and 0.750062 m height (displayed as 120 × 120 × 75 cm). Geometry is centered on X/Z with its base at Y=0. The model describes itself as a photo-based reconstruction: overall dimensions follow the listing, with some hidden construction details estimated. These measurements come from the supplied file, not a new independent product verification.
 
 Amazon ASIN B0F2ML48Y6 and the six registered table finish ASINs listed in [INTEGRATION.md](./INTEGRATION.md) use this table geometry. ASIN B0C4DGFFCM uses the supplied Ambimall lamp. The lamp is 1.524 m tall, and its footprint includes the cord. Both models are manually created approximations, not Amazon-provided assets. Model bounds and Amazon listing measurements are displayed separately. Previously saved products retain their original models. Round furniture uses an elliptical footprint in the floor plan and in room-boundary checks.
