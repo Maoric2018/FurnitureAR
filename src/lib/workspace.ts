@@ -2,6 +2,8 @@ import { getVariant, parseProduct } from './products';
 import type { FurnitureProduct } from './products';
 import { parseListing } from './amazon';
 import type { AmazonListing } from './amazon';
+import { parseSurvey } from './room-scan';
+import type { RoomSurvey } from './room-scan';
 
 export interface ProductItem {
   id: string;
@@ -15,7 +17,7 @@ export interface ProductItem {
 export interface PlacedItem extends ProductItem { product: FurnitureProduct; x: number; z: number; rotation: number }
 export interface RoomLayout {
   id: string; name: string; roomType: string; width: number; depth: number;
-  items: PlacedItem[]; updatedAt: string;
+  items: PlacedItem[]; updatedAt: string; survey?: RoomSurvey;
 }
 export interface Workspace { layouts: RoomLayout[]; items: ProductItem[] }
 export const WORKSPACE_KEY = 'furniture-ar:workspace:v2';
@@ -84,7 +86,7 @@ export function placeItem(room:RoomLayout, item:ProductItem): RoomLayout {
   return {...room,items:[...room.items,placed],updatedAt:new Date().toISOString()};
 }
 export function duplicateLayout(layout:RoomLayout): RoomLayout {
-  return {...layout,id:crypto.randomUUID(),name:`${layout.name} copy`.slice(0,80),items:layout.items.map(item=>({...item,id:crypto.randomUUID()})),updatedAt:new Date().toISOString()};
+  return {...structuredClone(layout),id:crypto.randomUUID(),name:`${layout.name} copy`.slice(0,80),items:layout.items.map(item=>({...item,id:crypto.randomUUID()})),updatedAt:new Date().toISOString()};
 }
 export function parseWorkspace(raw:unknown):Workspace {
   if(!raw||typeof raw!=='object') return {layouts:[],items:[]};
@@ -114,7 +116,7 @@ export function parseWorkspace(raw:unknown):Workspace {
       const item=readItem(entry);
       if(item?.product&&[entry.x,entry.z,entry.rotation].every(Number.isFinite))items.push(clampPlacement({...item,product:item.product,x:entry.x,z:entry.z,rotation:entry.rotation},value));
     }
-    layouts.push({...value,items});
+    try { layouts.push({...value,items,...(value.survey?{survey:parseSurvey(value.survey)}:{})}); } catch { /* Ignore corrupt room geometry without affecting other layouts. */ }
   }
   return {layouts,items:Array.isArray(data.items)?data.items.map(readItem).filter((item):item is ProductItem=>!!item):[]};
 }
