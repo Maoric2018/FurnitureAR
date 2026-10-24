@@ -126,7 +126,7 @@ export function solidWallSegments(wall: ScanWall, openings: ScanOpening[]): Scan
 export function placementWarnings(item: PlacedItem, layout: RoomLayout): string[] {
   if(!layout.survey)return [];
   const polygon=itemPolygon(item),survey=layout.survey,messages:string[]=[];
-  for(const obstacle of survey.obstacles)if(polygonsOverlap(polygon,footprintCorners(obstacle)))messages.push(`Overlaps ${obstacle.name}`);
+  if(survey.obstacles.some(obstacle=>polygonsOverlap(polygon,footprintCorners(obstacle))))messages.push('Overlaps an existing object');
   if(survey.walls.some(w=>solidWallSegments(w,survey.openings).some(segment=>polygonsOverlap(polygon,segmentBox(segment,.10)))))messages.push('Crosses a scanned wall');
   if(survey.openings.some(o=>o.kind!=='window'&&polygonsOverlap(polygon,segmentBox(o,.9))))messages.push('Near a doorway — check access');
   return messages;

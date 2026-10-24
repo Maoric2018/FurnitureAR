@@ -50,9 +50,9 @@ test('Round-trip saved scans and duplicate rooms retain independent editable obs
 });
 test('Placement detects furniture overlap and keeps the middle of the room clear',()=>{
   const room=makeRoom();assert.deepEqual(placementWarnings(product(),room),[]);
-  assert.ok(placementWarnings({...product(),x:-1.1,z:-1.35},room).includes('Overlaps Existing sofa'));
-  assert.ok(placementWarnings({...product(),x:2.05,z:-.8},room).includes('Overlaps Cabinet'));
-  assert.ok(placementWarnings({...product(),x:-1.8,z:1.2},room).includes('Overlaps Reading chair'));
+  assert.ok(placementWarnings({...product(),x:-1.1,z:-1.35},room).includes('Overlaps an existing object'));
+  assert.ok(placementWarnings({...product(),x:2.05,z:-.8},room).includes('Overlaps an existing object'));
+  assert.ok(placementWarnings({...product(),x:-1.8,z:1.2},room).includes('Overlaps an existing object'));
   assert.deepEqual(placementWarnings(product(),createLayout('Unscanned')),[]);
 });
 test('Rotated narrow furniture uses its footprint rather than a large axis-aligned box',()=>{

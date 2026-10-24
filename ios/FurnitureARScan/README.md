@@ -15,7 +15,7 @@ Native SwiftUI companion for the Furniture AR mobile website. Uses Apple's RoomP
 2. Slowly capture one room, including every wall, doorway, and piece of furniture. Follow the on-screen RoomPlan guidance, then choose **Finish scan**.
 3. Review the outline and name the room. **Open in Furniture AR** opens the deployed website with a review screen. Confirm **Create layout from scan**.
 4. Alternatively choose **Save / share room file**, then **Save to Files** or **AirDrop**. In the website choose **Import room scan** and select the exported JSON file. Large scans automatically use this file flow.
-5. Existing objects appear as fixed, hatched footprints. Select one to correct its label, dimensions, position, or rotation; add missed furniture or remove a false detection. Add Amazon products and arrange around the existing objects. Collision and doorway warnings are estimates.
+5. Existing objects appear as fixed, hatched footprints. They appear without detected category labels. Select one to correct its dimensions, position, or rotation; add missed furniture or remove a false detection. Add Amazon products and arrange around the existing objects. Collision and doorway warnings are estimates.
 
 The web app keeps layouts in that browser's local storage; it does not sync rooms across devices. Import the file on each device where you want the room. AR previews contain new products only and require manual alignment with the real room. Scanning does not automatically establish an AR anchor for a later browser session.
 
