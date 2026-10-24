@@ -132,14 +132,18 @@ const importedListing: AmazonListing={
 };
 
 test('Imported model selections retain listing provenance in saved items and room copies',()=>{
+  const listing: AmazonListing={...importedListing,colors:{status:'observed',options:[
+    {asin:importedListing.asin,name:'Oak',url:importedListing.url,imageUrl:null,selected:true},
+    {asin:'B0D8P23H61',name:'Black',url:'https://www.amazon.com/dp/B0D8P23H61',imageUrl:null,selected:false},
+  ]}};
   const product={...placeholderProduct,variants:[
     {...placeholderProduct.variants[0],asin:importedListing.asin,productUrl:importedListing.url},
     {...placeholderProduct.variants[1],asin:'B0D8P23H61',productUrl:'https://www.amazon.com/dp/B0D8P23H61'},
   ]};
-  const original=createImportedItem(importedListing,product);
+  const original=createImportedItem(listing,product);
   assert.equal(original.variantId,'oak');
   const selected=selectItemVariant(original,'black');
-  assert.equal(selected.listing,importedListing);
+  assert.equal(selected.listing,listing);
   assert.equal(selected.sourceUrl,importedListing.url);
   assert.equal(selected.product,product);
   const room=placeItem(createLayout('Dining room'),selected);

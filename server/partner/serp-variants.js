@@ -55,6 +55,8 @@ function normalizeGroup(group) {
       asin: asin(own(item, 'asin')),
       imageUrl: httpsUrl(own(item, 'image')),
       selected: boolean(own(item, 'selected')),
+      unavailable: boolean(own(item, 'unavailable')),
+      available: boolean(own(item, 'available')),
     }];
   });
   return [{ title, kind: groupKind(title), options }];
@@ -73,6 +75,7 @@ function normalizeCombination(combination) {
     dimensions: Object.fromEntries(entries),
     asin: asin(own(combination, 'asin')),
     unavailable: boolean(own(combination, 'unavailable')),
+    available: boolean(own(combination, 'available')),
   }];
 }
 

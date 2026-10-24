@@ -2,10 +2,12 @@
 
 A mobile web app with two ways to plan furniture:
 
-- **One product:** paste a link, inspect its 3D model, choose a finish, preview it in AR, and save it or add it to a room.
-- **A whole room:** create a named layout, add multiple links, move and rotate pieces on a floor plan, choose each piece’s finish, then view the complete arrangement in 3D or AR.
+- **One product:** search Amazon or paste a link, inspect its 3D model, choose a finish, preview it in AR, and save it or add it to a room.
+- **A whole room:** create a named layout, find products through search or links, move and rotate pieces on a floor plan, choose each piece’s finish, then view the complete arrangement in 3D or AR.
 
-The home screen is a workspace. Paste an **Amazon.com product link** to import its real name, photos, price, and available measurements. The table and lamp supplied by the project team have approximate 3D previews. Other products can be saved with their details; AR and room placement remain unavailable until a matching model exists. No unrelated placeholder is substituted.
+The home screen is a workspace. **Search Amazon by keyword** or paste an **Amazon.com product link** to import real product details. Search opens a photo-card list with prices and ratings when supplied, model-availability labels, and pagination. Selecting a result loads its full listing through the existing importer. The table and lamp supplied by the project team have approximate 3D previews. Other products can be saved with their details; AR and room placement remain unavailable until a matching model exists. No unrelated placeholder is substituted.
+
+Search is also available in Saved items and the room editor. It returns the products supplied for each Amazon search page, rather than attempting to download the entire catalog. Search results do not guarantee current stock; confirm price, availability, size, and finish on Amazon. Product search and import share the configured SerpApi account allowance; search runs only on submission or pagination, not on every keystroke.
 
 ## Run
 
@@ -46,7 +48,9 @@ Choose a named finish in the product preview or on a selected room piece when it
 
 The retained Little Tree sample palette offers textured Oak plus Black, Grey, Light Brown, Rustic Brown, White, and Brown **approximate solid-color previews**. These are authored previews, not color-matched scans or verified live availability. Dedicated GLBs can represent alternate appearances more faithfully. Exact variant ASINs and product links are optional metadata; when available, the product link follows the selected variant.
 
-The integrated Amazon importer reads observed color options for the registered Little Tree table family and maps recognized finishes to this palette. It keeps the listing’s exact variant ASINs and links and omits unavailable or ambiguous options; if color data is unusable, it retains the known finish for the requested ASIN. This is a limited model-family mapping, not general color discovery for every Amazon product. The lamp currently has only its original Beige and Black model.
+Every Amazon import now carries the listing’s observed color options and exact variant ASINs. Product, room, and in-AR color controls offer only reported options that also have a compatible modeled finish. Explicitly unavailable choices and different size/style combinations are excluded. Missing or ambiguous color data keeps the current model appearance but offers no unverified color changes; old saved imports without this data must be imported again to obtain current options.
+
+Color discovery also works for listings without a model, but does not create new geometry or material presets. The Little Tree table maps supported options to its authored palette; the lamp currently has only its original Beige and Black model. Options reflect the import snapshot and provider cache, not a continuous stock check. Changing color follows the exact variant’s Amazon link; the originally imported price and stock are not presented as the new variant’s price and stock.
 
 ## AR
 
@@ -68,7 +72,7 @@ Amazon ASIN B0F2ML48Y6 and the six registered table finish ASINs listed in [INTE
 
 ## Amazon importer
 
-The partner’s SerpApi implementation is integrated into `POST /api/products/import`. See [INTEGRATION.md](./INTEGRATION.md) for setup, request/response details, material variants, supported links, limitations, and model provenance. The API key is a server secret; it is never bundled into the phone app.
+The partner’s SerpApi implementation is integrated into `POST /api/products/import` and `POST /api/products/search`. See [INTEGRATION.md](./INTEGRATION.md) for setup, request/response details, material variants, supported links, limitations, and model provenance. The API key is a server secret; it is never bundled into the phone app.
 
 The same-origin route runs in the Cloudflare Worker for local development and hosted deployment. SAM 3D generation remains a separate [local experiment](./experiments/README.md) and is not connected to live imports yet. Product photos and URLs alone do not provide accurate geometry. See [VALIDATION.md](./VALIDATION.md) for the tested behavior and remaining limits.
 
@@ -87,6 +91,7 @@ The same-origin route runs in the Cloudflare Worker for local development and ho
 - `src/components/Viewer.tsx`: fixed-scale AR activation, tracking, errors and capability fallback.
 - `src/lib/products.ts`: product/variant schema and geometry dimension validation.
 - `src/lib/amazon.ts`: live listing validation and import request.
+- `src/lib/amazon-search.ts`: search result validation and keyword-search requests.
 - `server/`: adapted partner transport, normalizer, importer, caching and access checks.
 - `worker/index.ts`: hosted API route and static asset serving.
 - `tests/`: dimensions, importer contracts, input validation, finish persistence, material isolation/restoration and combined GLB/USDZ colors and transforms.

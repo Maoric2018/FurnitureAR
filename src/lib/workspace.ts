@@ -1,5 +1,5 @@
 import { getVariant, parseProduct } from './products';
-import type { FurnitureProduct } from './products';
+import type { FurnitureProduct, FurnitureVariant } from './products';
 import { parseListing } from './amazon';
 import type { AmazonListing } from './amazon';
 import { parseSurvey } from './room-scan';
@@ -53,13 +53,34 @@ export function sourceLabel(url: string) { try { return new URL(url).hostname.re
 export function createProductItem(url: string, product=placeholderProduct): ProductItem & { product: FurnitureProduct } {
   return {id:crypto.randomUUID(),name:product.name,sourceUrl:normalizeProductLink(url),product,variantId:getVariant(product).id,createdAt:new Date().toISOString()};
 }
+export function availableItemVariants(item: ProductItem): FurnitureVariant[] {
+  if (!item.product) return [];
+  if (!item.listing) return item.product.variants;
+  if (item.listing.colors?.status !== 'observed') return [];
+  const colors = new Map(item.listing.colors.options.map(option => [option.asin, option]));
+  return item.product.variants.flatMap(variant => {
+    const option = variant.asin ? colors.get(variant.asin.toUpperCase()) : undefined;
+    return option ? [{ ...variant, name: option.name, productUrl: option.url }] : [];
+  });
+}
+function reconcileItemVariant<T extends ProductItem>(item: T): T {
+  if (!item.product || item.listing?.colors?.status !== 'observed') return item;
+  const available = availableItemVariants(item);
+  if (available.some(variant => variant.id === item.variantId)) return item;
+  // Keep the model and placement when an old saved finish is no longer offered.
+  // The source ASIN remains a truthful preview even if it has no selectable colors.
+  const fallback = item.product.variants.find(variant => variant.asin?.toUpperCase() === item.listing!.asin)
+    ?? available[0] ?? getVariant(item.product, item.variantId);
+  return { ...item, variantId: fallback.id };
+}
 export function selectItemVariant<T extends ProductItem>(item: T, variantId: string): T {
-  if (!item.product?.variants.some(variant=>variant.id===variantId)) throw new Error('Choose an available finish for this item.');
+  if (!availableItemVariants(item).some(variant=>variant.id===variantId)) throw new Error('Choose an available finish for this item.');
   return {...item,variantId};
 }
 export function createImportedItem(listing: AmazonListing, product: FurnitureProduct | null): ProductItem {
-  return { id: crypto.randomUUID(), name: listing.title, sourceUrl: listing.url, product, listing,
-    ...(product ? {variantId:getVariant(product).id} : {}), createdAt: new Date().toISOString() };
+  const sourceVariant = product?.variants.find(variant => variant.asin?.toUpperCase() === listing.asin);
+  return reconcileItemVariant({ id: crypto.randomUUID(), name: listing.title, sourceUrl: listing.url, product, listing,
+    ...(product ? {variantId:(sourceVariant ?? getVariant(product)).id} : {}), createdAt: new Date().toISOString() });
 }
 export function createLayout(name: string, roomType='Living room', width=5, depth=4): RoomLayout {
   if(!name.trim()) throw new Error('Give your layout a name.');
@@ -82,7 +103,7 @@ export function placeItem(room:RoomLayout, item:ProductItem): RoomLayout {
   const columns=Math.max(1,Math.floor(room.width/spacing));
   const x=(index%columns)*spacing-(Math.min(columns,3)-1)*spacing/2;
   const z=Math.floor(index/columns)*spacing-room.depth/4;
-  const placed=clampPlacement({...item,product:item.product,id:crypto.randomUUID(),x,z,rotation:0},room);
+  const placed=clampPlacement({...reconcileItemVariant(item),product:item.product,id:crypto.randomUUID(),x,z,rotation:0},room);
   return {...room,items:[...room.items,placed],updatedAt:new Date().toISOString()};
 }
 export function duplicateLayout(layout:RoomLayout): RoomLayout {
@@ -105,7 +126,7 @@ export function parseWorkspace(raw:unknown):Workspace {
       }
       const {variantId: savedVariantId, ...rest}=item;
       const variant=product ? getVariant(product,typeof savedVariantId==='string'?savedVariantId:undefined) : null;
-      return {...rest,sourceUrl:normalizeProductLink(item.sourceUrl),product,...(listing?{listing}:{}),...(variant?{variantId:variant.id}:{})};
+      return reconcileItemVariant({...rest,sourceUrl:normalizeProductLink(item.sourceUrl),product,...(listing?{listing}:{}),...(variant?{variantId:variant.id}:{})});
     }catch{return null;}
   };
   const layouts:RoomLayout[]=[];

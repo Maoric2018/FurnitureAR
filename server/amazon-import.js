@@ -1,8 +1,7 @@
 import { SerpApiClient } from './partner/serpapi.js';
 import { normalizeSerpProduct } from './partner/serp-normalize.js';
 import { ApiError } from './partner/errors.js';
-import { normalizeSerpVariants } from './partner/serp-variants.js';
-import { adaptAmazonProduct } from './external-amazon-bridge.ts';
+import { resolveAmazonColors } from './amazon-colors.js';
 import { placeholderProduct } from '../src/lib/workspace.ts';
 
 const models = {
@@ -28,7 +27,11 @@ const tableFinishes = new Map([
   ['B0DSZGP1HK', 'White'], ['B0D8NQHBBH', 'Brown'],
 ]);
 
-function tableModel(asin, data, source) {
+export function hasRegisteredModel(asin) {
+  return typeof asin === 'string' && (Object.hasOwn(models, asin) || tableFinishes.has(asin));
+}
+
+function tableModel(asin, colors) {
   const name = tableFinishes.get(asin);
   if (!name) return null;
   const original = models.B0F2ML48Y6;
@@ -36,23 +39,25 @@ function tableModel(asin, data, source) {
   const selected = { ...finish, id: asin, asin, productUrl: `https://www.amazon.com/dp/${asin}` };
   const model = { ...original, material: `${name} finish`, variants: [selected],
     note: `${original.note} Alternate finishes are approximate solid-color previews.` };
-  const color = data.product_details?.color ?? data.item_specifications?.color;
-  // Never change geometry or size to fit a listing. The adapter uses the known
-  // model's meter bounds; listing measurements remain separate below.
-  try {
-    const product = adaptAmazonProduct({ source: 'serpapi', product: {
-      asin, title: source.title, selectedColor: color,
-      dimensions: { complete: true, meters: {
-        width: model.dimensions.width, height: model.dimensions.height, length: model.dimensions.depth,
-      } },
-      ...normalizeSerpVariants(data.product_results),
-    } }, asin);
-    return { ...model, variants: product.variants };
-  } catch {
-    // Missing or ambiguous variant data must not invent alternative colors.
-    // Keep the independently mapped requested finish and its model disclosure.
-    return model;
-  }
+  if (colors.status !== 'observed') return model;
+  const variants = colors.options.flatMap(option => {
+    const expectedName = tableFinishes.get(option.asin);
+    if (!expectedName || expectedName.toLowerCase() !== option.name.toLowerCase()) return [];
+    const palette = placeholderProduct.variants.find(variant => variant.name === expectedName);
+    return palette ? [{ ...palette, id: option.asin, asin: option.asin, name: option.name, productUrl: option.url,
+      ...(palette.materialOverrides ? { materialOverrides: palette.materialOverrides.map(override => ({ ...override })) } : {}) }] : [];
+  });
+  // The known model geometry stays unchanged. An unverified option cannot
+  // introduce a new material, model, size, or style.
+  return variants.some(variant => variant.asin === asin) ? { ...model, variants } : model;
+}
+
+function otherModel(asin, colors) {
+  const model = models[asin];
+  if (!model) return null;
+  const selected = colors.options.find(option => option.asin === asin);
+  return { ...model, variants: model.variants.map(variant => ({ ...variant, asin,
+    productUrl: `https://www.amazon.com/dp/${asin}`, name: selected?.name ?? variant.name })) };
 }
 
 export function parseAmazonLink(value) {
@@ -83,12 +88,23 @@ export function normalizeImport(data, requestedAsin, now = new Date()) {
   }
   const source = normalizeSerpProduct(data, requestedAsin);
   if (!source.title) throw new ApiError(502, 'INCOMPLETE_PRODUCT', 'Amazon returned incomplete product details. Try again shortly.');
-  const registered = tableModel(requestedAsin, data, source) ?? models[requestedAsin];
+  let colors = resolveAmazonColors(data.product_results, requestedAsin, data.product_details?.color ?? data.item_specifications?.color);
+  const suppliedColors = [data.product_details?.color, data.item_specifications?.color].filter(value => value !== undefined && value !== null);
+  if (suppliedColors.some(value => typeof value !== 'string')
+      || new Set(suppliedColors.map(value => typeof value === 'string' ? value.trim().toLowerCase() : value)).size > 1) {
+    colors = { status: 'unconfirmed', options: [] };
+  }
+  const expectedFinish = tableFinishes.get(requestedAsin);
+  const observedFinish = colors.options.find(option => option.selected)?.name;
+  if (expectedFinish && observedFinish && expectedFinish.toLowerCase() !== observedFinish.toLowerCase()) {
+    colors = { status: 'unconfirmed', options: [] };
+  }
+  const registered = tableModel(requestedAsin, colors) ?? otherModel(requestedAsin, colors);
   const listing = {
     asin: requestedAsin, title: source.title, brand: source.brand,
     url: `https://www.amazon.com/dp/${requestedAsin}`,
     images: source.images.map(image => image.url).slice(0, 8),
-    price: source.price, availability: source.availability,
+    price: source.price, availability: source.availability, colors,
     features: source.features.slice(0, 8), dimensionText: source.dimensionText,
     dimensions: source.dimensions ? {
       width: source.dimensions.meters.width, depth: source.dimensions.meters.length,

@@ -13,6 +13,22 @@ The app uses the partner's SerpApi transport and normalizer through a same-origi
 
 `VITE_PRODUCT_API_URL` optionally overrides the default `/api/products/import` URL. An external endpoint must return the complete listing/product contract below and permit the app's origin through CORS. Vite variables are public configuration, never a place for secrets.
 
+## Keyword search
+
+`POST /api/products/search` with `Content-Type: application/json`:
+
+```json
+{"q":"floor lamp","page":1}
+```
+
+The server uses [SerpApi's Amazon Search API](https://serpapi.com/amazon-search-api), with `engine=amazon`, `k` for the keywords, and `amazon_domain=amazon.com`. Queries contain 2–200 characters after whitespace normalization. Pages are integers from 1 through 10. `VITE_PRODUCT_SEARCH_API_URL` optionally overrides this route independently of the product-import endpoint.
+
+The response contains `query`, `page`, `nextPage`, `totalResults`, `products`, `retrievedAt`, `providerRetrievedAt`, and `cached`. Each product contains `asin`, `title`, a canonical Amazon `url`, nullable `imageUrl`, nullable `price` (`amount`, `currency`, and nullable `display`), nullable `rating`, nullable `ratingsTotal`, nullable `availability`, and `modelAvailable`.
+
+Only supplied organic result entries with valid ASINs and titles become cards. Duplicate ASINs are removed; unsafe image links are discarded. Ratings, prices, stock, totals, and retrieval timestamps remain unknown when the provider omits them. `nextPage` is present only when the provider supplies a next-page link, and the app never fetches that URL directly. Results are paginated; there is no guarantee of exhaustive Amazon inventory or current stock.
+
+`modelAvailable` means this app has a registered approximate model for that exact ASIN. Selecting a card calls the existing product-import endpoint to verify the actual listing and obtain the model; search summaries alone cannot be placed in AR. Products without a model still open their details and can be saved. Search uses the same server-only SerpApi key, sign-in and same-origin JSON checks, request limits, one-hour caching, and credential-safe errors as import. Each endpoint limits uncached requests to eight per user per minute and four simultaneous lookups per Worker instance.
+
 ## Request and response
 
 `POST /api/products/import` with `Content-Type: application/json`:
@@ -31,7 +47,22 @@ For a modeled product, `category` must be `Seating`, `Tables`, `Lighting`, or `S
 
 ## Variant colors and product identity
 
-The renderer supports dedicated models and named-material color overrides. The integrated SerpApi importer reads observed color options for the registered Little Tree table family and maps recognized finishes to the authored palette. It preserves confirmed variant ASINs and links and filters unavailable or ambiguous alternatives, including incompatible size/style combinations. If the color payload cannot be used, the importer retains the known finish for the requested ASIN while still returning the listing. It does not fabricate additional options or treat the entire palette as evidence of current availability. The lamp currently returns only its original Beige and Black model.
+The importer reads [SerpApi’s product variant groups and combinations](https://serpapi.com/amazon-product-api) and returns `listing.colors` for every product, including products without a model:
+
+```json
+{
+  "status": "observed",
+  "options": [
+    { "asin": "B0F2ML48Y6", "name": "Oak", "url": "https://www.amazon.com/dp/B0F2ML48Y6", "imageUrl": null, "selected": true }
+  ]
+}
+```
+
+`status` is `observed` or `unconfirmed`. Unconfirmed data has an empty `options` array. Options have real ASINs, canonical links, and nullable safe HTTPS images; `selected` identifies the requested ASIN. Missing, ambiguous, or inconsistent identity information fails closed. Explicitly unavailable options are excluded, and combinations must match the current non-color dimensions, such as size and style. A reported option is evidence from the import snapshot, not a guarantee of current stock; both the app and provider cache may affect freshness.
+
+The renderer supports dedicated models and named-material color overrides. The model registry still controls which reported options can be previewed: the Little Tree table maps recognized finishes to its authored palette, while the lamp currently has only its original Beige and Black model. A color label or product photo never invents an alternate model or RGB material. When data cannot be confirmed, the importer preserves the requested model’s appearance for viewing, but the UI does not offer unverified color choices.
+
+`availableItemVariants()` intersects modeled variants with `listing.colors` by exact ASIN for every picker, including room editing and WebXR controls. `selectItemVariant()` enforces the same rule, and workspace loading preserves it. Old listings without `colors` remain readable but offer no unverified alternate colors; import the product again to update the saved snapshot. Authored sample products without an Amazon listing retain their explicitly labeled demo palette. Prices and stock from the original import are labeled as such after choosing another variant; its Amazon link follows the selected ASIN.
 
 A variant with its own `modelSrc` uses that asset’s supplied material appearance. The `color` field draws its UI swatch; it does not recolor every surface automatically. For an explicit solid-color preview on shared geometry, supply `materialOverrides` with exact, case-sensitive glTF material names:
 
