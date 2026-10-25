@@ -4,7 +4,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { BufferGeometry, Float32BufferAttribute, Mesh, MeshStandardMaterial, Scene, Texture, Uint8BufferAttribute } from 'three';
+import { BufferGeometry, Float32BufferAttribute, Mesh, MeshStandardMaterial, Scene, Texture, Uint8BufferAttribute, Uint32BufferAttribute } from 'three';
 import { unzipSync } from 'three/addons/libs/fflate.module.js';
 import { exportQuickLookModel } from '../src/lib/quick-look-model.ts';
 import { collectVertexColorGeometry } from '../src/lib/quick-look-vertex-colors.ts';
@@ -34,7 +34,7 @@ function prim(stage: string, type: string, name: string) {
   throw new Error(`Unclosed ${type} ${name}`);
 }
 
-function exportedMesh(files: Record<string, Uint8Array>, name: string) {
+function exportedMesh(files: Record<string, Uint8Array>, name: string, sampleCorners?: Set<number>) {
   const stage = new TextDecoder().decode(files['model.usda']);
   const meshStart = stage.indexOf(`def Xform "${name}"`);
   assert(meshStart >= 0, `Missing mesh ${name}`);
@@ -57,12 +57,25 @@ function exportedMesh(files: Record<string, Uint8Array>, name: string) {
   const geometry = new TextDecoder().decode(files[geometryPath]);
   const uvAttribute = geometry.match(/(?:texCoord2f|float2)\[\] primvars:vertexColorUV = \[([^\]]+)\]\s*\(\s*interpolation = "faceVarying"/);
   assert(uvAttribute, 'The atlas needs a UV coordinate for each indexed face corner');
-  const uvs = [...uvAttribute[1].matchAll(/\(([^,]+),\s*([^)]+)\)/g)].map(match => [Number(match[1]), Number(match[2])]);
-  return { binding, material, texture, imagePath, uvs, image: decodePng(files[imagePath]) };
+  const uvs: number[][] = [];
+  let uvCount = 0;
+  for (const match of uvAttribute[1].matchAll(/\(([^,]+),\s*([^)]+)\)/g)) {
+    if (!sampleCorners || sampleCorners.has(uvCount)) uvs.push([Number(match[1]), Number(match[2])]);
+    uvCount++;
+  }
+  return { binding, material, texture, imagePath, uvs, uvCount, image: decodePng(files[imagePath]) };
 }
 
 function sample(image: ReturnType<typeof decodePng>, uv: number[]) {
   return image.pixel(Math.min(image.width - 1, Math.floor(uv[0] * image.width)), Math.min(image.height - 1, Math.floor((1 - uv[1]) * image.height))).map(channel => channel / 255);
+}
+
+function sampleBilinear(image: ReturnType<typeof decodePng>, uv: number[]) {
+  const x = uv[0] * image.width - .5, y = (1 - uv[1]) * image.height - .5;
+  const left = Math.floor(x), top = Math.floor(y), u = x - left, v = y - top;
+  const pixel = (dx: number, dy: number) => image.pixel(Math.max(0, Math.min(image.width - 1, left + dx)), Math.max(0, Math.min(image.height - 1, top + dy)));
+  const [a, b, c, d] = [pixel(0, 0), pixel(1, 0), pixel(0, 1), pixel(1, 1)];
+  return a.map((_, channel) => ((a[channel] * (1 - u) + b[channel] * u) * (1 - v) + (c[channel] * (1 - u) + d[channel] * u) * v) / 255);
 }
 
 function close(actual: number[], expected: number[], tolerance: number, label: string) {
@@ -82,6 +95,76 @@ test('Quick Look bakes indexed vertex colors into connected atlas pixels with pr
   }
   const center = [0, 1].map(axis => result.uvs.reduce((sum, uv) => sum + uv[axis], 0) / 3);
   close(sample(result.image, center), [1 / 3, 1 / 3, 1 / 3], .04, 'Interpolated triangle center');
+});
+
+test('Compact affine tiles preserve bilinear colors beside larger high-contrast tiles', async () => {
+  const colors = [[.15, .2, .25], [.45, .3, .4], [.25, .6, .55]];
+  const affine = new Mesh(triangle(colors), new MeshStandardMaterial({ vertexColors: true })); affine.name = 'Affine';
+  const complex = new Mesh(triangle([[1, 0, 0], [0, 1, 0], [0, 0, 1]]), affine.material); complex.name = 'Complex';
+  // One geometry containing both tile sizes exercises mixed atlas packing.
+  const geometry = new BufferGeometry();
+  for (const attribute of ['position', 'color', 'normal']) {
+    geometry.setAttribute(attribute, new Float32BufferAttribute([
+      ...affine.geometry.getAttribute(attribute).array, ...complex.geometry.getAttribute(attribute).array,
+    ], 3));
+  }
+  geometry.setIndex([0, 2, 1, 3, 5, 4]);
+  const mesh = new Mesh(geometry, affine.material); mesh.name = 'MixedTiles';
+  const scene = new Scene(); scene.add(mesh); scene.updateMatrixWorld(true);
+  const result = exportedMesh(unzipSync(await exportQuickLookModel(scene)), mesh.name);
+  for (let face = 0; face < 2; face++) {
+    const uvs = result.uvs.slice(face * 3, face * 3 + 3);
+    const span = Math.max(...uvs.map(uv => uv[0])) - Math.min(...uvs.map(uv => uv[0]));
+    assert(Math.abs(span * result.image.width - (face ? 9 : 1)) < .0001, 'Affine patches need one texel span; complex patches retain nine');
+    const source = [0, 1, 2].map(corner => {
+      const index = geometry.index!.getX(face * 3 + corner), colors = geometry.getAttribute('color');
+      return [colors.getX(index), colors.getY(index), colors.getZ(index)];
+    });
+    for (const weights of [[.2, .3, .5], [1 / 3, 1 / 3, 1 / 3], [.01, .49, .5], [0, .5, .5]]) {
+      const uv = [0, 1].map(axis => uvs.reduce((sum, point, index) => sum + point[axis] * weights[index], 0));
+      const expected = [0, 1, 2].map(channel => source.reduce((sum, color, index) => sum + color[channel] * weights[index], 0));
+      close(sampleBilinear(result.image, uv), expected, face ? .04 : .005, `Mixed face ${face}, weights ${weights}`);
+    }
+  }
+});
+
+test('Dense affine vertex colors fit a 4096 atlas beyond the previous six-pixel tile limit', async () => {
+  const faces = 470_000;
+  assert(faces * 6 ** 2 > 4092 ** 2, 'This fixture must exceed the previous tile budget');
+  // Indexed fan triangles share two black vertices. Every third vertex has a
+  // unique byte color, giving 470,000 distinct affine gradients without an
+  // unnecessarily expanded source mesh or a large checked-in binary fixture.
+  const positions = new Float32Array((faces + 2) * 3), normals = new Float32Array(positions.length);
+  const colors = new Uint8Array(positions.length), indices = new Uint32Array(faces * 3);
+  positions[3] = 1; normals[2] = normals[5] = 1;
+  for (let face = 0; face < faces; face++) {
+    const vertex = face + 2;
+    positions[vertex * 3 + 1] = 1; normals[vertex * 3 + 2] = 1;
+    colors.set([16 + face % 224, 16 + Math.floor(face / 224) % 224, 16 + Math.floor(face / (224 * 224))], vertex * 3);
+    indices.set([0, 1, vertex], face * 3);
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new Uint8BufferAttribute(colors, 3, true));
+  geometry.setIndex(new Uint32BufferAttribute(indices, 1));
+  const mesh = new Mesh(geometry, new MeshStandardMaterial({ vertexColors: true })); mesh.name = 'DenseAffine';
+  const scene = new Scene(); scene.add(mesh); scene.updateMatrixWorld(true);
+  const sampledFaces = [0, 1, 223, 224, Math.floor(faces / 2), faces - 1];
+  const corners = new Set(sampledFaces.flatMap(face => [face * 3, face * 3 + 1, face * 3 + 2]));
+  const result = exportedMesh(unzipSync(await exportQuickLookModel(scene)), mesh.name, corners);
+  assert(result.image.width <= 4096 && result.image.height <= 4096, 'Dense colors must keep the existing mobile texture limit');
+  assert.equal(result.uvCount, faces * 3, 'Every face corner must retain a texture coordinate');
+  assert.equal(result.uvs.length, sampledFaces.length * 3);
+  for (const [sampleIndex, face] of sampledFaces.entries()) {
+    const uvs = result.uvs.slice(sampleIndex * 3, sampleIndex * 3 + 3);
+    const rgb = [...colors.subarray((face + 2) * 3, (face + 3) * 3)].map(channel => channel / 255);
+    close(sampleBilinear(result.image, uvs[2]), rgb, .001, `Dense face ${face} corner`);
+    for (const weights of [[.2, .3, .5], [1 / 3, 1 / 3, 1 / 3], [0, .1, .9]]) {
+      const uv = [0, 1].map(axis => uvs.reduce((sum, point, index) => sum + point[axis] * weights[index], 0));
+      close(sampleBilinear(result.image, uv), rgb.map(channel => channel * weights[2]), .001, `Dense face ${face} interpolated color`);
+    }
+  }
 });
 
 test('Quick Look keeps each geometry’s vertex color when meshes share a material and leaves the source scene unchanged', async () => {
