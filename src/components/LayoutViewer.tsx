@@ -5,11 +5,15 @@ import { exportLayout, exportNativeLayout } from '../lib/layout-model';
 import { bytesToBase64, hasNativeRoomAR, nativeLayoutMetadata, nativeRequest } from '../lib/native-room';
 import { Viewer } from './Viewer';
 import type { ViewerHandle } from './Viewer';
+import { isUrbanDemoLayout } from '../lib/urban-demo';
 export default function LayoutViewer({layout,onUnavailable}:{layout:RoomLayout;onUnavailable:()=>void}){
   const [model,setModel]=useState<Awaited<ReturnType<typeof exportLayout>>|null>(null),[error,setError]=useState(''),[ready,setReady]=useState(false),[status,setStatus]=useState(''),[retry,setRetry]=useState(0);
   const viewer=useRef<ViewerHandle>(null);
   const [nativeBusy,setNativeBusy]=useState(false);
   const native=hasNativeRoomAR()&&!!layout.survey;
+  const gallery=isUrbanDemoLayout(layout)?layout.items.find(item=>item.product.placementKind==='wall'):undefined;
+  // Start inside the room, facing the artwork rather than its frame backs.
+  const cameraOrbit=gallery?`${32-gallery.rotation}deg 72deg auto`:undefined;
   const nativeExport=useRef<AbortController|null>(null);
   useEffect(()=>{setNativeBusy(false);return()=>nativeExport.current?.abort();},[layout]);
   const startAR=async()=>{
@@ -30,7 +34,7 @@ export default function LayoutViewer({layout,onUnavailable}:{layout:RoomLayout;o
     return ()=>{active=false;controller.abort();if(url)URL.revokeObjectURL(url);};
   },[layout,retry]);
   return <div className="layout-3d">
-    {model?<Viewer ref={viewer} src={model.url} name={layout.name} interactive ar arScale={native?'fixed':'auto'} expectedDimensions={model.dimensions} onReady={onReady} onStatus={onStatus} onUnavailable={onUnavailable}/>:<div className="layout-loading">{error?<><p>{error}</p><button className="text-button" onClick={()=>setRetry(value=>value+1)}><RotateCcw size={16}/> Try again</button></>:<><span className="loading-ring"/><p>Loading layout…</p></>}</div>}
+    {model?<Viewer ref={viewer} src={model.url} name={layout.name} interactive ar arScale={native?'fixed':'auto'} cameraOrbit={cameraOrbit} expectedDimensions={model.dimensions} onReady={onReady} onStatus={onStatus} onUnavailable={onUnavailable}/>:<div className="layout-loading">{error?<><p>{error}</p><button className="text-button" onClick={()=>setRetry(value=>value+1)}><RotateCcw size={16}/> Try again</button></>:<><span className="loading-ring"/><p>Loading layout…</p></>}</div>}
     <div className="layout-ar-bar"><div><p>{native?'Matches your scanned room. If needed, the app will guide you through alignment.':`${layout.survey?'New products only · ':''}Drag to position · Pinch to resize. Use 100% to check fit.`}</p></div><button className="button primary" disabled={!ready||nativeBusy} onClick={()=>void startAR()}><ScanLine size={16}/>{nativeBusy?'Preparing preview…':'View in AR'}</button></div>{status&&<p className="layout-ar-status status-text" role="status">{status}</p>}
   </div>;
 }

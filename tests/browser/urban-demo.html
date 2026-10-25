@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Urban design demo workflow regression</title>
+  <style>
+    #urban-fixture{position:relative;z-index:9;margin-left:225px;padding:14px 24px;border-bottom:2px solid #a95829;background:#fff5df;color:#352e24;font:12px/1.5 system-ui,sans-serif}
+    #urban-fixture h1{font:600 16px/1.4 system-ui,sans-serif;margin:0 0 6px}
+    #urban-fixture p{margin:0 0 8px}
+    #urban-fixture button{border:1px solid #b4a28a;background:white;border-radius:4px;padding:8px 10px;margin-right:8px;font:inherit}
+    #urban-fixture pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0;font:11px/1.5 ui-monospace,monospace}
+    #urban-fixture [data-status="failed"]{color:#a71d24;font-weight:600}
+    #urban-fixture [data-status="passed"]{color:#22594a;font-weight:600}
+    @media(max-width:650px){#urban-fixture{margin-left:0;padding:12px 16px}}
+  </style>
+</head>
+<body>
+  <section id="urban-fixture" aria-label="Urban design regression controls">
+    <h1>Urban design demo — production workflow QA</h1>
+    <p>Runs the real app in StrictMode. Checks cancellation, three arrangements, selection, editable 3D, and preservation of existing layouts. API requests are blocked. Restore your original workspace when finished.</p>
+    <button id="run-urban-checks">Run demo checks</button>
+    <button id="restore-urban-workspace">Restore original workspace</button>
+    <pre id="urban-demo-report" aria-label="Urban design regression report" data-status="idle">Ready. Your saved workspace has not been changed.</pre>
+  </section>
+  <div id="root"></div>
+  <script type="module" src="./urban-demo.tsx"></script>
+</body>
+</html>

@@ -67,3 +67,7 @@ operating system's file picker. Use **Restore original workspace** afterward.
 Open `/tests/browser/ui-walkthrough.html` in the local preview. It renders the actual app with synthetic camera frames, mock Amazon/photo-generation APIs, and sample or empty workspaces. All API calls are simulated or blocked; no GPU request is sent. Banner controls choose errors, slow responses, denied camera access, and job states. External product links and native scanner launches are intercepted and reported. Use **Restore original data** before leaving to restore the local/session storage backed up by the fixture. The fixture is not a production entry point.
 
 See `docs/ui-audit-2026-10-24.md` for the audited controls and verification limits.
+
+## Prepared urban design demo
+
+Open `/tests/browser/urban-demo.html` and choose **Run demo checks**. This runs the real app, checks canceling the loading sequence, three distinct arrangements using the same five products, selection-only saving, preservation of previous layouts, ready 3D/AR assets, move/Undo, and zero API calls. Use **Restore original workspace** afterward. The test validates browser rendering and AR readiness, not physical iPhone camera tracking.

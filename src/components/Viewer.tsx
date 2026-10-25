@@ -17,12 +17,13 @@ export interface ViewerHandle { startAR: () => void; reset: () => void }
 interface Props {
   src: string; iosSrc?: string; name: string; interactive?: boolean; ar?: boolean;
   arScale?: 'fixed' | 'auto';
+  cameraOrbit?: string;
   autoRotate?: boolean; onReady?: (ready: boolean) => void;
   expectedDimensions?: FurnitureProduct['dimensions'];
   onUnavailable?: () => void; onStatus?: (status: string) => void;
   materialOverrides?: MaterialColorOverride[]; arControls?: ReactNode;
 }
-export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSrc,name,interactive=false,ar=false,arScale='fixed',autoRotate=false,onReady,onUnavailable,onStatus,expectedDimensions,materialOverrides,arControls}, ref) {
+export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSrc,name,interactive=false,ar=false,arScale='fixed',cameraOrbit='32deg 72deg auto',autoRotate=false,onReady,onUnavailable,onStatus,expectedDimensions,materialOverrides,arControls}, ref) {
   const element = useRef<ModelViewerElement>(null);
   const [state,setState] = useState<'loading'|'loaded'|'error'>('loading');
   const [attempt,setAttempt] = useState(0);
@@ -105,12 +106,12 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSr
       // Must stay directly within the user's tap for iOS Quick Look permission.
       viewer.activateAR().catch(() => latest.current.onStatus?.('AR couldn’t start. Check camera access and try again.'));
     },
-    reset() { if(element.current) { element.current.cameraOrbit='32deg 72deg auto'; element.current.cameraTarget='auto auto auto'; element.current.fieldOfView='30deg'; element.current.jumpCameraToGoal(); } }
-  }),[]);
+    reset() { if(element.current) { element.current.cameraOrbit=cameraOrbit; element.current.cameraTarget='auto auto auto'; element.current.fieldOfView='30deg'; element.current.jumpCameraToGoal(); } }
+  }),[cameraOrbit]);
   return <div className={`viewer ${interactive ? 'viewer-interactive' : ''}`}>
     <model-viewer key={`${src}-${attempt}`} ref={element} src={src} ios-src={materialOverrides?.length ? undefined : iosSrc} alt={`3D view of ${name}`}
       camera-controls={interactive || undefined} auto-rotate={autoRotate || undefined} rotation-per-second="12deg"
-      camera-orbit="32deg 72deg auto" field-of-view="30deg" min-camera-orbit="auto 12deg 70%" max-camera-orbit="auto 90deg 180%"
+      camera-orbit={cameraOrbit} field-of-view="30deg" min-camera-orbit="auto 12deg 70%" max-camera-orbit="auto 90deg 180%"
       shadow-intensity="1.15" shadow-softness="1" environment-image="neutral" exposure="1.1"
       interaction-prompt="none" touch-action="pan-y" loading="eager" reveal="auto"
       ar={ar || undefined} ar-modes="webxr quick-look" ar-scale={arScale} ar-placement="floor" xr-environment={ar || undefined}>
