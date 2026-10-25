@@ -10,6 +10,8 @@ They do not call Amazon or any model-generation service.
   fixture. Each goes through production `exportLayout`. Checks cover source and
   exported material factors, real decoded albedo pixels, normal-map references,
   GLB vertex-color values, and textures embedded in the browser's USDZ export.
+  The vertex-color fixture must have a connected baked texture containing its
+  red, blue, and green colors; an unused `displayColor` attribute is insufficient.
   Source and exported models render through the production `Viewer` component.
   Each rendered layout also calls model-viewer's actual automatic Quick Look
   conversion and verifies its material/shader targets remain under the active
@@ -43,3 +45,8 @@ when those tools are unavailable.
 The actual Sunday Sofa Moss GLB also goes through the saved-layout arrangement
 and Quick Look export. Both native import paths must retain eleven bindings:
 seven green upholstery pieces and four wood feet with the original color factors.
+
+`tests/quick-look-vertex-colors.test.ts` independently decodes exported PNGs and
+checks their UV-addressed corner and interpolated colors. It also covers a shared
+material on differently colored geometries, atlas reuse, material tint, and
+preservation of the original preview geometry and material.
