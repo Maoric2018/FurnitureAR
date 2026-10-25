@@ -1,5 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { Armchair, Box, Camera, Check, Copy, Grid2X2, HelpCircle, Home, Layers, Link2, Plus, Search, Trash2, X } from 'lucide-react';
+import type { CSSProperties } from 'react';
+import { flushSync } from 'react-dom';
+import { Armchair, ArrowRight, Box, Camera, Check, Copy, HelpCircle, Home, Layers, Link2, Plus, ScanLine, Search, Trash2, Wand2, X } from 'lucide-react';
 import type { ProductItem, RoomLayout } from './lib/workspace';
 import { createScannedLayout, duplicateLayout, placeItem, readWorkspace, relativeDate, saveWorkspace, selectItemVariant } from './lib/workspace';
 import { readUnit, writeUnit } from './lib/storage';
@@ -20,9 +22,18 @@ const PreviewModal=lazy(()=>import('./components/PreviewModal'));
 const RoomEditor=lazy(()=>import('./components/RoomEditor'));
 
 const PhotoStudio=lazy(()=>import('./components/PhotoStudio'));
+const HeroShowcase=lazy(()=>import('./components/HeroShowcase'));
 import './components/photo-studio.css';
 
 type Page='home'|'layouts'|'photo';
+// Page changes run inside a view transition where supported, so the shell morphs instead of jumping.
+function withTransition(update:()=>void){
+  const doc=document as Document&{startViewTransition?:(callback:()=>void)=>unknown};
+  if(!doc.startViewTransition||window.matchMedia('(prefers-reduced-motion: reduce)').matches){update();return;}
+  doc.startViewTransition(()=>flushSync(update));
+}
+const stagger=(index:number)=>({'--i':index}) as CSSProperties;
+const words=(text:string,offset:number)=>text.split(' ').flatMap((word,i)=>[i?' ':'',<span key={word+i} className="word" style={stagger(offset+i)}>{word}</span>]);
 export default function App(){
   const [workspace,setWorkspace]=useState(readWorkspace),[persisted,setPersisted]=useState(true);
   const [scanOpen,setScanOpen]=useState(false),[scanError,setScanError]=useState<string>();
@@ -30,14 +41,27 @@ export default function App(){
   const [preview,setPreview]=useState<ProductItem|null>(null),[createOpen,setCreateOpen]=useState(false),[pendingItem,setPendingItem]=useState<ProductItem|null>(null);
   const [unit,setUnit]=useState<Unit>(readUnit),[help,setHelp]=useState(false),[phone,setPhone]=useState(false),[copied,setCopied]=useState(false);
   const [autoOpenCamera,setAutoOpenCamera]=useState(false);
-  const [jobsOpen,setJobsOpen]=useState(false);
-  const openPhoto=()=>{setAutoOpenCamera(true);setPage('photo');setRoomId(null);window.scrollTo({top:0});};
+  const [jobsOpen,setJobsOpen]=useState(false),[designOnOpen,setDesignOnOpen]=useState(false);
+  const openPhoto=()=>withTransition(()=>{setAutoOpenCamera(true);setPage('photo');setRoomId(null);window.scrollTo({top:0});});
   const [toast,setToast]=useState<{message:string;undo?:()=>void}|null>(null);const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
   useEffect(()=>{setPersisted(saveWorkspace(workspace));},[workspace]);
   useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current);},[]);
+  // Cards marked data-spotlight light up under the pointer; one listener serves them all.
+  useEffect(()=>{
+    const move=(event:PointerEvent)=>{
+      const card=(event.target as Element|null)?.closest?.('[data-spotlight]') as HTMLElement|null;
+      if(!card)return;
+      const box=card.getBoundingClientRect();
+      card.style.setProperty('--mx',`${event.clientX-box.left}px`);card.style.setProperty('--my',`${event.clientY-box.top}px`);
+    };
+    document.addEventListener('pointermove',move,{passive:true});
+    return()=>document.removeEventListener('pointermove',move);
+  },[]);
+  // Warm the editor and preview chunks so the first open can morph instead of showing a loader.
+  useEffect(()=>{const warm=setTimeout(()=>{void import('./components/RoomEditor');void import('./components/PreviewModal');},1500);return()=>clearTimeout(warm);},[]);
   const notify=useCallback((message:string,undo?:()=>void)=>{setToast({message,undo});if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>setToast(null),6000);},[]);
-  const navigate=(next:Page)=>{setAutoOpenCamera(false);setPage(next);setRoomId(null);setQuery('');window.scrollTo({top:0});};
-  const openRoom=(id:string)=>{setRoomId(id);setPage('layouts');window.scrollTo({top:0});};
+  const navigate=(next:Page)=>withTransition(()=>{setAutoOpenCamera(false);setPage(next);setRoomId(null);setQuery('');setDesignOnOpen(false);window.scrollTo({top:0});});
+  const openRoom=(id:string,design=false)=>withTransition(()=>{setRoomId(id);setPage('layouts');setDesignOnOpen(design);window.scrollTo({top:0});});
   const updateRoom=(room:RoomLayout)=>setWorkspace(current=>({...current,layouts:current.layouts.map(item=>item.id===room.id?room:item)}));
   const removeRoom=(room:RoomLayout)=>{setWorkspace(current=>({...current,layouts:current.layouts.filter(item=>item.id!==room.id)}));notify('Layout deleted.',()=>setWorkspace(current=>({...current,layouts:[room,...current.layouts]})));};
   const room=workspace.layouts.find(item=>item.id===roomId);
@@ -108,21 +132,37 @@ export default function App(){
     if(hasNativeRoomAR())void nativeRequest('ready').catch(()=>{});
     return()=>{window.removeEventListener('hashchange',receiveLink);window.removeEventListener('furniture-ar:scan',receiveNative);};
   },[finishScan]);
-  const layoutCards=(items:RoomLayout[])=><div className="layout-grid">{items.map(item=><article className="layout-card" key={item.id}><button className="layout-card-plan" onClick={()=>openRoom(item.id)} aria-label={`Open ${item.name}`}><FloorPlan layout={item} compact/><span className="tag room-type-tag">{item.roomType}</span></button><div className="layout-card-info"><button onClick={()=>openRoom(item.id)}><h3>{item.name}</h3><p>{item.items.length+(item.survey?.obstacles.length??0)} {item.items.length+(item.survey?.obstacles.length??0)===1?'piece':'pieces'} · Edited {relativeDate(item.updatedAt).toLowerCase()}</p></button><div className="card-actions"><button className="icon-button" aria-label={`Duplicate ${item.name}`} title="Duplicate" onClick={()=>{const copy=duplicateLayout(item);setWorkspace(current=>({...current,layouts:[copy,...current.layouts]}));notify('Layout duplicated.');}}><Copy size={15}/></button><button className="icon-button" aria-label={`Delete ${item.name}`} title="Delete" onClick={()=>removeRoom(item)}><Trash2 size={15}/></button></div></div></article>)}</div>;
+  const designRoom=()=>{const latest=layouts[0];if(latest)openRoom(latest.id,true);else{startRoom();notify('Create a layout first, then choose Design my room.');}};
+  const emptyLayouts=(text:string)=><div className="empty-state"><img src="/images/empty-room.webp" alt="" width={220} height={220}/><h3>No layouts yet</h3><p>{text}</p><button className="button primary" onClick={()=>startRoom()}><Plus size={16}/>New layout</button></div>;
+  const layoutCards=(items:RoomLayout[])=><div className="layout-grid">{items.map(item=><article className="layout-card" key={item.id} data-spotlight><button className="layout-card-plan" style={{viewTransitionName:`plan-${item.id}`}} onClick={()=>openRoom(item.id)} aria-label={`Open ${item.name}`}><FloorPlan layout={item} compact/><span className="tag room-type-tag">{item.roomType}</span></button><div className="layout-card-info"><button onClick={()=>openRoom(item.id)}><h3>{item.name}</h3><p>{item.items.length+(item.survey?.obstacles.length??0)} {item.items.length+(item.survey?.obstacles.length??0)===1?'piece':'pieces'} · Edited {relativeDate(item.updatedAt).toLowerCase()}</p></button><div className="card-actions"><button className="icon-button" aria-label={`Duplicate ${item.name}`} title="Duplicate" onClick={()=>{const copy=duplicateLayout(item);setWorkspace(current=>({...current,layouts:[copy,...current.layouts]}));notify('Layout duplicated.');}}><Copy size={15}/></button><button className="icon-button" aria-label={`Delete ${item.name}`} title="Delete" onClick={()=>removeRoom(item)}><Trash2 size={15}/></button></div></div></article>)}</div>;
   const brand=<a className="brand" href="#" onClick={event=>{event.preventDefault();navigate('home');}} aria-label="Roomify home"><img src="/icon.svg" alt="" width={32} height={32}/><span>Roomify</span></a>;
   return <div className="app-shell"><a href="#main-content" className="skip-link">Skip to content</a>
     <aside className="sidebar">{brand}<nav aria-label="Main navigation">{([{id:'home',label:'Overview',icon:Home},{id:'photo',label:'Photo to 3D',icon:Camera},{id:'layouts',label:'My layouts',icon:Layers}] as const).map(({id,label,icon:Icon})=><button key={id} className={`side-link ${page===id?'active':''}`} aria-current={page===id?'page':undefined} title={label} onClick={()=>navigate(id)}><Icon size={16}/><span>{label}</span>{id==='layouts'&&workspace.layouts.length>0&&<small>{workspace.layouts.length}</small>}</button>)}</nav>
       <div className="sidebar-footer"><button className="side-link jobs-link" title="3D models" aria-label={`Your 3D models${activeJobs?`, ${activeJobs} in progress`:''}`} onClick={()=>setJobsOpen(true)}><Box size={16}/><span>3D models</span>{activeJobs>0&&<small>{activeJobs}</small>}</button><button className="side-link" title="Help" onClick={()=>setHelp(true)}><HelpCircle size={16}/><span>Help</span></button><p className="storage-status"><span className={persisted?'status-dot':'status-dot offline'}/>{persisted?'Saved in this browser':'Browser storage unavailable'}</p></div>
     </aside>
     <div className="app-main"><header className="mobile-header">{brand}<div className="mobile-header-actions"><button className="icon-button jobs-button" aria-label={`Your 3D models${activeJobs?`, ${activeJobs} in progress`:''}`} onClick={()=>setJobsOpen(true)}><Box size={18}/>{activeJobs>0&&<small>{activeJobs}</small>}</button><button className="icon-button" aria-label="Help" onClick={()=>setHelp(true)}><HelpCircle size={18}/></button></div></header><main id="main-content" className={room?'main-content editor-content':'main-content'}>
-      {room?<Suspense fallback={<div className="workspace-loading"><span className="loading-ring"/>Opening your layout…</div>}><RoomEditor onScan={()=>{setPendingItem(null);setScanError(undefined);setScanOpen(true);}} onCreateDesign={createRoom} key={room.id} layout={room} onChange={updateRoom} onBack={()=>navigate('layouts')} onUnavailable={()=>setPhone(true)} onNotify={notify} persisted={persisted} onPreview={openPreview}/></Suspense>:<>
+      {room?<Suspense fallback={<div className="workspace-loading"><span className="loading-ring"/>Opening your layout…</div>}><RoomEditor onScan={()=>{setPendingItem(null);setScanError(undefined);setScanOpen(true);}} onCreateDesign={createRoom} key={room.id} layout={room} openDesigner={designOnOpen} onChange={updateRoom} onBack={()=>navigate('layouts')} onUnavailable={()=>setPhone(true)} onNotify={notify} persisted={persisted} onPreview={openPreview}/></Suspense>:<>
         {page==='photo'&&<Suspense fallback={<div className="workspace-loading"><span className="loading-ring"/>Opening photo studio…</div>}><PhotoStudio autoOpenCamera={autoOpenCamera}/></Suspense>}
-        {page==='home'&&<><div className="page-heading"><div><h1>Overview</h1></div></div>
-          <div className="start-grid"><section className="start-card"><div className="start-card-body"><h2>Find furniture</h2><LinkInput onProduct={openPreview}/></div></section><section className="start-card room-start"><div className="start-card-body"><h2>Plan a room</h2><p>Arrange furniture on a floor plan, then preview it in AR.</p><div className="start-card-actions"><button className="button primary" onClick={()=>startRoom()}><Plus size={16}/>New layout</button></div></div></section></div>
-          <section className="photo-entry"><Camera size={20}/><div><h2>Photo to 3D</h2><p>Create a model from your own furniture.</p></div><button className="button secondary" onClick={openPhoto}><Camera size={16}/>Open camera</button></section>
-          {workspace.layouts.length>0&&<section className="saved-layouts-section"><div className="section-heading"><h2>Recent layouts</h2>{workspace.layouts.length>0&&<button className="text-button" onClick={()=>navigate('layouts')}>View all</button>}</div>{layoutCards(layouts.slice(0,3))}</section>}
+        {page==='home'&&<>
+          <section className="hero" aria-labelledby="hero-title">
+            <div className="hero-copy">
+              <span className="eyebrow reveal" style={stagger(0)}><span className="live-dot"/>Spatial design studio · LiDAR · 3D · AI</span>
+              <h1 id="hero-title" className="hero-title">{words('Your room,',0)} <em className="word gradient-text" style={stagger(2)}>reimagined</em> {words('before you buy.',3)}</h1>
+              <p className="hero-lede reveal" style={stagger(5)}>Scan your space, turn real Amazon listings into true-to-scale 3D models, and let AI lay out the room. Then walk around it in AR.</p>
+              <div className="hero-search reveal" style={stagger(6)}><LinkInput onProduct={openPreview}/></div>
+              <div className="hero-proof reveal" style={stagger(7)}><span><ScanLine/>LiDAR room scans</span><span><Box/>Photo to 3D model</span><span><Wand2/>AI layouts with real prices</span></div>
+            </div>
+            <Suspense fallback={<div className="hero-stage"/>}><HeroShowcase/></Suspense>
+          </section>
+          <section className="bento" aria-label="Ways to start">
+            <article className="bento-tile wide scroll-reveal" data-spotlight><img src="/images/feature-plan.webp" alt="" loading="lazy" decoding="async"/><div className="bento-copy"><span className="bento-badge"><Layers/>Floor planner</span><h3>Plan a room to the centimeter</h3><p>Start from your measurements or a LiDAR scan, then drag real products into place with collision and doorway checks.</p><button className="button primary" onClick={()=>startRoom()}><Plus size={16}/>New layout</button></div></article>
+            <article className="bento-tile narrow dark scroll-reveal" data-spotlight><img src="/images/ai-highrise.webp" alt="" loading="lazy" decoding="async"/><div className="bento-copy"><span className="bento-badge"><Wand2/>Claude</span><h3>Design with AI</h3><p>Describe a vibe. Get three layouts that fit your room and budget.</p><button className="button secondary" onClick={designRoom}>Try it<ArrowRight size={16}/></button></div></article>
+            <article className="bento-tile half scroll-reveal" data-spotlight><img src="/images/feature-photo3d.webp" alt="" loading="lazy" decoding="async"/><div className="bento-copy"><span className="bento-badge"><Camera/>SAM 3D</span><h3>Photo to 3D</h3><p>Photograph furniture you already own and get a textured 3D model you can place in AR.</p><button className="button secondary" onClick={openPhoto}><Camera size={16}/>Open camera</button></div></article>
+            <article className="bento-tile half scroll-reveal" data-spotlight><img src="/images/feature-scan.webp" alt="" loading="lazy" decoding="async"/><div className="bento-copy"><span className="bento-badge"><ScanLine/>iPhone LiDAR</span><h3>Scan your room</h3><p>RoomPlan maps walls, doors, windows and existing furniture into a measured floor plan.</p><button className="button secondary" onClick={()=>startRoom()}><ScanLine size={16}/>Start a layout</button></div></article>
+          </section>
+          {workspace.layouts.length>0&&<section className="saved-layouts-section scroll-reveal"><div className="section-heading"><h2>Recent layouts</h2><button className="text-button" onClick={()=>navigate('layouts')}>View all<ArrowRight size={14}/></button></div>{layoutCards(layouts.slice(0,3))}</section>}
         </>}
-        {page==='layouts'&&<><div className="page-heading"><div><h1>My layouts</h1><p>Saved automatically in this browser.</p></div><div className="page-actions"><button className="button primary" onClick={()=>startRoom()}><Plus size={16}/>New layout</button></div></div>{workspace.layouts.length?<><div className="list-toolbar"><label className="search-field"><Search size={16}/><input placeholder="Search layouts" aria-label="Search layouts" value={query} onChange={event=>setQuery(event.target.value)}/></label><span>{layouts.length} {layouts.length===1?'layout':'layouts'}</span></div>{layoutCards(layouts)}{query&&!layouts.length&&<p className="no-results">No layouts match “{query}”.</p>}</>:<div className="empty-state"><Grid2X2 size={28}/><h3>No layouts yet</h3><p>Create a layout or scan your room.</p></div>}</>}
+        {page==='layouts'&&<><div className="page-heading"><div><h1>My layouts</h1><p>Saved automatically in this browser.</p></div><div className="page-actions"><button className="button primary" onClick={()=>startRoom()}><Plus size={16}/>New layout</button></div></div>{workspace.layouts.length?<><div className="list-toolbar"><label className="search-field"><Search size={16}/><input placeholder="Search layouts" aria-label="Search layouts" value={query} onChange={event=>setQuery(event.target.value)}/></label><span>{layouts.length} {layouts.length===1?'layout':'layouts'}</span></div>{layoutCards(layouts)}{query&&!layouts.length&&<p className="no-results">No layouts match “{query}”.</p>}</>:emptyLayouts('Create a layout or scan your room.')}</>}
       </>}
     </main></div>
     {preview&&<Suspense fallback={<Modal label="Loading preview" onClose={()=>setPreview(null)} className="small-modal"><div className="workspace-loading"><span className="loading-ring"/>Opening product preview…</div></Modal>}><PreviewModal key={preview.id} item={preview} layouts={workspace.layouts} onVariant={id=>setPreview(current=>current?.product?selectItemVariant(current,id):current)} onGenerate={generateModel} onCheckModel={checkModel} modelJob={jobs.find(job=>job.asin===preview.listing?.asin)} onAdd={addToRoom} onNew={()=>{const item=preview;setPreview(null);startRoom(item);}} onClose={()=>setPreview(null)} onUnavailable={()=>setPhone(true)} unit={unit} onUnit={value=>{setUnit(value);writeUnit(value);}}/></Suspense>}

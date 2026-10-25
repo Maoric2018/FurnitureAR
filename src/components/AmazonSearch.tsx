@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { Box, ExternalLink, ImageOff, LoaderCircle, Search, Star } from 'lucide-react';
 import { importAmazonProduct } from '../lib/amazon';
 import { searchAmazonProducts } from '../lib/amazon-search';
@@ -114,16 +115,16 @@ export default function AmazonSearch({ initialQuery, buttonLabel, onClose, onPro
       </form>
     </div>
     <div className="amazon-search-body" ref={resultRegion} aria-busy={searching === 'initial'}>
-      {searching === 'initial' ? <div className="amazon-search-state empty-state" role="status"><LoaderCircle size={28} className="spin"/><h3>Searching Amazon…</h3></div> : <>
+      {searching === 'initial' ? <><div className="amazon-results-summary"><span role="status"><LoaderCircle size={14} className="spin"/>Searching Amazon for <strong>“{query.trim()}”</strong>…</span></div><div className="amazon-result-grid" aria-hidden="true">{Array.from({ length: 8 }, (_, i) => <div className="amazon-result-card amazon-skeleton-card" key={i} style={{ '--i': i } as CSSProperties}><div className="amazon-result-photo skeleton"/><div className="amazon-result-info"><span className="skeleton skeleton-line short"/><span className="skeleton skeleton-line"/><span className="skeleton skeleton-line"/><span className="skeleton skeleton-line price"/><span className="skeleton skeleton-button"/></div></div>)}</div></> : <>
         {!results && !searchError && <div className="amazon-search-state empty-state"><Search size={28}/><h3>Search for a product</h3></div>}
         {results && <div className="amazon-results-summary"><span role="status">{count ? `${count} ${count === 1 ? 'item' : 'items'} shown` : 'No matching items'} for <strong>“{results.query}”</strong></span></div>}
         {results && !count && !searchError && <div className="amazon-search-state empty-state"><Search size={28}/><h3>Try a different search</h3><p>Try “floor lamp” or “dining table”.</p></div>}
         {searchError?.page === 1 && <div className="amazon-search-state amazon-search-error empty-state"><Search size={28}/><h3>Search failed</h3><p role="alert">{searchError.message}</p><button type="button" className="button secondary" onClick={() => void runSearch(query)}>Try again</button></div>}
-        {!!count && <div className="amazon-result-grid">{results!.products.map(product => {
+        {!!count && <div className="amazon-result-grid">{results!.products.map((product, index) => {
           const loading = importing === product.asin;
           const failure = productError?.asin === product.asin ? productError : null;
           const action = product.modelAvailable ? addingToLayout ? 'Add to layout' : 'Preview in AR' : 'View details';
-          return <article className="amazon-result-card" key={product.asin}>
+          return <article className={`amazon-result-card ${loading ? 'importing' : ''}`} key={product.asin} style={{ '--i': index % 12 } as CSSProperties} data-spotlight>
             <ProductPhoto key={product.imageUrl ?? 'missing'} product={product}/>
             <div className="amazon-result-info">
               {product.modelAvailable && <span className="tag amazon-model-badge accent"><Box size={12}/>AR ready</span>}
