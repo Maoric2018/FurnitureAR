@@ -69,9 +69,9 @@ export default function FloorPlan({layout,selectedId,onSelect,onMove,onDeselect,
     if(!cancel&&current.moved&&(current.next.x!==current.item.x||current.next.z!==current.item.z))onMove?.(current.next);
   };
   const keyMove=(event:KeyboardEvent,item:PlacedItem)=>{
+    if(event.key==='Enter'||event.key===' '){event.preventDefault();onSelect?.(item.id);return;}
     if(!onMove)return;
     if(event.key==='Escape'){event.preventDefault();drag.current=null;setDraft(null);onDeselect?.();return;}
-    if(event.key==='Enter'||event.key===' '){event.preventDefault();onSelect?.(item.id);return;}
     const step=event.shiftKey?.25:.05;
     const delta:Record<string,[number,number]>={ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step],ArrowDown:[0,step]};
     if(delta[event.key]){event.preventDefault();onSelect?.(item.id);onMove(movePlacement(item,layout,item.x+delta[event.key][0],item.z+delta[event.key][1]));}
@@ -111,6 +111,6 @@ export default function FloorPlan({layout,selectedId,onSelect,onMove,onDeselect,
       </>}
       {!compact&&<text x="0" y=".1" textAnchor="middle" fontSize=".16" fill={labelColor} transform={`rotate(${-item.rotation})`}>{index+1}</text>}
     </g>;})}
-    {!layout.items.length&&!layout.survey&&<><path d="M -.18 -.18 h .36 v .36 h -.36 z M -.45 0 h -.17 m 1.07 0 h .17 M 0 -.45 v -.17 M 0 .45 v .17" fill="none" stroke="#c8ccc8" strokeWidth=".018"/>{!compact&&<text x="0" y=".92" textAnchor="middle" fontSize=".14" fill="#676d68">Add a product to start arranging</text>}</>}
+    {!layout.items.length&&!layout.survey&&<><path d="M -.18 -.18 h .36 v .36 h -.36 z M -.45 0 h -.17 m 1.07 0 h .17 M 0 -.45 v -.17 M 0 .45 v .17" fill="none" stroke="#c8ccc8" strokeWidth=".018"/>{!compact&&<text x="0" y=".92" textAnchor="middle" fontSize=".14" fill="#676d68">Add a product</text>}</>}
   </svg>;
 }

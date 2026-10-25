@@ -12,6 +12,6 @@ export default function Modal({children,onClose,label,className=''}:{children:Re
     return () => { item?.close(); document.body.style.overflow=oldOverflow; previous?.focus(); };
   },[]);
   return <dialog ref={dialog} className={`modal ${className}`} aria-label={label} onCancel={event=>{event.preventDefault();onClose();}} onClick={event=>{if(event.target===dialog.current)onClose();}}>
-    <div className="modal-inner"><button className="icon-button close-modal" aria-label="Close dialog" onClick={onClose}><X size={21}/></button>{children}</div>
+    <div className="modal-inner"><button className="icon-button close-modal" aria-label="Close dialog" title="Close" onClick={onClose}><X size={21}/></button>{children}</div>
   </dialog>;
 }

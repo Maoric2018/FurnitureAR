@@ -107,6 +107,11 @@
   background: var(--surface-3);
 }
 
+.photo-stage.photo-stage-placeholder {
+  min-height: 280px;
+  aspect-ratio: auto;
+}
+
 .photo-stage.camera-active {
   border-color: var(--text);
   background: var(--text);
@@ -420,8 +425,8 @@
   min-height: 32px;
 }
 
-.photo-fallback small {
-  flex-basis: 100%;
+.photo-file-hint {
+  color: var(--text-3);
   font-size: 12px;
 }
 
@@ -486,27 +491,6 @@
   color: var(--text-3);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
-}
-
-.photo-status-list {
-  display: grid;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.photo-status-list > span {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.photo-status-list svg {
-  color: var(--accent);
-}
-
-.photo-status-list .pending,
-.photo-status-list .pending svg {
-  color: var(--text-2);
 }
 
 /* Panel: size form and dimensions */

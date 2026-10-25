@@ -61,3 +61,9 @@ an existing layout when scanning another room, duplicate native deliveries,
 fragment consumption, and reopening saved scans. All API requests are blocked.
 The file-input test uses a synthetic File/DataTransfer; it does not exercise the
 operating system's file picker. Use **Restore original workspace** afterward.
+
+## Full UI walkthrough
+
+Open `/tests/browser/ui-walkthrough.html` in the local preview. It renders the actual app with synthetic camera frames, mock Amazon/photo-generation APIs, and sample or empty workspaces. All API calls are simulated or blocked; no GPU request is sent. Banner controls choose errors, slow responses, denied camera access, and job states. External product links and native scanner launches are intercepted and reported. Use **Restore original data** before leaving to restore the local/session storage backed up by the fixture. The fixture is not a production entry point.
+
+See `docs/ui-audit-2026-10-24.md` for the audited controls and verification limits.

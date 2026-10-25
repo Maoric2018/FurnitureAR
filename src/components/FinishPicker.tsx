@@ -24,12 +24,12 @@ export default function FinishPicker({variants,selected,onChange,compact=false,l
     return ()=>element?.removeEventListener('beforexrselect',keepControlTap);
   },[]);
   return <fieldset ref={fieldset} className={`finish-picker${compact?' finish-picker-compact':''}`} onPointerDown={event=>event.stopPropagation()} onClick={event=>event.stopPropagation()}>
-    <legend>{listing?'Amazon colors':'Color'}{(!listing||confirmed)&&<><strong>{displayed.name}</strong>{displayed.approximate&&<span className="color-preview-label tag">Color preview</span>}</>}</legend>
-    {listing&&!confirmed&&<p className="finish-current-preview">Current preview: {selected.name}. This color is not confirmed for this item.</p>}
+    <legend>{listing?'Amazon colors':'Color'}{(!listing||confirmed)&&<><strong>{displayed.name}</strong>{displayed.approximate&&<span className="color-preview-label tag">Approximate</span>}</>}</legend>
+    {listing&&!confirmed&&<p className="finish-current-preview">{selected.name} is not a confirmed color for this item.</p>}
     <div className="finish-choices">{variants.map(variant=><button key={variant.id} type="button" className="finish-choice" aria-label={`Select ${variant.name} color${variant.approximate?', color preview':''}`} aria-pressed={variant.id===selected.id} onClick={()=>{if(variant.id!==selected.id)onChange(variant.id);}}>
       <span className="finish-swatch" style={{backgroundColor:variant.color}} aria-hidden="true"/>
       <span>{variant.name}</span>{variant.id===selected.id&&<Check size={13} aria-hidden="true"/>}
     </button>)}</div>
-    {listing&&<p className="finish-source-note">{!observed?'Amazon hasn’t confirmed color options for this item. Reimport the product to check again.':!variants.length?'Amazon’s listed colors don’t have matching 3D previews yet.':`${listedCount>variants.length?`${variants.length} of ${listedCount} listed colors ${variants.length===1?'has a matching 3D preview':'have matching 3D previews'}.`:'Colors listed for this product at import.'} Confirm availability on Amazon.`}</p>}
+    {listing&&!compact&&<p className="finish-source-note">{!observed?'Colors unconfirmed. Reimport to check again.':!variants.length?'No matching 3D color previews.':`${listedCount>variants.length?`${variants.length} of ${listedCount} colors previewed.`:'Colors at import.'} Check stock on Amazon.`}</p>}
   </fieldset>;
 }
