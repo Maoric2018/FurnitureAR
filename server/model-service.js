@@ -54,7 +54,7 @@ function generatedProduct(listing, result, hash) {
 }
 
 export function createModelService({ lookup, generator = modelGenerator, now = Date.now, adapterTimeoutMs = 15000 } = {}) {
-  const listingCache = new Map(), inFlight = new Map();
+  const listingCache = new Map(), listingInFlight = new Map(), inFlight = new Map();
   let importer, apiKey;
   const version = cleanText(generator.version, 'unversioned', 100);
   const timeoutMs = Math.min(60000, Math.max(1, adapterTimeoutMs));
@@ -77,7 +77,7 @@ export function createModelService({ lookup, generator = modelGenerator, now = D
       record = JSON.parse(text);
       if (record.schemaVersion !== 1 || record.asin !== asin || record.url !== canonicalUrl(asin)
         || record.listing?.asin !== asin || record.listing?.url !== canonicalUrl(asin)) throw new Error('Stored product identity mismatch.');
-      if (!['ready', 'pending', 'not_configured', 'no_image', 'failed'].includes(record.status)) throw new Error('Invalid stored status.');
+      if (!['ready', 'pending', 'not_requested', 'not_configured', 'no_image', 'failed'].includes(record.status)) throw new Error('Invalid stored status.');
       record.listing = parseListing(record.listing);
       if (record.status === 'ready') {
         record.product = parseProduct(record.product);
@@ -113,14 +113,21 @@ export function createModelService({ lookup, generator = modelGenerator, now = D
   async function lookupListing(asin, env) {
     const cached = listingCache.get(asin);
     if (cached && cached.expires > now()) return { value: cached.value, cached: true };
-    if (!lookup && (!importer || apiKey !== env.SERPAPI_API_KEY)) { apiKey = env.SERPAPI_API_KEY; importer = createImporter(env); }
-    const value = await (lookup || importer)(asin);
-    if (value?.listing?.asin !== asin || value.listing.url !== canonicalUrl(asin)) throw new ApiError(502, 'PRODUCT_MISMATCH', 'Amazon returned a different product variant. Try the exact product link.');
-    remember(asin, value);
-    return { value, cached: false };
+    if (!listingInFlight.has(asin)) {
+      const work = Promise.resolve().then(async () => {
+        if (!lookup && (!importer || apiKey !== env.SERPAPI_API_KEY)) { apiKey = env.SERPAPI_API_KEY; importer = createImporter(env); }
+        const value = await (lookup || importer)(asin);
+        if (value?.listing?.asin !== asin || value.listing.url !== canonicalUrl(asin)) throw new ApiError(502, 'PRODUCT_MISMATCH', 'Amazon returned a different product variant. Try the exact product link.');
+        remember(asin, value);
+        return { value, cached: false };
+      }).finally(() => listingInFlight.delete(asin));
+      listingInFlight.set(asin, work);
+    }
+    return listingInFlight.get(asin);
   }
 
-  async function resolve(asin, env, statusOnly) {
+  async function resolve(asin, env, mode, attempt = 0) {
+    const statusOnly = mode === 'status';
     const bucket = env.MODEL_BUCKET;
     let record = null, corruptRecord = null, storageAvailable = Boolean(bucket), cached = false;
     if (bucket) {
@@ -131,13 +138,28 @@ export function createModelService({ lookup, generator = modelGenerator, now = D
     if (record?.status === 'ready') return publicValue(record, true);
     if (statusOnly && !storageAvailable) throw new ApiError(503, 'MODEL_STORAGE_UNAVAILABLE', 'Saved models are temporarily unavailable. Try again shortly.');
     if (statusOnly && !record) throw new ApiError(404, 'MODEL_NOT_FOUND', 'Select this Amazon product first to prepare its model.');
+    // Browsing never advances a provider job. Status checks can only poll a
+    // previously accepted job, never initiate or retry generation themselves.
+    if (statusOnly && record.status !== 'pending') return publicValue(record, true);
+    if (statusOnly && !record.jobId) {
+      // A crashed start can leave an intent without an accepted provider job.
+      // Expose a retryable failure after its lease, rather than silently start
+      // work from GET or leave the browser polling an orphan forever.
+      if (now() >= Number(record.nextPollAt || 0)) {
+        try { return publicValue((await writeRecord(bucket, { ...record, status: 'failed', failureConfirmed: false }, record)).record, true); }
+        catch { throw new ApiError(503, 'MODEL_STORAGE_UNAVAILABLE', 'Saved models are temporarily unavailable. Try again shortly.'); }
+      }
+      return publicValue(record, true);
+    }
+    if (mode === 'lookup' && record && (['pending', 'failed'].includes(record.status) || record.metadataExpiresAt > now())) return publicValue(record, true);
 
     const fresh = record && record.metadataExpiresAt > now();
     // A pending job keeps its original listing and image throughout generation.
     // Fresh listing snapshots also survive adapter upgrades without another
     // SerpApi request. Only ready geometry is reused indefinitely.
     let value;
-    if (record && (fresh || record.status === 'pending' || statusOnly)) value = { listing: record.listing, product: record.product };
+    const uncertainAttempt = record?.status === 'failed' && record.idempotencyKey && record.failureConfirmed !== true;
+    if (record && (fresh || record.status === 'pending' || uncertainAttempt || statusOnly)) value = { listing: record.listing, product: record.product };
     else { const loaded = await lookupListing(asin, env); value = loaded.value; cached = loaded.cached; }
     if (value.product) {
       const registered = { ...envelope(asin, value, 'ready'), source: 'registered' };
@@ -147,14 +169,35 @@ export function createModelService({ lookup, generator = modelGenerator, now = D
       } catch { /* Registered assets already exist in the deployment. */ } }
       return publicValue(registered, cached);
     }
+    if (mode === 'lookup') {
+      const browsing = envelope(asin, value, 'not_requested');
+      if (storageAvailable) {
+        try {
+          const written = await writeRecord(bucket, browsing, record ?? corruptRecord);
+          return publicValue(written.record, cached || written.conflict);
+        } catch { /* Listing browsing remains usable without model storage. */ }
+      }
+      return publicValue(browsing, cached);
+    }
     if (!storageAvailable) return publicValue(envelope(asin, value, 'storage_unavailable'), cached);
     if (fresh && record.generatorVersion === version && ['not_configured', 'no_image'].includes(record.status)
       && !(record.status === 'not_configured' && env.MODEL_API_URL && env.MODEL_API_KEY)) return publicValue(record, true);
 
+    const currentPending = record?.status === 'pending';
+    const existingJob = currentPending && typeof record.jobId === 'string' && record.jobId.length > 0;
+    // Only a user's explicit retry of a known terminal failure gets a fresh
+    // provider identity. Lost responses/timeouts may have accepted GPU work,
+    // so those retries must recover the original job with its original key.
+    const freshAttempt = mode === 'generate' && record?.status === 'failed' && record.failureConfirmed === true;
+    const preserveAttempt = record?.idempotencyKey && (currentPending || uncertainAttempt || record.generatorVersion === version);
+    const attemptId = freshAttempt ? crypto.randomUUID() : preserveAttempt ? record.attemptId : undefined;
+    const baseKey = `furniture-ar:amazon-com:${asin}:${version}`;
+    const idempotencyKey = freshAttempt ? `${baseKey}:attempt:${attemptId}`
+      : preserveAttempt ? record.idempotencyKey : baseKey;
     const input = { asin, url: canonicalUrl(asin), imageUrl: imageUrl(value.listing), listing: value.listing,
-      idempotencyKey: `furniture-ar:amazon-com:${asin}:${version}` };
+      idempotencyKey };
     const next = { ...envelope(asin, value, 'pending'), createdAt: record?.createdAt ?? new Date(now()).toISOString(), imageUrl: input.imageUrl,
-      idempotencyKey: input.idempotencyKey };
+      idempotencyKey: input.idempotencyKey, ...(attemptId ? { attemptId } : {}) };
     if (!input.imageUrl) {
       next.status = 'no_image';
       try { const written = await writeRecord(bucket, next, record ?? corruptRecord); return publicValue(written.record, cached || written.conflict); }
@@ -165,13 +208,18 @@ export function createModelService({ lookup, generator = modelGenerator, now = D
     // key handles retries after a crash; adapters must pass it to their
     // provider. Conditional metadata writes provide a short lease and prevent
     // a delayed Worker from overwriting another Worker's ready result.
-    const currentPending = record?.status === 'pending' && record.generatorVersion === version;
-    const existingJob = currentPending && typeof record.jobId === 'string' && record.jobId.length > 0;
     if (currentPending && now() < Number(record.nextPollAt)) return publicValue(record, true);
     let intent;
     try {
       const claimed = await writeRecord(bucket, { ...(existingJob ? record : next), nextPollAt: now() + timeoutMs + POLL_MS }, record ?? corruptRecord);
-      if (claimed.conflict) return publicValue(claimed.record, true);
+      if (claimed.conflict) {
+        // A simultaneous lookup may have saved its listing first. It must not
+        // consume the explicit request to start generation.
+        if (mode === 'generate' && !['ready', 'pending'].includes(claimed.record.status) && attempt < 2) {
+          return resolve(asin, env, mode, attempt + 1);
+        }
+        return publicValue(claimed.record, true);
+      }
       intent = claimed.record;
     }
     catch { return publicValue({ ...next, status: 'storage_unavailable' }, cached); }
@@ -204,7 +252,13 @@ export function createModelService({ lookup, generator = modelGenerator, now = D
       }
       if (result?.status === 'pending' && typeof result.jobId === 'string' && result.jobId.length > 0 && result.jobId.length <= 500) {
         Object.assign(next, { status: 'pending', jobId: result.jobId, stage: result.stage, nextPollAt: now() + POLL_MS });
-      } else next.status = result?.status === 'not_configured' ? 'not_configured' : 'failed';
+      } else {
+        next.status = result?.status === 'not_configured' ? 'not_configured' : 'failed';
+        if (next.status === 'failed') {
+          next.failureConfirmed = result?.failureConfirmed === true;
+          if (typeof result?.jobId === 'string' && result.jobId.length > 0 && result.jobId.length <= 500) next.jobId = result.jobId;
+        }
+      }
       const written = await writeRecord(bucket, next, intent);
       return publicValue(written.record, cached || written.conflict);
     } catch (error) {
@@ -213,7 +267,7 @@ export function createModelService({ lookup, generator = modelGenerator, now = D
       if (result?.status === 'ready') {
         try { validateGeneratedModel(result); }
         catch {
-          try { const written = await writeRecord(bucket, { ...next, status: 'failed' }, intent); return publicValue(written.record, cached || written.conflict); }
+          try { const written = await writeRecord(bucket, { ...next, status: 'failed', failureConfirmed: true }, intent); return publicValue(written.record, cached || written.conflict); }
           catch { return publicValue({ ...next, status: 'storage_unavailable' }, cached); }
         }
       }
@@ -221,14 +275,17 @@ export function createModelService({ lookup, generator = modelGenerator, now = D
     }
   }
 
-  async function load(asin, env = {}, statusOnly = false) {
+  async function load(asin, env = {}, mode = 'lookup') {
     if (!validAsin(asin)) throw new ApiError(400, 'INVALID_LINK', 'Use a valid Amazon product ID.');
-    if (!inFlight.has(asin)) {
-      if (inFlight.size >= 4) throw new ApiError(503, 'LOOKUP_BUSY', 'A few products are loading. Try again shortly.', 2);
-      const work = resolve(asin, env, statusOnly).finally(() => inFlight.delete(asin));
-      inFlight.set(asin, work);
+    if (!['lookup', 'generate', 'status'].includes(mode)) throw new ApiError(400, 'INVALID_REQUEST', 'Use a supported model request.');
+    const key = `${asin}:${mode}`;
+    if (!inFlight.has(key)) {
+      const activeAsins = new Set([...inFlight.keys()].map(value => value.split(':')[0]));
+      if (!activeAsins.has(asin) && activeAsins.size >= 4) throw new ApiError(503, 'LOOKUP_BUSY', 'A few products are loading. Try again shortly.', 2);
+      const work = resolve(asin, env, mode).finally(() => inFlight.delete(key));
+      inFlight.set(key, work);
     }
-    return inFlight.get(asin);
+    return inFlight.get(key);
   }
 
   async function asset(request, env, asin, hash) {
