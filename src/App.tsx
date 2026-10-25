@@ -9,7 +9,8 @@ import LinkInput from './components/LinkInput';
 import FloorPlan from './components/FloorPlan';
 import NewLayout from './components/NewLayout';
 import RoomScanImport from './components/RoomScanImport';
-import { readRoomScanFragment } from './lib/room-scan';
+import { parseRoomScan, readRoomScanFragment } from './lib/room-scan';
+import { hasNativeRoomAR, nativeRequest } from './lib/native-room';
 import type { AmazonProductResult } from './lib/amazon';
 import { resolveModelItem } from './lib/model-resolution';
 const PreviewModal=lazy(()=>import('./components/PreviewModal'));
@@ -20,6 +21,17 @@ export default function App(){
   const [workspace,setWorkspace]=useState(readWorkspace),[persisted,setPersisted]=useState(true);
   const [incomingScan,setIncomingScan]=useState(()=>{try{return {scan:readRoomScanFragment(window.location.hash),error:undefined};}catch(error){return {scan:undefined,error:(error as Error).message};}});
   const [scanOpen,setScanOpen]=useState(!!incomingScan.scan||!!incomingScan.error);
+  useEffect(()=>{
+    if(!hasNativeRoomAR())return;
+    const receive=(event:Event)=>{
+      try{setIncomingScan({scan:parseRoomScan((event as CustomEvent).detail),error:undefined});}
+      catch(error){setIncomingScan({scan:undefined,error:(error as Error).message});}
+      setCreateOpen(false);setPreview(null);setScanOpen(true);
+    };
+    window.addEventListener('furniture-ar:scan',receive);
+    void nativeRequest('ready').catch(()=>{});
+    return()=>window.removeEventListener('furniture-ar:scan',receive);
+  },[]);
   useEffect(()=>{
     const receiveScan=()=>{
       if(!window.location.hash.startsWith('#room-scan='))return;
@@ -58,7 +70,7 @@ export default function App(){
       <div className="sidebar-bottom"><div className="sidebar-tip"><span className="corner-mark"><ScanLine size={23}/></span><strong>A better view, on your phone.</strong><p>Place your pieces in the room with augmented reality.</p><button onClick={()=>setPhone(true)}>Open on mobile <ArrowUpRight size={13}/></button></div><button className="support-link" onClick={()=>setHelp(true)}><HelpCircle size={17}/>How it works<ArrowUpRight size={13}/></button><div className="workspace-status"><span className={persisted?'online-dot':'offline-dot'}/>{persisted?'Saved on this device':'Browser storage unavailable'}</div></div>
     </aside>
     <div className="app-main"><header className="topbar"><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={12}/><strong>{room?room.name:page==='home'?'Overview':'My layouts'}</strong></div><div className="topbar-actions"><button className="topbar-help" onClick={()=>setHelp(true)}>Getting started<ArrowUpRight size={13}/></button></div></header><main id="main-content" className={room?'main-content editor-content':'main-content'}>
-      {room?<Suspense fallback={<div className="workspace-loading"><span className="loading-ring"/>Opening your layout…</div>}><RoomEditor key={room.id} layout={room} onChange={updateRoom} onBack={()=>navigate('layouts')} onUnavailable={()=>setPhone(true)} onNotify={notify} persisted={persisted} onPreview={setPreview}/></Suspense>:<>
+      {room?<Suspense fallback={<div className="workspace-loading"><span className="loading-ring"/>Opening your layout…</div>}><RoomEditor onCreateDesign={createRoom} key={room.id} layout={room} onChange={updateRoom} onBack={()=>navigate('layouts')} onUnavailable={()=>setPhone(true)} onNotify={notify} persisted={persisted} onPreview={setPreview}/></Suspense>:<>
         {page==='home'&&<><div className="page-heading"><div><div className="overline">MAKE YOURSELF AT HOME</div><h1>A little planning.<br/>A place that feels like you.</h1><p>Try a single piece. Or bring a whole room together.</p></div><span className="heading-coordinate"><ArrowDownLeft size={20}/><span>YOUR SPACE.<br/>YOUR PERSPECTIVE.</span></span></div>
           <div className="start-grid"><section className="quick-start"><div className="mode-label"><span className="mode-icon"><Armchair size={20}/></span><span>ONE PRODUCT</span><span className="mode-index">01</span></div><h2>Will it work <br/>in my room?</h2><p>Search Amazon or paste a link. <br/>Find your piece. Find the right spot.</p><LinkInput onProduct={setPreview}/><div className="input-help"><Search size={12}/>Browse Amazon finds, then preview a matching 3D model.</div></section><section className="room-start"><img src="/images/room.jpg" alt="A bright living room with natural wood furniture and a neutral sofa"/><div className="room-photo-shade"/><div className="mode-label"><span className="mode-icon"><LayoutGrid size={20}/></span><span>A WHOLE ROOM</span><span className="mode-index">02</span></div><div className="room-start-copy"><span className="room-caption">SEE THE BIGGER PICTURE</span><h2>Good pieces.<br/>Better together.</h2><p>Create a floor plan. Arrange your furniture.<br/>Then see it all in your space.</p><div className="room-start-actions"><button className="button light" onClick={()=>startRoom()}>Create a layout<Plus size={17}/></button></div></div><span className="photo-edge-label">ROOM FOR YOUR IDEAS</span></section></div>
           <section className="saved-layouts-section"><div className="section-heading"><div><h2>Your layouts <span>{workspace.layouts.length.toString().padStart(2,'0')}</span></h2><p>Pick up where you left off.</p></div><button className="text-button" onClick={()=>navigate('layouts')}>View all layouts<ArrowRight size={15}/></button></div>{workspace.layouts.length?layoutCards(layouts.slice(0,2)):<div className="empty-layout-row"><span className="empty-plan-icon"><Grid2X2 size={26}/></span><div><h3>Your first room starts here.</h3><p>Keep a few ideas together. Move things around. Come back anytime.</p></div><button className="button outlined" onClick={()=>startRoom()}><Plus size={15}/>New layout</button></div>}</section>

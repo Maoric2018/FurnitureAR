@@ -23,7 +23,7 @@ export function arrangeModels(items:PlacedItem[],models:Map<string,Group>):Scene
   }
   return scene;
 }
-export async function exportLayout(layout:RoomLayout, signal?:AbortSignal):Promise<{url:string;dimensions:{width:number;height:number;depth:number}}> {
+async function loadLayoutScene(layout:RoomLayout, signal?:AbortSignal):Promise<Scene> {
   if(!layout.items.length)throw new Error('Add a piece before opening the 3D preview.');
   if(layout.items.some(item=>!item.product))throw new Error('Every piece needs a matching 3D model before this layout can be previewed.');
   const models=new Map<string,Group>(),loader=new GLTFLoader();
@@ -38,8 +38,22 @@ export async function exportLayout(layout:RoomLayout, signal?:AbortSignal):Promi
   }
   signal?.throwIfAborted();
   const scene=arrangeModels(layout.items,models);
+  scene.updateMatrixWorld(true);
+  return scene;
+}
+export async function exportLayout(layout:RoomLayout, signal?:AbortSignal):Promise<{url:string;dimensions:{width:number;height:number;depth:number}}> {
+  const scene=await loadLayoutScene(layout,signal);
   const bounds=new Box3().setFromObject(scene,true).getSize(new Vector3());
   const result=await new GLTFExporter().parseAsync(scene,{binary:true,onlyVisible:true});
   signal?.throwIfAborted();
   return {url:URL.createObjectURL(new Blob([result as ArrayBuffer],{type:'model/gltf-binary'})),dimensions:{width:bounds.x,height:bounds.y,depth:bounds.z}};
+}
+/** Retain the floor-plan origin. Plane anchoring/centering belongs to native AR. */
+export async function exportNativeLayout(layout:RoomLayout, signal?:AbortSignal):Promise<Uint8Array> {
+  const scene=await loadLayoutScene(layout,signal);
+  const {USDZExporter}=await import('three/addons/exporters/USDZExporter.js');
+  const result=await new USDZExporter().parseAsync(scene,{includeAnchoringProperties:false});
+  signal?.throwIfAborted();
+  if(result.byteLength>48*1024*1024)throw new Error('This arrangement is too large for the app preview. Try fewer pieces.');
+  return result;
 }

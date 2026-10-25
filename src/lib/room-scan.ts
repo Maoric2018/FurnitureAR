@@ -11,6 +11,8 @@ export interface RoomObstacle extends Point {
 export interface RoomSurvey {
   source: 'apple-roomplan'; capturedAt: string; walls: ScanWall[];
   openings: ScanOpening[]; obstacles: RoomObstacle[];
+  /** Opaque key to the private tracking map on the scanning iPhone. */
+  scanId?: string;
 }
 export interface ImportedRoom { name: string; width: number; depth: number; survey: RoomSurvey }
 export const MAX_SCAN_BYTES = 512_000;
@@ -47,7 +49,9 @@ export function parseSurvey(value: unknown): RoomSurvey {
   if (walls.length < 2) return fail();
   const ids = [...walls, ...openings, ...obstacles].map(v => v.id);
   if (new Set(ids).size !== ids.length) return fail();
-  return { source: 'apple-roomplan', capturedAt: v.capturedAt, walls, openings, obstacles };
+  if (v.scanId !== undefined && (typeof v.scanId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v.scanId))) return fail();
+  return { source: 'apple-roomplan', capturedAt: v.capturedAt, walls, openings, obstacles,
+    ...(v.scanId ? { scanId: v.scanId as string } : {}) };
 }
 /** One shared X/Z ground plane, in metres. Recenter every layer together. */
 export function parseRoomScan(raw: unknown): ImportedRoom {

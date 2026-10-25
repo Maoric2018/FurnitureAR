@@ -9,7 +9,7 @@
 <key>CFBundleShortVersionString</key><string>1.0</string>
 <key>CFBundleVersion</key><string>1</string>
 <key>LSRequiresIPhoneOS</key><true/>
-<key>NSCameraUsageDescription</key><string>Furniture AR uses your camera and LiDAR to measure walls and existing furniture. Camera images are not uploaded.</string>
+<key>NSCameraUsageDescription</key><string>Furniture AR uses your camera and LiDAR to measure your room and keep virtual furniture aligned with it.</string>
 <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
 <key>UILaunchScreen</key><dict/>
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationPortraitUpsideDown</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>

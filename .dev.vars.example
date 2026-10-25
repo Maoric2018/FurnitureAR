@@ -1,2 +1,7 @@
 # Server-only local secret. Copy this file to .dev.vars and add your key.
 SERPAPI_API_KEY=
+
+# Server-only Claude room designer. Never use a VITE_ prefix for this key.
+ANTHROPIC_API_KEY=
+# Optional: an Opus model available to your Anthropic account.
+CLAUDE_MODEL=claude-opus-5-5

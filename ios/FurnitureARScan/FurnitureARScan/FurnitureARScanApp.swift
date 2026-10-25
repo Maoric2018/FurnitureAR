@@ -13,6 +13,10 @@ private struct ShareSheet: UIViewControllerRepresentable {
 }
 private struct ScanHome: View {
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var tracking = RoomTrackingStore()
+    @State private var planner: PlannerDestination?
+    @AppStorage("plannerAddress") private var plannerAddress = "https://furniture-ar-studio-eric.ericshengyanjin.chatgpt.site/"
     @State private var scanning = false
     @State private var room: RoomDocument? = loadRoom()
     @State private var shareFile: ShareFile?
@@ -60,12 +64,10 @@ private struct ScanHome: View {
                         Text("Review the outline. You can correct detected objects in the layout editor. Confirm important measurements in your room.")
                             .font(.subheadline).foregroundStyle(.secondary)
                         Button {
-                            do {
                                 guard !current.name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty else { error="Give this room a name first."; return }
                                 save(current)
-                                if let url = try current.webURL() { openURL(url) }
-                                else { shareFile = ShareFile(url:try current.file()) }
-                            } catch { self.error=error.localizedDescription }
+                                guard let url=URL(string:plannerAddress),url.scheme == "https",url.host != nil,url.user == nil,url.password == nil else { error="Enter an HTTPS planner address first.";return }
+                                planner=PlannerDestination(url:url,room:current)
                         } label: { Label("Open in Furniture AR",systemImage:"arrow.up.right").frame(maxWidth:.infinity) }
                         .buttonStyle(.borderedProminent).controlSize(.large)
                         Button {
@@ -76,7 +78,7 @@ private struct ScanHome: View {
                             catch { self.error=error.localizedDescription }
                         } label: { Label("Save / share room file",systemImage:"square.and.arrow.up").frame(maxWidth:.infinity) }
                         .buttonStyle(.bordered).controlSize(.large)
-                        Text("Choose Save to Files or AirDrop. On the website, choose Import room scan and select this JSON file. Large scans open the share sheet automatically.")
+                        Text("The planner stays inside this app so your scan and camera share room coordinates. Exported room files do not contain the private tracking map.")
                             .font(.footnote).foregroundStyle(.secondary)
                         Divider()
                     } else {
@@ -91,18 +93,25 @@ private struct ScanHome: View {
                     Button(action:startScan) { Label(room == nil ? "Scan my room" : "Scan another room",systemImage:"viewfinder").frame(maxWidth:.infinity) }
                         .buttonStyle(.borderedProminent).controlSize(.large).disabled(!supported)
                     if !supported { Text("Scanning needs a LiDAR-equipped iPhone or iPad. Your iPhone 16 Pro is supported; the simulator cannot scan.").font(.footnote).foregroundStyle(.secondary) }
-                    Text("Camera images stay on your phone. Only room measurements and object labels are exported. Saved scans are estimates, not a guarantee of fit.")
+                    if let notice=tracking.mapNotice { Text(notice).font(.footnote).foregroundStyle(.secondary) }
+                    DisclosureGroup("Planner address") {
+                        TextField("https://…",text:$plannerAddress).textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL).textFieldStyle(.roundedBorder)
+                        Text("Use the updated hosted website or an HTTPS development preview. Changing this address changes where your room measurements are sent.").font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Text("The tracking map stays on your phone. The planner receives room measurements; Design my room sends measurements and any photos you choose to Claude. Scans are estimates—confirm important dimensions.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }.padding(26)
             }.background(Color(red:0.96,green:0.97,blue:0.94))
                 .navigationTitle("Room scanner").navigationBarTitleDisplayMode(.inline)
-                .fullScreenCover(isPresented:$scanning) { CaptureScreen { result in room=result; save(result) } }
+                .fullScreenCover(isPresented:$scanning) { CaptureScreen(tracking:tracking) { result in room=result; save(result) } }
+                .fullScreenCover(item:$planner) { NativeWorkspace(destination:$0,tracking:tracking) { result in room=result; save(result) } }
                 .sheet(item:$shareFile) { ShareSheet(url:$0.url) }
                 .alert("Room scanner",isPresented:Binding(get:{error != nil},set:{if !$0 {error=nil;permissionDenied=false}})) {
                     if permissionDenied { Button("Open Settings") { openURL(URL(string:UIApplication.openSettingsURLString)!) } }
                     Button("OK",role:.cancel) { error=nil;permissionDenied=false }
                 } message: { Text(error ?? "") }
                 .onOpenURL { url in if url.scheme == "furniturear-scan" && url.host == "scan" { startScan() } }
+                .onChange(of:scenePhase) { _,phase in if phase != .active { tracking.suspend() } }
         }
     }
     private func metric(_ value:String,_ label:String)->some View {

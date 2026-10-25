@@ -23,6 +23,8 @@ struct RoomDocument: Codable {
     var source = "apple-roomplan"
     var name: String
     var capturedAt: String
+    var scanId: String?
+    var floorY: Float?
     var walls: [ScanWall]
     var openings: [ScanOpening]
     var obstacles: [ScanObstacle]
@@ -30,6 +32,9 @@ struct RoomDocument: Codable {
     init(room: CapturedRoom, name: String = "My scanned room") throws {
         self.name = name
         capturedAt = ISO8601DateFormatter().string(from: Date())
+        scanId = UUID().uuidString
+        let floorEstimates = room.walls.map { $0.transform.columns.3.y - $0.dimensions.y / 2 }.sorted()
+        floorY = floorEstimates.isEmpty ? nil : floorEstimates[floorEstimates.count / 2]
         func confidence(_ value: CapturedRoom.Confidence) -> String {
             switch value { case .high: return "high"; case .medium: return "medium"; case .low: return "low"; @unknown default: return "unknown" }
         }
@@ -76,6 +81,15 @@ struct RoomDocument: Codable {
         let xs = points.map(\.x), zs = points.map(\.z)
         let minX = xs.min() ?? 0, minZ = zs.min() ?? 0
         return (minX,minZ,(xs.max() ?? 0)-minX,(zs.max() ?? 0)-minZ)
+    }
+    var floorPlanOrigin: simd_float4x4? {
+        guard let scanId, UUID(uuidString:scanId) != nil, let floorY, floorY.isFinite else { return nil }
+        let b = bounds
+        return RoomAlignment.translation(x:b.minX+b.width/2,y:floorY,z:b.minZ+b.depth/2)
+    }
+    var normalizedWalls:[PlanWall] {
+        let b=bounds,cx=b.minX+b.width/2,cz=b.minZ+b.depth/2
+        return walls.map{PlanWall(start:PlanPoint(x:$0.start.x-cx,z:$0.start.z-cz),end:PlanPoint(x:$0.end.x-cx,z:$0.end.z-cz))}
     }
     func data() throws -> Data {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
