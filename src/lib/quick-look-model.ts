@@ -6,8 +6,10 @@ import type { USDZExporterOptions } from 'three/addons/exporters/USDZExporter.js
 import { strToU8, unzipSync, zipSync } from 'three/addons/libs/fflate.module.js';
 import type { Zippable } from 'three/addons/libs/fflate.module.js';
 
-/** Keep materials in the default prim, so Apple's referenced AR asset retains
- * both mesh bindings and shader connections when /Root is placed in a scene. */
+/** Keep materials inside the active scene, not just the file's default prim.
+ * Object view can read /Root while AR imports /Root/Scenes/Scene separately.
+ * References outside that scene are discarded and become white surfaces.
+ * https://developer.apple.com/documentation/usd/scenelibrary */
 export function scopeQuickLookMaterials(archive: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
   const files = unzipSync(archive);
   if (!files['model.usda']) throw new Error('The AR export is missing its model.');
@@ -15,16 +17,24 @@ export function scopeQuickLookMaterials(archive: Uint8Array<ArrayBuffer>): Uint8
   const marker = '\n\ndef "Materials"';
   const split = stage.indexOf(marker);
   if (split < 0) {
-    // Permit a future upstream exporter that already scopes its materials.
-    if (/\n\s+def(?: Scope)? "Materials"/.test(stage) && !stage.includes('</Materials/')) return archive;
+    // Permit a future upstream exporter that already scopes its materials to
+    // the active scene. Root-only scope is insufficient for AR scene import.
+    if (/\n\t{3}def(?: Scope)? "Materials"/.test(stage)
+      && !stage.includes('</Materials/') && !stage.includes('</Root/Materials/')) return archive;
     throw new Error('This model’s AR materials could not be prepared. Please try again.');
   }
   const root = stage.slice(0, split).trimEnd();
-  if (!root.endsWith('}') || !stage.includes('defaultPrim = "Root"')) {
+  // Three's exporter writes one active Scene inside a sceneLibrary. Validate
+  // this known structure before inserting; never silently repair a new layout
+  // into the wrong scope after an upstream exporter change.
+  const sceneEnd = '\n\t\t}\n\t}\n}';
+  if (!root.endsWith(sceneEnd) || !stage.includes('defaultPrim = "Root"')
+    || !root.includes('kind = "sceneLibrary"') || !root.includes('\n\t\tdef Xform "Scene"')) {
     throw new Error('This model’s AR material structure could not be read.');
   }
-  const materials = stage.slice(split).trim().split('\n').map(line => `\t${line}`).join('\n');
-  files['model.usda'] = strToU8(`${root.slice(0, -1)}\n${materials}\n}\n`.replaceAll('</Materials/', '</Root/Materials/'));
+  const materials = stage.slice(split).trim().split('\n').map(line => `\t\t\t${line}`).join('\n');
+  files['model.usda'] = strToU8(`${root.slice(0, -sceneEnd.length)}\n\n${materials}${sceneEnd}\n`
+    .replaceAll('</Materials/', '</Root/Scenes/Scene/Materials/'));
 
   // USDZ requires stored entries with each payload starting on a 64-byte
   // boundary. Rebuild padding after changing the root stage's byte length.
