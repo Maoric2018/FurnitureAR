@@ -1,6 +1,6 @@
 # Mobile hosting
 
-This independent deployment includes GitHub SAM 3D integration `8d3ce5d`, texture-preserving layout export `d2be545`, and optional background generation `b82817c`, together with the existing hosted timing and same-origin authentication updates. The original repository’s Site identity remains unchanged; this copy has its own `.openai/hosting.json` and source repository.
+This independent deployment includes GitHub main `3e49003`: the interface redesign, SAM 3D integration, optional background generation, texture-preserving layout export, and Quick Look material fix, together with the existing hosted timing, configurable GPU workers, and same-origin authentication updates. The original repository’s Site identity remains unchanged; this copy has its own `.openai/hosting.json` and source repository.
 
 - Site: https://furniture-ar-mobile-20261024.notyourmewtwo.chatgpt.site
 - Audience: public. The existing hosting access policy is preserved.

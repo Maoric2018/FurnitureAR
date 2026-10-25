@@ -1,13 +1,79 @@
-.preview-model-choice{display:grid;gap:12px;margin-top:22px}
-.preview-model-choice>.button{width:100%;min-height:45px;font-size:12px}
-.preview-model-choice>p{font-size:11px;line-height:1.7;color:#777d6e}
-.preview-model-choice>.text-button{justify-self:start;font-size:11px}
-.preview-model-progress{padding:17px;margin-top:18px;border:1px solid #dce4d4;border-radius:7px;background:#f3f6ed;color:#4d6040}
-.preview-model-progress-title{display:flex;align-items:center;gap:10px;font-size:12px;line-height:1.5}
-.preview-model-progress-title .loading-ring{width:19px;height:19px;flex:none}
-.preview-model-progress>p{font-size:11px;line-height:1.7;margin-top:10px}
-.preview-model-progress>.button{width:100%;margin-top:15px;min-height:41px;font-size:11px;background:#fff}
-.preview-model-progress>.text-button{margin-top:12px;font-size:11px}
-.preview-model-notice{overflow-wrap:anywhere}
-.preview-viewer-loading{display:flex;min-height:330px;align-items:center;justify-content:center;gap:12px;color:#68745d;font-size:12px}
-@media(max-width:650px){.preview-model-choice>p,.preview-model-choice>.text-button,.preview-model-progress>p,.preview-model-progress>.text-button{font-size:12px}.preview-viewer-loading{min-height:300px}.preview-model-progress-title{font-size:13px}}
+/* Product preview: 3D viewer loading */
+.product-stage > .preview-viewer-loading {
+  position: absolute;
+  top: var(--stage-top);
+  right: 0;
+  bottom: var(--stage-bottom);
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-2);
+}
+
+/* Product preview: optional 3D generation */
+.preview-model-choice {
+  display: grid;
+  gap: 10px;
+}
+
+.preview-model-choice > .button {
+  width: 100%;
+}
+
+.preview-model-choice > p {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.preview-model-choice > .text-button {
+  justify-self: start;
+}
+
+/* Product preview: generation progress */
+.preview-model-progress {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.preview-model-progress-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+
+.preview-model-progress-title strong {
+  font-weight: 600;
+}
+
+.preview-model-progress-title .loading-ring {
+  flex: none;
+}
+
+.preview-model-progress > .text-button {
+  justify-self: start;
+}
+
+.preview-model-progress > .button {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.preview-model-notice {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .preview-model-choice > .text-button,
+  .preview-model-progress > .text-button {
+    min-height: 40px;
+  }
+}
