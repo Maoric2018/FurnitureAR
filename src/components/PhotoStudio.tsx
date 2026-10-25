@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Box, Camera, Check, ChevronRight, Clock3, Download, ImagePlus, LoaderCircle, RefreshCw, Ruler, ScanLine, ShieldCheck, Sparkles, X } from 'lucide-react';
-import { createGeneration, generationConfig, generationModelUrl, getGeneration, preparePhoto, readPendingGeneration, rememberGeneration, GenerationError } from '../lib/reconstruction';
-import type { GenerationConfig, GenerationJob } from '../lib/reconstruction';
+import { createGeneration, generationConfig, generationModelUrl, getGeneration, preparePhoto, readPendingGeneration, rememberGeneration, trackGeneration, generationElapsedSeconds, GenerationError } from '../lib/reconstruction';
+import type { GenerationConfig, PendingGeneration } from '../lib/reconstruction';
 import { prepareGeneratedModel } from '../lib/reconstruction-model';
 import type { PreparedModel } from '../lib/reconstruction-model';
 import { Viewer } from './Viewer';
@@ -12,14 +12,16 @@ const stageLabels: Record<string, string> = { preparing: 'Preparing your photo',
 export default function PhotoStudio({ autoOpenCamera = false, onBack }: { autoOpenCamera?: boolean; onBack: () => void }) {
   const [config, setConfig] = useState<GenerationConfig | null>(null), [configError, setConfigError] = useState(''), [configAttempt, setConfigAttempt] = useState(0);
   const [photo, setPhoto] = useState<{ file: File; url: string } | null>(null), [cameraOpen, setCameraOpen] = useState(false), [cameraReady, setCameraReady] = useState(false), [openingCamera, setOpeningCamera] = useState(false);
-  const [job, setJob] = useState<GenerationJob | null>(readPendingGeneration), [uploading, setUploading] = useState(false), [preparingPhoto, setPreparingPhoto] = useState(false);
-  const [error, setError] = useState(''), [pollError, setPollError] = useState(''), [pollAttempt, setPollAttempt] = useState(0), [elapsed, setElapsed] = useState(0);
+  const [job, setJob] = useState<PendingGeneration | null>(readPendingGeneration), [uploading, setUploading] = useState(false), [preparingPhoto, setPreparingPhoto] = useState(false);
+  const [error, setError] = useState(''), [pollError, setPollError] = useState(''), [pollAttempt, setPollAttempt] = useState(0), [now, setNow] = useState(Date.now);
+  const [uploadStartedAt, setUploadStartedAt] = useState<number | null>(null);
   const [model, setModel] = useState<PreparedModel | null>(null), [modelError, setModelError] = useState(''), [modelAttempt, setModelAttempt] = useState(0), [modelLoading, setModelLoading] = useState(false);
   const [heightDraft, setHeightDraft] = useState(''), [height, setHeight] = useState<number | null>(null), [modelReady, setModelReady] = useState(false), [arStatus, setArStatus] = useState('');
   const video = useRef<HTMLVideoElement>(null), input = useRef<HTMLInputElement>(null), nativeCamera = useRef<HTMLInputElement>(null), stream = useRef<MediaStream | null>(null);
   const mounted = useRef(false), cameraSequence = useRef(0), photoSequence = useRef(0), startedCamera = useRef(false), uploadController = useRef<AbortController | null>(null), uploadBusy = useRef(false), requestId = useRef(crypto.randomUUID());
   const rawModel = useRef<{ ticket: string; bytes: ArrayBuffer } | null>(null), viewer = useRef<ViewerHandle>(null);
   const busy = uploading || job?.status === 'queued' || job?.status === 'processing';
+  const elapsed = generationElapsedSeconds(job?.startedAt ?? uploadStartedAt, now);
   const finished = job?.status === 'succeeded';
   const stopCamera = useCallback(() => {
     cameraSequence.current++; stream.current?.getTracks().forEach(track => track.stop()); stream.current = null;
@@ -57,7 +59,7 @@ export default function PhotoStudio({ autoOpenCamera = false, onBack }: { autoOp
     try {
       const prepared = await preparePhoto(file);
       if (!mounted.current || sequence !== photoSequence.current) return;
-      stopCamera(); setPhoto({ file: prepared, url: URL.createObjectURL(prepared) }); requestId.current = crypto.randomUUID(); setJob(null); setHeight(null); setHeightDraft('');
+      stopCamera(); setPhoto({ file: prepared, url: URL.createObjectURL(prepared) }); requestId.current = crypto.randomUUID(); setJob(null); setUploadStartedAt(null); setHeight(null); setHeightDraft('');
     } catch (cause) { if (mounted.current && sequence === photoSequence.current) setError((cause as Error).message); }
     finally { if (mounted.current && sequence === photoSequence.current) setPreparingPhoto(false); }
   };
@@ -72,11 +74,12 @@ export default function PhotoStudio({ autoOpenCamera = false, onBack }: { autoOp
   const generate = async () => {
     if (!photo || uploadBusy.current || !config?.configured || !config.signedIn) return;
     stopCamera(); setError(''); setPollError(''); setUploading(true); uploadBusy.current = true;
+    const startedAt = uploadStartedAt ?? Date.now(); setUploadStartedAt(startedAt); setNow(Date.now());
     const controller = new AbortController(); uploadController.current = controller;
     const timer = setTimeout(() => controller.abort(), 40000);
     try {
       const created = await createGeneration(photo.file, requestId.current, controller.signal);
-      if (mounted.current) { setElapsed(0); setJob(created); }
+      if (mounted.current) { const pending = trackGeneration(created, null, startedAt); rememberGeneration(pending); setJob(pending); }
     } catch (cause) {
       if (mounted.current) {
         setError(controller.signal.aborted ? 'The upload response took too long. Retry to check the same request without creating a second generation.' : (cause as Error).message);
@@ -92,7 +95,7 @@ export default function PhotoStudio({ autoOpenCamera = false, onBack }: { autoOp
       try {
         const next = await getGeneration(ticket, AbortSignal.any([controller.signal, AbortSignal.timeout(35000)]));
         if (controller.signal.aborted) return;
-        failures = 0; setJob(next);
+        failures = 0; setJob(current => trackGeneration(next, current));
         if (next.status === 'failed') return;
         if (next.status === 'succeeded') return;
         if (Date.now() - start > 20 * 60000) { setPollError('This is taking longer than expected. Your model may still be generating; check its status again.'); return; }
@@ -107,7 +110,15 @@ export default function PhotoStudio({ autoOpenCamera = false, onBack }: { autoOp
     timer = setTimeout(poll, 1000);
     return () => { controller.abort(); clearTimeout(timer); };
   }, [job?.ticket, job?.status === 'queued' || job?.status === 'processing', pollAttempt]);
-  useEffect(() => { if (!busy) return; const timer = setInterval(() => setElapsed(value => value + 1), 1000); return () => clearInterval(timer); }, [busy]);
+  useEffect(() => {
+    if (!busy) return;
+    const updateClock = () => setNow(Date.now());
+    updateClock();
+    const timer = setInterval(updateClock, 1000);
+    document.addEventListener('visibilitychange', updateClock);
+    window.addEventListener('pageshow', updateClock);
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', updateClock); window.removeEventListener('pageshow', updateClock); };
+  }, [busy]);
   useEffect(() => {
     if (!finished || !job) { setModel(null); return; }
     const ticket = job.ticket, controller = new AbortController(); let url: string | undefined;
@@ -124,7 +135,7 @@ export default function PhotoStudio({ autoOpenCamera = false, onBack }: { autoOp
     })().catch(cause => { if (!controller.signal.aborted) { setModelError((cause as Error).message); setModelLoading(false); } });
     return () => { controller.abort(); if (url) URL.revokeObjectURL(url); };
   }, [finished, job?.ticket, height, modelAttempt]);
-  const reset = () => { stopCamera(); setPhoto(null); setJob(null); rawModel.current = null; setError(''); setPollError(''); setModelError(''); setHeight(null); setHeightDraft(''); requestId.current = crypto.randomUUID(); };
+  const reset = () => { stopCamera(); setPhoto(null); setJob(null); setUploadStartedAt(null); rawModel.current = null; setError(''); setPollError(''); setModelError(''); setHeight(null); setHeightDraft(''); requestId.current = crypto.randomUUID(); };
   const step = finished ? 2 : busy || job ? 1 : 0;
   const readyForGeneration = !!photo && config?.configured && config.signedIn && !preparingPhoto;
   return <div className="photo-studio">

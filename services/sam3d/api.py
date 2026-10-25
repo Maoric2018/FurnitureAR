@@ -4,6 +4,7 @@ Requires Tornado (already supplied by the Pod's Jupyter environment).
 Binds to loopback by default. Expose only through an HTTPS tunnel.
 """
 import concurrent.futures
+from contextlib import contextmanager
 import fcntl
 import hashlib
 import hmac
@@ -35,8 +36,18 @@ TTL = 24 * 60 * 60
 JOB_LIMIT = 60  # At most 60 retained jobs, plus a maximum of four unfinished jobs.
 
 
+def worker_count(value=None):
+    value = os.environ.get("SAM3D_MAX_WORKERS", "2") if value is None else value
+    if isinstance(value, str) and re.fullmatch(r"[+-]?[0-9]+", value.strip()):
+        value = int(value)
+    if type(value) is not int or not 1 <= value <= 2:
+        raise ValueError("SAM3D_MAX_WORKERS must be an integer from 1 to 2")
+    return value
+
+
 class Jobs:
-    def __init__(self, data=DATA, root=ROOT):
+    def __init__(self, data=DATA, root=ROOT, max_workers=None):
+        self.max_workers = worker_count(max_workers)
         self.data, self.root = Path(data), Path(root)
         self.data.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.db = sqlite3.connect(self.data / "jobs.sqlite3", check_same_thread=False)
@@ -44,7 +55,37 @@ class Jobs:
         self.db.execute("CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY, owner TEXT, idem TEXT, digest TEXT, status TEXT, stage TEXT, created REAL, UNIQUE(owner, idem))")
         self.db.execute("UPDATE jobs SET status='failed' WHERE status IN ('queued','processing')")
         self.db.commit()
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers)
+
+    def counts(self):
+        with self.lock:
+            counts = dict(self.db.execute("SELECT status,count(*) FROM jobs WHERE status IN ('queued','processing') GROUP BY status"))
+        return {"max_workers": self.max_workers, "running": counts.get("processing", 0), "queued": counts.get("queued", 0)}
+
+    def event(self, job_id, event, **details):
+        # Private, per-job evidence of overlap; never include credentials or images.
+        path = self.data / job_id / "timeline.jsonl"
+        entry = {"at": time.time(), "event": event, **details}
+        try:
+            descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+            with os.fdopen(descriptor, "a") as output:
+                output.write(json.dumps(entry) + "\n")
+        except OSError:
+            # Diagnostics must not prevent scheduling or change a model's result.
+            logging.warning("Could not write timeline for job %s", job_id, exc_info=True)
+
+    @contextmanager
+    def stage(self, job_id, stage):
+        self.update(job_id, "processing", stage)
+        started = time.monotonic()
+        self.event(job_id, "stage_started", stage=stage)
+        succeeded = False
+        try:
+            yield
+            succeeded = True
+        finally:
+            self.event(job_id, "stage_finished", stage=stage, succeeded=succeeded,
+                       elapsed_seconds=time.monotonic() - started)
 
     def clean(self):
         # Only this service's own completed job directories can expire.
@@ -75,6 +116,7 @@ class Jobs:
             (folder / "upload").write_bytes(image)
             self.db.execute("INSERT INTO jobs VALUES (?,?,?,?,?,?,?)", (job_id, owner, idem, digest, "queued", "preparing", time.time()))
             self.db.commit()
+            self.event(job_id, "queued")
             if schedule:
                 self.executor.submit(self.run, job_id)
             return self.get(job_id, owner)
@@ -111,27 +153,31 @@ class Jobs:
     def run(self, job_id):
         folder = self.data / job_id
         try:
-            # Share the notebook's existing lock; never compete for its GPU.
+            self.event(job_id, "waiting_for_gpu")
+            # API workers share the GPU; the notebook's exclusive lock still
+            # excludes every API worker. Each worker owns a separate file handle.
             with (self.root / ".sam3d-upload.lock").open("a") as gpu_lock:
                 deadline = time.monotonic() + 1200
                 while True:
                     try:
-                        fcntl.flock(gpu_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        fcntl.flock(gpu_lock, fcntl.LOCK_SH | fcntl.LOCK_NB)
                         break
                     except BlockingIOError:
                         if time.monotonic() > deadline:
                             raise TimeoutError("Notebook is still using the GPU")
                         time.sleep(2)
-                self.update(job_id, "processing", "preparing")
-                self.command([MASK_PYTHON, str(self.root / "auto_mask.py"), "--input", str(folder / "upload"), "--output-dir", str(folder)], folder / "mask.log", 180)
-                self.update(job_id, "processing", "reconstructing")
-                self.command(["bash", "-c", 'source "$1/etc/profile.d/conda.sh" && conda activate sam3d-objects && exec python -u "$2" --root "$3" --job "$4"', "sam3d", CONDA, str(Path(__file__).with_name("infer.py")), str(self.root), str(folder)], folder / "inference.log", 1200)
-                self.update(job_id, "processing", "exporting")
-                validate_glb(folder / "model.glb")
+                with self.stage(job_id, "preparing"):
+                    self.command([MASK_PYTHON, str(self.root / "auto_mask.py"), "--input", str(folder / "upload"), "--output-dir", str(folder)], folder / "mask.log", 180)
+                with self.stage(job_id, "reconstructing"):
+                    self.command(["bash", "-c", 'source "$1/etc/profile.d/conda.sh" && conda activate sam3d-objects && exec python -u "$2" --root "$3" --job "$4"', "sam3d", CONDA, str(Path(__file__).with_name("infer.py")), str(self.root), str(folder)], folder / "inference.log", 1200)
+                with self.stage(job_id, "exporting"):
+                    validate_glb(folder / "model.glb")
                 self.update(job_id, "succeeded", "exporting")
+                self.event(job_id, "succeeded")
         except Exception:
             logging.exception("Generation failed: %s", job_id)
             self.update(job_id, "failed", "preparing")
+            self.event(job_id, "failed")
 
 
 def validate_glb(path):
@@ -163,9 +209,10 @@ class Base(tornado.web.RequestHandler):
 
 class Health(Base):
     def get(self):
-        ready = all(p.exists() for p in [ROOT / "checkpoints/hf/pipeline.yaml", ROOT / "auto_mask.py", Path(MASK_PYTHON), Path(CONDA) / "envs/sam3d-objects/bin/python"])
+        jobs = self.settings["jobs"]
+        ready = all(p.exists() for p in [jobs.root / "checkpoints/hf/pipeline.yaml", jobs.root / "auto_mask.py", Path(MASK_PYTHON), Path(CONDA) / "envs/sam3d-objects/bin/python"])
         self.set_status(200 if ready else 503)
-        self.write({"ready": ready})
+        self.write({"ready": ready, **jobs.counts()})
 
 
 class Create(Base):
@@ -222,5 +269,5 @@ if __name__ == "__main__":
     server = tornado.httpserver.HTTPServer(app, max_buffer_size=IMAGE_LIMIT+4096, max_body_size=IMAGE_LIMIT+4096)
     server.listen(int(os.environ.get("PORT", "8765")), address="127.0.0.1")
     tornado.ioloop.PeriodicCallback(jobs.clean, 60 * 60 * 1000).start()
-    logging.warning("SAM 3D API listening on loopback port %s", os.environ.get("PORT", "8765"))
+    logging.warning("SAM 3D API listening on loopback port %s with max_workers=%s", os.environ.get("PORT", "8765"), jobs.max_workers)
     tornado.ioloop.IOLoop.current().start()

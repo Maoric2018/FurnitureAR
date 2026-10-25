@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Generation timer regression</title>
+  <style>
+    #timer-fixture{position:relative;z-index:9;margin-left:225px;padding:14px 24px;border-bottom:2px solid #a95829;background:#fff5df;color:#352e24;font:12px/1.5 system-ui,sans-serif}
+    #timer-fixture h1{font:600 16px/1.4 system-ui,sans-serif;margin:0 0 6px}
+    #timer-fixture p{margin:0 0 8px}
+    #timer-fixture .fixture-actions{display:flex;flex-wrap:wrap;gap:8px}
+    #timer-fixture button{border:1px solid #b4a28a;background:white;border-radius:4px;padding:8px 10px;font:inherit}
+    #timer-fixture pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0;font:11px/1.5 ui-monospace,monospace}
+    #timer-fixture [data-failed="true"]{color:#a71d24;font-weight:600}
+    @media(max-width:650px){#timer-fixture{margin-left:0;padding:12px 16px}}
+  </style>
+</head>
+<body>
+  <section id="timer-fixture" aria-label="Timer regression controls">
+    <h1>Timer regression fixture — simulated job, no GPU request</h1>
+    <p>Use the real app navigation below to leave Photo to 3D and return. Refresh this page to check recovery of the same job.</p>
+    <div class="fixture-actions">
+      <button id="load-processing">Load 30-second processing job</button>
+      <button id="advance-clock">Advance clock by 20 seconds</button>
+      <button id="clear-fixture">Clear fixture</button>
+    </div>
+    <pre id="timer-report" aria-label="Timer regression report">Starting fixture…</pre>
+  </section>
+  <div id="root"></div>
+  <script type="module" src="./generation-timer.tsx"></script>
+</body>
+</html>
