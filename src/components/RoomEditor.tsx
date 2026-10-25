@@ -14,12 +14,12 @@ import ExistingObjects from './ExistingObjects';
 import { placementWarnings } from '../lib/room-scan';
 import type { RoomObstacle } from '../lib/room-scan';
 import { hasNativeRoomAR } from '../lib/native-room';
-interface Props {layout:RoomLayout;onChange:(layout:RoomLayout)=>void;onBack:()=>void;onUnavailable:()=>void;onNotify:(message:string)=>void;persisted:boolean;onPreview:(item:ProductItem)=>void;onCreateDesign:(layout:RoomLayout)=>void;onScan:()=>void;openDesigner?:boolean}
-export default function RoomEditor({layout,onChange,onBack,onUnavailable,onNotify,persisted,onPreview,onCreateDesign,onScan,openDesigner=false}:Props){
+interface Props {layout:RoomLayout;onChange:(layout:RoomLayout)=>void;onBack:()=>void;onUnavailable:()=>void;onNotify:(message:string)=>void;persisted:boolean;onPreview:(item:ProductItem)=>void;onCreateDesign:(layout:RoomLayout)=>void;onScan:()=>void}
+export default function RoomEditor({layout,onChange,onBack,onUnavailable,onNotify,persisted,onPreview,onCreateDesign,onScan}:Props){
   const [view,setView]=useState<'plan'|'3d'>('plan'),[selectedId,setSelectedId]=useState<string|undefined>(layout.items[0]?.id);
   const [history,setHistory]=useState<RoomLayout[]>([]),[future,setFuture]=useState<RoomLayout[]>([]),[showSize,setShowSize]=useState(false);
   const [snap,setSnap]=useState(true);
-  const [designOpen,setDesignOpen]=useState(()=>{if(openDesigner)return true;const params=new URLSearchParams(window.location.search);return params.get('layout')===layout.id&&params.get('design')==='1';});
+  const [designOpen,setDesignOpen]=useState(()=>{const params=new URLSearchParams(window.location.search);return params.get('layout')===layout.id&&params.get('design')==='1';});
   useEffect(()=>{
     const url=new URL(window.location.href);
     if(url.searchParams.get('layout')!==layout.id)return;
@@ -102,7 +102,7 @@ export default function RoomEditor({layout,onChange,onBack,onUnavailable,onNotif
           <button aria-label="Remove selected piece" title="Remove piece" disabled={!selected&&!selectedObstacle} onClick={removeSelected}><Trash2 size={17}/></button>
         </div>
       </div>}
-      <div className="plan-canvas" style={{viewTransitionName:`plan-${layout.id}`}}>{view==='plan'?<FloorPlan layout={layout} selectedId={selectedId} onSelect={id=>{setSelectedId(id);setSelectedObstacleId(undefined);}} onMove={changeItem} snap={snap} onDeselect={()=>{setSelectedId(undefined);setSelectedObstacleId(undefined);}} selectedObstacleId={selectedObstacleId} onSelectObstacle={id=>{setSelectedObstacleId(id);setSelectedId(undefined);}} onMoveObstacle={changeObstacle}/>:<LayoutViewer layout={layout} onUnavailable={onUnavailable}/>}</div>
+      <div className="plan-canvas">{view==='plan'?<FloorPlan layout={layout} selectedId={selectedId} onSelect={id=>{setSelectedId(id);setSelectedObstacleId(undefined);}} onMove={changeItem} snap={snap} onDeselect={()=>{setSelectedId(undefined);setSelectedObstacleId(undefined);}} selectedObstacleId={selectedObstacleId} onSelectObstacle={id=>{setSelectedObstacleId(id);setSelectedId(undefined);}} onMoveObstacle={changeObstacle}/>:<LayoutViewer layout={layout} onUnavailable={onUnavailable}/>}</div>
       {!!warnings.length&&<div className="overlap-notice notice warning" role="status"><TriangleAlert size={16}/><div><strong>Check this placement</strong>{warnings.slice(0,3).map((message,i)=><p key={i}>{message}</p>)}{warnings.length>3&&<p>And {warnings.length-3} more placement warnings.</p>}</div></div>}
       <div className="plan-footer"><span>{view==='plan'?snap?'Drag to move · snaps every 5 cm.':'Drag to move · free placement.':'Drag to rotate. Pinch or scroll to zoom.'}</span><span>{pieceCount} {pieceCount===1?'piece':'pieces'}<i/>To scale</span></div>
     </section><aside className="layout-inspector"><div className="inspector-header"><h2>In this layout<span>{pieceCount}</span></h2></div><div className="inspector-import"><LinkInput compact onProduct={add} buttonLabel="Add to layout"/>{layout.survey&&<button className="text-button" disabled={layout.survey.obstacles.length>=200} onClick={()=>addOutline()}><Plus size={14}/>Add furniture outline</button>}</div>

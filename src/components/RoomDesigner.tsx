@@ -10,8 +10,6 @@ import './room-designer.css';
 
 type Brief = { brief: string; style: string; budget: string; rules: Record<string, PieceRule> };
 const styles = ['Let the room lead', 'Warm minimal', 'Mid-century', 'Japandi', 'Colorful & playful', 'Industrial'];
-// The request is one call, so stages advance on a timer and hold on the last one until it returns.
-const stages = ['Reading your floor plan and photos', 'Searching live Amazon inventory', 'Checking fit, collisions and doorways', 'Pricing each design against your budget'];
 const money = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n);
 function readBrief(layout: RoomLayout): Brief {
   const defaults: Brief = { brief: '', style: styles[0], budget: '800', rules: Object.fromEntries(layout.items.map(i => [i.id, 'fixed'])) };
@@ -31,7 +29,7 @@ export default function RoomDesigner({ layout, onClose, onApply }: { layout: Roo
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [result, setResult] = useState<DesignResult | null>(null);
   const [selected, setSelected] = useState(0), [refinement, setRefinement] = useState(''), [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(true);
-  const [revisions, setRevisions] = useState<string[]>([]), [stage, setStage] = useState(0);
+  const [revisions, setRevisions] = useState<string[]>([]);
   const pending = useRef<AbortController | null>(null), mounted = useRef(true), timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const active = result?.proposals[selected];
@@ -47,12 +45,6 @@ export default function RoomDesigner({ layout, onClose, onApply }: { layout: Roo
   useEffect(() => {
     try { localStorage.setItem(`furniture-ar:design:${layout.id}`, JSON.stringify(brief)); setSaved(true); } catch { setSaved(false); }
   }, [brief, layout.id]);
-  useEffect(() => {
-    setStage(0);
-    if (!busy) return;
-    const timer = setInterval(() => setStage(value => Math.min(value + 1, stages.length - 1)), 7000);
-    return () => clearInterval(timer);
-  }, [busy]);
   const change = (patch: Partial<Brief>) => setBrief(current => ({ ...current, ...patch }));
   const cancel = () => { pending.current?.abort(); pending.current = null; if (timeout.current) clearTimeout(timeout.current); setBusy(false); };
   const generate = async (previous?: DesignProposal) => {
@@ -107,7 +99,7 @@ export default function RoomDesigner({ layout, onClose, onApply }: { layout: Roo
         {!!result.notices.length && <div className="designer-notices">{result.notices.map((notice, i) => <p key={i}>{notice}</p>)}</div>}
         <footer className="designer-form-footer"><span>Saved as a new layout. Your starting room stays available.</span><button className="button primary" disabled={busy} onClick={() => onApply(active)}>Use this design<ArrowRight size={17}/></button></footer></>}
       </div>}
-      {busy && <div className="designer-progress" role="status"><div className="designer-orb" aria-hidden="true"><span/><span/><span/></div><div className="designer-progress-copy"><strong>Designing your room</strong><ol>{stages.map((label, i) => <li key={label} className={i === stage ? 'active' : undefined} aria-current={i === stage ? 'step' : undefined}><span className="step-dot"/>{label}</li>)}</ol><span>This can take a few minutes. Your layout stays unchanged until you choose a design.</span></div><button onClick={cancel}>Cancel</button></div>}
+      {busy && <div className="designer-progress" role="status"><LoaderCircle className="spin" size={19}/><span>Reading your room, finding furniture, and checking the fit. This can take a few minutes.</span><button onClick={cancel}>Cancel</button></div>}
       {error && <div className="designer-error" role="alert">{error}</div>}
     </div>
   </Modal>;

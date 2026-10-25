@@ -4,8 +4,8 @@
   "description": "Plan your room, design around what is there, and preview furniture in AR.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f4efe7",
-  "theme_color": "#f4efe7",
+  "background_color": "#f3f4f3",
+  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "/icon.svg",
