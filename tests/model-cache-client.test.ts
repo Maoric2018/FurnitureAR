@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getAmazonProductModel, ImportError, importAmazonProduct, parseAmazonModel, parseAmazonProductResult, parseListing } from '../src/lib/amazon.ts';
+import { generateAmazonProductModel, getAmazonProductModel, ImportError, importAmazonProduct, parseAmazonModel, parseAmazonProductResult, parseListing } from '../src/lib/amazon.ts';
 import { createImportedItem, parseWorkspace } from '../src/lib/workspace.ts';
 import { resolveModelItem } from '../src/lib/model-resolution.ts';
 
@@ -21,7 +21,7 @@ const product = () => ({
 const ready = () => ({ listing: listing(), product: product(), model: { status: 'ready', source: 'cache' } });
 
 test('Model metadata accepts only known states, sources, and bounded retry delays and drops unknown fields', () => {
-  for (const status of ['ready', 'not_configured', 'pending', 'failed', 'storage_unavailable', 'no_image']) {
+  for (const status of ['ready', 'not_requested', 'not_configured', 'pending', 'failed', 'storage_unavailable', 'no_image']) {
     assert.deepEqual(parseAmazonModel({ status, error: 'api_key=SECRET', providerJobId: 'SECRET' }), { status });
   }
   assert.deepEqual(parseAmazonModel({ status: 'pending', retryAfterMs: 4000 }), { status: 'pending', retryAfterMs: 4000 });
@@ -29,6 +29,19 @@ test('Model metadata accepts only known states, sources, and bounded retry delay
     ...[-1, NaN, Infinity, 0.5, 300001, '4000'].map(retryAfterMs => ({ status: 'pending', retryAfterMs }))]) {
     assert.throws(() => parseAmazonModel(value), error => error instanceof ImportError && error.code === 'INVALID_MODEL_RESPONSE' && !error.message.includes('SECRET'));
   }
+});
+
+test('Browsing does not opt into generation; only the explicit model action sends consent', async t => {
+  const bodies: unknown[] = [];
+  t.mock.method(globalThis, 'fetch', async (_url: unknown, init?: RequestInit) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    return Response.json({listing:listing(),product:null,model:{status:'not_requested'}});
+  });
+  const url=`https://www.amazon.com/dp/${asin}`;
+  const browsed=await importAmazonProduct(url);
+  assert.equal(browsed.listing.model?.status,'not_requested');
+  await generateAmazonProductModel(url);
+  assert.deepEqual(bodies,[{url},{url,generateModel:true}]);
 });
 
 test('Model results attach sanitized state to the listing and survive saved-item persistence', () => {
