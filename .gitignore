@@ -20,3 +20,6 @@ ios/**/build/
 ios/**/DerivedData/
 ios/**/xcuserdata/
 *.xcuserstate
+
+# Local live-generation evidence; cached models live in R2, not Git.
+verification/

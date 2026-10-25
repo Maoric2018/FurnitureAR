@@ -6,6 +6,7 @@ import { createLayout, createProductItem, duplicateLayout, parseWorkspace, place
 import { parseRoomScan, parseSurvey } from '../src/lib/room-scan.ts';
 import { bytesToBase64, hasNativeRoomAR, nativeLayoutMetadata, nativeRequest } from '../src/lib/native-room.ts';
 import { exportNativeLayout } from '../src/lib/layout-model.ts';
+import { unzipSync } from 'three/addons/libs/fflate.module.js';
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/room-scan.json',import.meta.url),'utf8'));
 const scanId='0fd3d6b7-9107-4310-9cec-f9f3d470692e';
 function scannedRoom(){const scan=parseRoomScan({...fixture,scanId});return {...createLayout('Room','Scanned room',scan.width,scan.depth),survey:scan.survey};}
@@ -59,6 +60,27 @@ test('native USDZ export keeps metre scale, offset, and yaw without automatic pl
     // The serialized local matrix retains the negative Y rotation used by the map.
     assert.ok(text.includes('-1, 0, 2.220446049250313e-16, 0') || text.includes('-1, 0, 6.123233995736766e-17, 0'));
     assert.equal(room.items[0].x,1.25);
+    const stage=new TextDecoder().decode(unzipSync(bytes)['model.usda']);
+    assert.ok(stage.includes('</Root/Scenes/Scene/Materials/'), 'Native AR must retain materials inside its imported scene');
+    assert.equal(stage.includes('</Materials/'),false);
     const controller=new AbortController();controller.abort();await assert.rejects(exportNativeLayout(room,controller.signal));
+  } finally {globalThis.fetch=previousFetch;(globalThis as any).window=previousWindow;}
+});
+
+test('native room export retains the generated models’ baked vertex colors inside the aligned scene',async()=>{
+  const previousFetch=globalThis.fetch,previousWindow=globalThis.window;
+  const data=readFileSync(new URL('./browser/fixtures/vertex-colors.glb',import.meta.url));
+  try {
+    (globalThis as any).window={location:{href:'https://furniture.test/'}};
+    globalThis.fetch=async()=>new Response(data);
+    const product={...catalog[0],dimensions:{width:1,depth:1,height:1},variants:[catalog[0].variants[0]]};
+    const room=placeItem(scannedRoom(),createProductItem('https://example.com/colored-model',product));
+    room.items[0]={...room.items[0],x:-1,z:1,rotation:45};
+    const files=unzipSync(await exportNativeLayout(room));
+    const stage=new TextDecoder().decode(files['model.usda']);
+    assert.match(stage,/inputs:diffuseColor.connect = <\/Root\/Scenes\/Scene\/Materials\/[^>]+\/VertexColorTexture_\d+\.outputs:rgb>/);
+    assert.ok(Object.keys(files).some(path=>path.endsWith('.png')),'Baked colors must be included in the native transfer');
+    assert.equal(stage.includes('preliminary:anchoring:type'),false);
+    assert.ok(stage.includes('-1, 0, 1, 1'));
   } finally {globalThis.fetch=previousFetch;(globalThis as any).window=previousWindow;}
 });

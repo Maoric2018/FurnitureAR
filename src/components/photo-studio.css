@@ -1,0 +1,672 @@
+/* Photo to 3D page (PhotoStudio.tsx).
+   Uses the shared primitives from src/styles.css; only page-specific layout lives here. */
+
+/* Step indicator */
+.photo-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.photo-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.photo-steps li > span {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.photo-steps li > span svg {
+  width: 12px;
+  height: 12px;
+}
+
+.photo-steps li > svg {
+  margin-left: 4px;
+  color: var(--border-strong);
+}
+
+.photo-steps .complete > span {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.photo-steps .current {
+  color: var(--text);
+}
+
+.photo-steps .current > span {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Service notes (extend .notice) */
+.photo-service-note {
+  margin-bottom: 16px;
+}
+
+.photo-service-note > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.photo-service-note p {
+  margin-top: 2px;
+}
+
+.photo-service-note > .button,
+.photo-service-note > .icon-button,
+.photo-service-note > .text-button {
+  flex-shrink: 0;
+  align-self: center;
+  margin-left: auto;
+}
+
+/* Workspace */
+.photo-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  align-items: start;
+  gap: 16px;
+}
+
+/* Stage */
+.photo-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: min-content;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-3);
+}
+
+.photo-stage.camera-active {
+  border-color: var(--text);
+  background: var(--text);
+}
+
+.photo-stage-top {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  left: 12px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.photo-stage-top .tag {
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.camera-active .photo-stage-top .tag {
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  box-shadow: none;
+}
+
+.photo-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-border);
+}
+
+.photo-stage-caption {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  z-index: 2;
+  width: fit-content;
+  margin: 0 auto;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
+  color: var(--text-2);
+  font-size: 12px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Stage: empty, loading and error states */
+.photo-stage-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 360px;
+  padding: 32px 24px;
+  color: var(--text-2);
+  font-size: 13px;
+  text-align: center;
+}
+
+.photo-stage-empty > svg {
+  width: 28px;
+  height: 28px;
+  margin-bottom: 4px;
+  color: var(--text-3);
+}
+
+.photo-stage-empty h2 {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.photo-stage-empty p[role="alert"] {
+  color: var(--danger);
+}
+
+.photo-stage-empty .button {
+  margin-top: 8px;
+}
+
+/* Stage: generated model */
+.photo-stage > .viewer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Stage: live camera */
+.photo-stage > video {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--text);
+}
+
+.photo-frame {
+  position: absolute;
+  inset: 52px 10% 112px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.photo-frame i {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+
+.photo-frame i:nth-child(1) {
+  top: 0;
+  left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-top-left-radius: 4px;
+}
+
+.photo-frame i:nth-child(2) {
+  top: 0;
+  right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-top-right-radius: 4px;
+}
+
+.photo-frame i:nth-child(3) {
+  bottom: 0;
+  left: 0;
+  border-top: 0;
+  border-right: 0;
+  border-bottom-left-radius: 4px;
+}
+
+.photo-frame i:nth-child(4) {
+  right: 0;
+  bottom: 0;
+  border-top: 0;
+  border-left: 0;
+  border-bottom-right-radius: 4px;
+}
+
+.photo-camera-bar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.photo-camera-bar button:focus-visible {
+  outline-color: #fff;
+}
+
+.photo-camera-close {
+  display: grid;
+  justify-self: start;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.photo-camera-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.photo-shutter {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  padding: 4px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+}
+
+.photo-shutter > span {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.1s;
+}
+
+.photo-shutter:active:not(:disabled) > span {
+  transform: scale(0.92);
+}
+
+.photo-camera-bar > span {
+  justify-self: end;
+  color: #fff;
+  font-size: 12px;
+  text-align: right;
+}
+
+/* Stage: selected photo */
+.photo-selected-image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 48px 24px;
+  object-fit: contain;
+}
+
+.photo-busy-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+
+/* Side panel */
+.photo-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.photo-panel > h2 {
+  font-size: 18px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.photo-panel > h2 + p {
+  margin-top: -10px;
+  color: var(--text-2);
+}
+
+.photo-panel > .button {
+  width: 100%;
+}
+
+.photo-panel > .button + .field-hint {
+  margin-top: -8px;
+}
+
+.photo-panel > .text-button {
+  align-self: flex-start;
+}
+
+.photo-fineprint {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+/* Panel: tips and photo actions */
+.photo-tips {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.photo-tips li::marker {
+  color: var(--text-3);
+}
+
+.photo-retake-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: -8px;
+}
+
+.photo-retake-actions > .button {
+  flex: 1 1 auto;
+}
+
+.photo-fallback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.photo-fallback .text-button {
+  min-height: 32px;
+}
+
+.photo-fallback small {
+  flex-basis: 100%;
+  font-size: 12px;
+}
+
+.photo-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Panel: errors */
+.photo-error {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-lg);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.photo-error .button {
+  white-space: normal;
+}
+
+/* Panel: generation progress */
+.photo-progress {
+  display: grid;
+  gap: 6px;
+}
+
+.photo-progress > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.photo-progress strong {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.photo-progress progress,
+.photo-indeterminate {
+  display: block;
+  width: 100%;
+}
+
+.photo-elapsed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -8px;
+  color: var(--text-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.photo-status-list {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.photo-status-list > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.photo-status-list svg {
+  color: var(--accent);
+}
+
+.photo-status-list .pending,
+.photo-status-list .pending svg {
+  color: var(--text-2);
+}
+
+/* Panel: size form and dimensions */
+.photo-size-form {
+  display: grid;
+  gap: 8px;
+}
+
+.photo-size-form > label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.photo-size-form > label svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-3);
+}
+
+.photo-height-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.photo-height-input > .input {
+  flex: 1;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.photo-height-input > span {
+  color: var(--text-2);
+}
+
+.photo-size-form > p {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.photo-dimensions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.photo-dimensions > span {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.photo-dimensions > span > small {
+  color: var(--text-2);
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.photo-dimensions strong {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.photo-dimensions strong > small {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* Photo to 3D: responsive */
+@media (max-width: 1100px) {
+  .photo-workspace {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+}
+
+@media (max-width: 960px) {
+  .photo-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .photo-stage {
+    aspect-ratio: 3 / 2;
+  }
+
+  .photo-stage.camera-active {
+    max-height: 75vh;
+    max-height: 75dvh;
+    aspect-ratio: 3 / 4;
+  }
+}
+
+@media (max-width: 720px) {
+  .photo-steps {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .photo-steps li {
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+    font-size: 12px;
+  }
+
+  .photo-steps li > svg {
+    display: none;
+  }
+
+  .photo-service-note > .icon-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .photo-stage {
+    aspect-ratio: 4 / 5;
+  }
+
+  .photo-frame {
+    inset: 52px 8% 112px;
+  }
+
+  .photo-panel {
+    padding: 16px;
+  }
+
+  .photo-studio .text-button {
+    min-height: 40px;
+  }
+
+  .photo-height-input > .input {
+    height: 40px;
+  }
+}
+
+@media (max-width: 400px) {
+  .photo-camera-bar {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .photo-dimensions > span {
+    padding: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photo-shutter > span {
+    transition: none;
+  }
+}

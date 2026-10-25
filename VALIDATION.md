@@ -35,7 +35,7 @@
 - Source and production output were scanned for the supplied SerpApi key and local Hugging Face token; neither was embedded.
 - The previously published version loaded and rejected anonymous imports with a sign-in prompt. That deployment predates the guest-access changes below. The original signed-in flow was tested locally using the Sites development identity; the browser's hosted OpenAI login was not completed.
 
-Physical iPhone/Android camera AR has not been tested here. Registered models are supplied approximations, and arbitrary Amazon photos do not yet generate models through the app. Listing measurements can be missing or disagree with model geometry; the interface keeps both sources distinct.
+Physical iPhone/Android camera AR has not been tested here. Registered models are supplied approximations; the later SAM 3D integration and optional background-generation checks are recorded below. Listing measurements can be missing or disagree with model geometry; the interface keeps both sources distinct.
 
 The separate [Mac SAM 3D experiment](experiments/README.md) generated and exported the isolated table example in 601.2 seconds. Its CPU-decoded mesh had zero invalid vertices/faces; the final 20,000-triangle textured GLB passed geometry/texture checks and visual inspection. Small reconstruction artifacts remain, and its scale has not been verified.
 
@@ -70,4 +70,36 @@ The room scanner was merged with the newer GitHub Amazon search and observed-col
 - A separate real Miniflare R2 integration verified conditional create/update behavior and stale-write rejection. An injected test generator stored a 41,020-byte test-only GLB for a synthetic ASIN; after disposing and recreating the storage runtime, a fresh service reused the model and served identical bytes while both provider functions were configured to throw if called. This fixture was kept out of the app's live product cache.
 - A real Amazon search opened the Govee floor-lamp listing with its photo and the honest disabled-generator message. After restarting the local preview without any SerpApi key configured, a differently formatted link for the same ASIN returned the persisted product snapshot with `cached: true` and the same retrieval timestamp. No geometry was generated for that live product.
 - Independent review caught and resolved a cross-Worker race where a late pending result could overwrite ready metadata. Conditional R2 writes now preserve the completed result. It also verified completion updates a previously saved item even when a fresh preview has a different ID.
-- Changed files and the browser build contain no configured API credentials. The actual image-to-GLB adapter remains a dummy. Hosted storage and publication remain unverified because the existing Sites project is inaccessible through the connected account.
+- Changed files and the browser build contain no configured API credentials. At this stage the image-to-GLB adapter was a dummy; the subsequent SAM 3D integration below replaced it. Hosted storage and publication remained unverified because the existing Sites project was inaccessible through the connected account.
+
+
+## SAM 3D integration merge — 2026-10-24
+
+Merged the real Runpod image-to-GLB adapter and the camera studio onto upstream `6ae0214` (exact-ASIN cache), preserving guest Amazon browsing, room scanning, finish selection and all 30 supplied catalog models.
+
+- `npm test`: 175 passed, including provider routing/idempotency, user-isolated camera jobs, cache persistence/concurrency, unsafe inputs, real vertex bounds and scale gating.
+- `npm run build`: passed (TypeScript, Worker and browser bundles).
+- Real cloud run through the new Amazon adapter and model service: ASIN `B074XPNS3Z`, 79.597 seconds, 7,452,876-byte GLB, SHA-256 `938678df7240bc3a30c8acd1740c65498a8fa9dcece563a415e0b8d71e4598bc`. A new model-service instance reused the cached result without another lookup or generation.
+- The live run used the team's existing `03_lamp/source.json` product/photo record and downloaded its Amazon CDN photo. No fresh SerpApi lookup was claimed: the current local configuration has no `SERPAPI_API_KEY`. Fresh Amazon search/import requires that server secret; camera generation uses only the two configured model secrets.
+- The real generated GLB and metadata were copied into local R2 through Wrangler for browser verification. The current product-link interface loaded and rendered the actual lamp, labeled cache reuse and reference dimensions, and disabled AR/layout placement because this source record has no real measurement. This was not a replacement demo asset.
+- The actual local Worker also retrieved the already-completed cloud job through its poll adapter, normalized the GLB, and rewrote its pending R2 record to ready; no second GPU generation was needed. Browser console errors: none.
+- The camera studio and room-scan entry points remain available in the merged interface. A narrow phone-width check showed all four navigation entries and no horizontal overflow. Physical camera permission, native RoomPlan, and AR tracking still require real-device checks over HTTPS; desktop rendering does not verify phone tracking.
+- Local verification files are ignored by Git under `verification/`. Model service credentials remain in ignored `.dev.vars`; the temporary HTTPS connection and existing Runpod process must stay active. No hosted deployment or remote Git push was performed.
+
+## Optional background generation — local verification
+
+- The full automated suite and production build pass; `git diff --check` is clean. Regression coverage includes lookup-only imports, boolean opt-in validation, concurrent browsing/starting, status requests that never start work, accepted-job completion, exact-ASIN reuse, queue bounds, persistent job recovery, and finish-preserving saved-item updates.
+- Retry tests distinguish confirmed failures from ambiguous start outcomes. A confirmed failure gets a new persisted attempt key only on explicit retry. A lost response or timeout retains its original key, and browsing or reloading never silently creates another attempt.
+- Browser QA used local fixture jobs and a real authored test GLB, without paid or live GPU generation. Browsing product photos caused no generation POSTs or GLB downloads. A requested job continued while a different product was open, and its result did not replace that product.
+- Reload resumed GET status checks while the total generation POST count stayed at the two explicit user requests. The completed item still showed its photo; its GLB downloaded once, only after **Load 3D model** was selected. The completed, measured chair was then successfully added to a new room layout. Browser console errors: none.
+- GPU worker count, inference locking, provider queue limits and underlying reconstruction speed are unchanged. These checks verify optional loading and background workflow, not a new GPU throughput benchmark. Physical AR tracking and hosted deployment were not exercised by this local validation.
+
+## Combined GitHub update — 2026-10-25
+
+Merged GitHub `main` at `e3f75f7` with the local Claude designer and native room-alignment work. Preserved the redesigned interface, optional background generation, camera studio, texture decoding, Quick Look colors/shading, and the simplified layout-only furniture saving workflow. Scan footprints remain unlabeled; new layouts retain manual sizing or the iPhone scanning entry. Snap, drag, undo/redo, and keyboard arrangement controls remain available.
+
+- All 254 automated tests pass, and the TypeScript/Worker/browser production build passes.
+- Native room export now uses the shared corrected USDZ exporter. Integration checks verify scene-scoped materials and connected baked vertex colors while retaining meter scale, placement, rotation, and disabled automatic plane anchoring.
+- The standalone native alignment checks pass. The Swift sources and signing settings were preserved unchanged by this merge; installation and physical room tracking were not retested.
+- The merged local preview returns HTTP 200. Visual browser verification was unavailable because local browser control is disabled in Work settings.
+- No paid image generation or Claude request was made for this merge. Ignored local credentials were preserved; no GitHub push or hosted deployment was performed.

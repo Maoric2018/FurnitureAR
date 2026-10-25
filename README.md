@@ -2,10 +2,12 @@
 
 A mobile web app with two ways to plan furniture:
 
-- **One product:** search Amazon or paste a link, inspect its 3D model, choose a finish, and preview it in AR. This flow does not save products.
-- **A whole room:** enter room dimensions to create a named layout (scanning is a placeholder for the future unified app), find products through search or links, move and rotate pieces on a floor plan, choose each piece’s finish, then view the complete arrangement in 3D or AR.
+- **One product:** search Amazon or paste a link, browse its photos, optionally generate or load its 3D model, choose a finish, then preview it in AR or add it to a layout. There is no standalone saved-items library.
+- **A whole room:** create a named layout from manual dimensions or a scan in the iPhone app, arrange pieces on a floor plan, use **Design my room** for suggestions, then preview the layout in 3D or AR. Browser scanning remains an app handoff placeholder.
 
 The home screen is a workspace. **Search Amazon by keyword** or paste an **Amazon.com product link** to import real product details. Search opens a photo-card list with prices and ratings when supplied, model-availability labels, and pagination. Selecting a result checks the saved model for that exact Amazon product before fetching more product details. The table and lamp supplied by the project team have approximate 3D previews. Other products can be viewed with their details; AR and room placement remain unavailable until a matching model exists. No unrelated placeholder is substituted.
+
+Product previews open with photos. Choose **Load 3D model** for an available model, or **Generate 3D model** to request one. Browsing alone neither starts generation nor downloads a GLB. The **3D models** panel keeps requested jobs and their progress while you browse or edit a room. Accepted jobs continue on the GPU service after the tab closes; reopening resumes status checks without resubmitting them. Products are saved as furniture only when added to a layout.
 
 Search is also available inside each room layout. It returns the products supplied for each Amazon search page, rather than attempting to download the entire catalog. Search results do not guarantee current stock; confirm price, availability, size, and finish on Amazon. Product search and import share the configured SerpApi account allowance; search runs only on submission or pagination, not on every keystroke.
 
@@ -16,7 +18,8 @@ Requires Node.js 22.12+ (or a supported newer version).
 ```sh
 npm ci
 cp .dev.vars.example .dev.vars
-# Add the supplied SerpApi key to .dev.vars (server-only).
+# Add SERPAPI_API_KEY for Amazon search/import and MODEL_API_URL + MODEL_API_KEY for SAM 3D.
+# These are server-only values. Preserve an existing .dev.vars instead of overwriting it.
 npm run dev
 ```
 
@@ -30,7 +33,13 @@ npm run preview
 
 Amazon selections share a persistent model cache, keyed by marketplace and exact ASIN rather than tracking parameters in a product link. A completed model is reused before calling SerpApi or the generator again. Its GLB and product-link metadata live under `generated-models/amazon-com/<ASIN>/` in the website's R2 storage. Local development uses persistent local R2 storage; deployed storage is shared across visitors and devices.
 
-The image-to-GLB generator is deliberately a disabled adapter for now. It receives the verified product's photo and supports both immediate results and jobs that finish later. No sample shape is substituted for an unknown product. See [generator integration and storage](MODEL_GENERATION.md) for the adapter contract, cache layout, and deployment requirements. Stored prices, stock, and colors are snapshots; the cache does not continuously refresh Amazon availability.
+The image-to-GLB adapter calls the team’s existing SAM 3D Runpod service only after an explicit generation request. The app tracks the job’s real stage independently of the product preview. A completed GLB is normalized and stored by the server; viewing it remains a separate **Load 3D model** action. Known registered models and completed cached models are reused. No sample shape is substituted for an unknown product. This change avoids unnecessary work and allows continued browsing; GPU worker concurrency is unchanged. See [generator integration and storage](MODEL_GENERATION.md) for the adapter contract, cache layout, and deployment requirements. Stored prices, stock, and colors are snapshots; the cache does not continuously refresh Amazon availability.
+
+## Camera → GLB → AR
+
+Choose **Photo to 3D** or **Open camera**, sign in, capture/upload a photo, and press **Generate 3D model**. The model runs on the existing GPU; a real status animation tracks preparation, reconstruction and export. Enter a measured height before placing the generated model in AR, or download its GLB. See [PHOTO_TO_3D.md](./PHOTO_TO_3D.md) and [the Runpod service](./services/sam3d/README.md).
+
+For Amazon models, scale uses the first available labeled height, width or depth while preserving proportions. Without a usable measurement, the model is a clearly labeled 1 m reference preview; AR and room placement stay unavailable. A single photo cannot determine real dimensions.
 
 ## Design my room — Claude Opus
 
@@ -98,14 +107,16 @@ Amazon ASIN B0F2ML48Y6 and the six registered table finish ASINs listed in [INTE
 
 The partner’s SerpApi implementation is integrated into `POST /api/products/import` and `POST /api/products/search`. See [INTEGRATION.md](./INTEGRATION.md) for setup, request/response details, material variants, supported links, limitations, and model provenance. The API key is a server secret; it is never bundled into the phone app.
 
-The same-origin route runs in the Cloudflare Worker for local development and hosted deployment. SAM 3D generation remains a separate [local experiment](./experiments/README.md) and is not connected to live imports yet. Product photos and URLs alone do not provide accurate geometry. See [VALIDATION.md](./VALIDATION.md) for the tested behavior and remaining limits.
+The same-origin route runs in the Cloudflare Worker for local development and hosted deployment. Amazon imports look up details and existing models by default; `generateModel: true` explicitly requests SAM 3D through `server/model-generator.js`. Camera uploads use [Photo to 3D](./PHOTO_TO_3D.md). The [older local experiment](./experiments/README.md) is retained for reference. Product photos and URLs alone do not provide accurate geometry. See [VALIDATION.md](./VALIDATION.md) for the tested behavior and remaining limits.
 
 ## Source map
 
-- `src/App.tsx`: workspace overview, layouts, scan handoff and navigation.
+- `src/App.tsx`: workspace overview, layouts, scan handoff, navigation and background model updates.
 - `src/components/NewLayout.tsx`: manual room dimensions or room scan entry.
 - `src/components/LinkInput.tsx`: Amazon product-link entry and importer connection.
-- `src/components/PreviewModal.tsx`: listing details and individual product/AR preview.
+- `src/components/PreviewModal.tsx`: photos-first listing details, generation choice and lazy product/AR preview.
+- `src/components/ModelJobsPanel.tsx`: app-wide model progress, status checks and reopening requested items.
+- `src/lib/model-jobs.ts` and `src/lib/use-model-jobs.ts`: persistent job tracking, explicit starts and status-only recovery after reload.
 - `src/components/FinishPicker.tsx`: named finish choices and approximate-preview labels.
 - `src/components/RoomEditor.tsx`: arrangement editing and undo.
 - `src/components/FloorPlan.tsx`: dimensioned SVG plan with touch, pointer and keyboard controls.
@@ -118,7 +129,7 @@ The same-origin route runs in the Cloudflare Worker for local development and ho
 - `src/lib/amazon.ts`: live listing validation and import request.
 - `src/lib/amazon-search.ts`: search result validation and keyword-search requests.
 - `server/`: adapted partner transport, normalizer, importer, caching and access checks.
-- `server/model-generator.js`: disabled photo-to-GLB adapter and future provider contract.
+- `server/model-generator.js`: live SAM 3D start/poll adapter for the Amazon cache; `server/sam3d-glb.js` preserves proportions and establishes metric bounds.
 - `server/model-service.js`: exact-product model resolution, persistent files, and generation status.
 - `worker/index.ts`: hosted API route and static asset serving.
 - `tests/`: dimensions, importer contracts, input validation, finish persistence, material isolation/restoration and combined GLB/USDZ colors and transforms.

@@ -5,3 +5,7 @@ SERPAPI_API_KEY=
 ANTHROPIC_API_KEY=
 # Optional: an Opus model available to your Anthropic account.
 CLAUDE_MODEL=claude-opus-5-5
+
+# SAM 3D: server-only HTTPS API, shared by Amazon imports and Photo to 3D.
+MODEL_API_URL=
+MODEL_API_KEY=
