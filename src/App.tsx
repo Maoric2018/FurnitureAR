@@ -26,7 +26,7 @@ type Page='home'|'layouts'|'photo';
 export default function App(){
   const [workspace,setWorkspace]=useState(readWorkspace),[persisted,setPersisted]=useState(true);
   const [scanOpen,setScanOpen]=useState(false),[scanError,setScanError]=useState<string>();
-  const [page,setPage]=useState<Page>(()=>new URLSearchParams(window.location.search).has('photo')?'photo':'home'),[roomId,setRoomId]=useState<string|null>(()=>new URLSearchParams(window.location.search).get('layout')),[query,setQuery]=useState('');
+  const [page,setPage]=useState<Page>(()=>{const params=new URLSearchParams(window.location.search);return params.has('layout')?'layouts':params.has('photo')?'photo':'home';}),[roomId,setRoomId]=useState<string|null>(()=>new URLSearchParams(window.location.search).get('layout')),[query,setQuery]=useState('');
   const [preview,setPreview]=useState<ProductItem|null>(null),[createOpen,setCreateOpen]=useState(false),[pendingItem,setPendingItem]=useState<ProductItem|null>(null);
   const [unit,setUnit]=useState<Unit>(readUnit),[help,setHelp]=useState(false),[phone,setPhone]=useState(false),[copied,setCopied]=useState(false);
   const [autoOpenCamera,setAutoOpenCamera]=useState(false);

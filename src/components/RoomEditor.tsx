@@ -20,6 +20,12 @@ export default function RoomEditor({layout,onChange,onBack,onUnavailable,onNotif
   const [history,setHistory]=useState<RoomLayout[]>([]),[future,setFuture]=useState<RoomLayout[]>([]),[showSize,setShowSize]=useState(false);
   const [snap,setSnap]=useState(true);
   const [designOpen,setDesignOpen]=useState(()=>{const params=new URLSearchParams(window.location.search);return params.get('layout')===layout.id&&params.get('design')==='1';});
+  useEffect(()=>{
+    const url=new URL(window.location.href);
+    if(url.searchParams.get('layout')!==layout.id)return;
+    url.searchParams.delete('layout');url.searchParams.delete('design');
+    window.history.replaceState(null,'',url.pathname+url.search+url.hash);
+  },[layout.id]);
   const [nameDraft,setNameDraft]=useState(layout.name);
   const [selectedObstacleId,setSelectedObstacleId]=useState<string|undefined>(layout.items.length?undefined:layout.survey?.obstacles[0]?.id);
   const warnings=layout.items.flatMap((item,index)=>placementWarnings(item,layout).map(message=>`Piece ${index+1}: ${message}`));
