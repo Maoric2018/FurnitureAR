@@ -11,9 +11,14 @@ enum PlannerReturnError: LocalizedError {
 }
 
 /// Shared by deep-link imports, manually configured destinations, and legacy exports.
-/// No deployment is a default: the launching website owns the return destination.
+/// Website launches keep their own destination. Standalone and retired-site
+/// scans use the current Roomify deployment instead of an obsolete saved URL.
 enum PlannerReturn {
-    static func address(_ raw: String) throws -> URL {
+    static let currentAddress = "https://furniture-ar-mobile-20261024.notyourmewtwo.chatgpt.site/"
+    private static let currentURL = URL(string: currentAddress)!
+    private static let retiredHost = "furniture-ar-studio-eric.ericshengyanjin.chatgpt.site"
+
+    private static func validatedAddress(_ raw: String) throws -> URL {
         let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty, value.count <= 4096,
               value.rangeOfCharacter(from: .whitespacesAndNewlines) == nil,
@@ -32,8 +37,26 @@ enum PlannerReturn {
         return url
     }
 
+    private static func isRetired(_ url: URL) -> Bool {
+        // A DNS trailing dot and case changes must not bypass this migration.
+        // Exact host matching leaves other users' deployments untouched.
+        guard var host = url.host?.lowercased() else { return false }
+        if host.hasSuffix(".") { host.removeLast() }
+        return host == retiredHost
+    }
+
+    static func address(_ raw: String) throws -> URL {
+        let url = try validatedAddress(raw)
+        return isRetired(url) ? currentURL : url
+    }
+
+    static func configuredAddress(_ raw: String) throws -> URL {
+        if raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return currentURL }
+        return try address(raw)
+    }
+
     /// A malformed explicit returnUrl never falls back to an old saved website.
-    /// Bare legacy links continue to support the manually configured address.
+    /// Bare legacy links use the configured address or current Roomify website.
     static func launch(_ url: URL, savedAddress: String) throws -> URL? {
         guard let parts = URLComponents(url: url, resolvingAgainstBaseURL: false),
               parts.scheme?.lowercased() == "furniturear-scan", parts.host?.lowercased() == "scan",
@@ -42,7 +65,7 @@ enum PlannerReturn {
             throw PlannerReturnError.invalidLaunch
         }
         guard parts.query != nil else {
-            return savedAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : try address(savedAddress)
+            return try configuredAddress(savedAddress)
         }
         guard let items = parts.queryItems, items.count == 1,
               items[0].name == "returnUrl", let value = items[0].value else {
@@ -52,8 +75,14 @@ enum PlannerReturn {
         catch { throw PlannerReturnError.invalidLaunch }
     }
 
-    /// A completed scan keeps its destination even when later scans/settings change.
+    /// Modern scans keep their destination. A retired destination must not
+    /// override a corrected setting or keep reopening the old deployment.
     static func capturedAddress(_ captured: String?, manualAddress: String) throws -> URL {
-        try address(captured ?? manualAddress)
+        guard let captured, !captured.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return try configuredAddress(manualAddress)
+        }
+        let url = try validatedAddress(captured)
+        if isRetired(url) { return try configuredAddress(manualAddress) }
+        return url
     }
 }

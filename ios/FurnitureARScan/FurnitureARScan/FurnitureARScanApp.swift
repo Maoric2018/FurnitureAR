@@ -16,7 +16,7 @@ private struct ScanHome: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var tracking = RoomTrackingStore()
     @State private var planner: PlannerDestination?
-    @AppStorage("plannerAddress") private var plannerAddress = ""
+    @AppStorage("plannerAddress") private var plannerAddress = PlannerReturn.currentAddress
     @State private var scanning = false
     @State private var openingCamera = false
     @State private var scanReturnURL: URL?
@@ -38,12 +38,30 @@ private struct ScanHome: View {
             try room.data().write(to: Self.savedURL, options: [.atomic,.completeFileProtection])
         } catch { self.error = "The scan is ready but could not be saved on this device. Export the room file before closing the app." }
     }
+    private func migratePlannerDestinations() {
+        if let destination = try? PlannerReturn.configuredAddress(plannerAddress), plannerAddress != destination.absoluteString {
+            plannerAddress = destination.absoluteString
+        }
+        // Older rooms without a bound destination can still use the setting.
+        // Migrate already-bound retired destinations and persist the repair.
+        if var current = room, current.plannerURL != nil,
+           let destination = try? PlannerReturn.capturedAddress(current.plannerURL, manualAddress: plannerAddress),
+           current.plannerURL != destination.absoluteString {
+            current.plannerURL = destination.absoluteString
+            room = current; save(current)
+        }
+    }
     private var canStartScan: Bool { supported && !scanning && !openingCamera && planner == nil && shareFile == nil }
     private func startScan(returningTo destination: URL? = nil) {
         guard canStartScan else { return }
         // Freeze the route before the asynchronous permission prompt. A second
         // launch cannot change this scan's destination while permission is open.
-        let route = destination ?? (try? PlannerReturn.address(plannerAddress))
+        let route: URL
+        do {
+            if let destination { route = try PlannerReturn.address(destination.absoluteString) }
+            else { route = try PlannerReturn.configuredAddress(plannerAddress) }
+        } catch { self.error = error.localizedDescription; return }
+        plannerAddress = route.absoluteString
         openingCamera = true
         Task { @MainActor in
             defer { openingCamera = false }
@@ -85,12 +103,14 @@ private struct ScanHome: View {
                             .font(.subheadline).foregroundStyle(.secondary)
                         Button {
                                 guard !current.name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty else { error="Give this room a name first."; return }
-                                save(current)
                                 do {
                                     let url = try PlannerReturn.capturedAddress(current.plannerURL, manualAddress: plannerAddress)
-                                    planner=PlannerDestination(url:url,room:current)
+                                    var updated = current
+                                    updated.plannerURL = url.absoluteString
+                                    room = updated; save(updated)
+                                    planner=PlannerDestination(url:url,room:updated)
                                 } catch { self.error = error.localizedDescription }
-                        } label: { Label("Open in Roomify",systemImage:"arrow.up.right").frame(maxWidth:.infinity) }
+                        } label: { Label("Go to Roomify",systemImage:"arrow.up.right").frame(maxWidth:.infinity) }
                         .buttonStyle(.borderedProminent).controlSize(.large)
                         Button {
                             do {
@@ -118,7 +138,7 @@ private struct ScanHome: View {
                     if let notice=tracking.mapNotice { Text(notice).font(.footnote).foregroundStyle(.secondary) }
                     DisclosureGroup("Planner address") {
                         TextField("https://…",text:$plannerAddress).textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL).textFieldStyle(.roundedBorder)
-                        Text("Opening the scanner from a website sets this automatically. This address is used for new standalone scans and older scans without a saved destination. A completed scan keeps the website it started from.").font(.footnote).foregroundStyle(.secondary)
+                        Text("Opening the scanner from a website sets this automatically. Standalone scans use the current Roomify website unless you enter another address. Saved addresses from the retired website are updated automatically.").font(.footnote).foregroundStyle(.secondary)
                     }
                     Text("The tracking map stays on your phone. The planner receives room measurements; Design my room sends measurements and any photos you choose to Claude. Scans are estimates—confirm important dimensions.")
                         .font(.footnote).foregroundStyle(.secondary)
@@ -144,6 +164,7 @@ private struct ScanHome: View {
                     if permissionDenied { Button("Open Settings") { openURL(URL(string:UIApplication.openSettingsURLString)!) } }
                     Button("OK",role:.cancel) { error=nil;permissionDenied=false }
                 } message: { Text(error ?? "") }
+                .onAppear(perform:migratePlannerDestinations)
                 .onOpenURL(perform:openScan)
                 .onChange(of:scenePhase) { _,phase in if phase != .active { tracking.suspend() } }
         }

@@ -22,7 +22,7 @@ import Foundation
         equal(try PlannerReturn.launch(link(second), savedAddress: first)?.absoluteString, second)
         equal(try PlannerReturn.launch(link("https://first.example/a%20room/"), savedAddress: "")?.absoluteString, "https://first.example/a%20room/")
         equal(try PlannerReturn.launch(URL(string: "furniturear-scan://scan")!, savedAddress: first)?.absoluteString, first)
-        equal(try PlannerReturn.launch(URL(string: "furniturear-scan://scan")!, savedAddress: "")?.absoluteString, nil)
+        equal(try PlannerReturn.launch(URL(string: "furniturear-scan://scan")!, savedAddress: "")?.absoluteString, PlannerReturn.currentAddress)
         equal(try PlannerReturn.capturedAddress(first, manualAddress: second).absoluteString, first)
         equal(try PlannerReturn.capturedAddress(nil, manualAddress: second).absoluteString, second)
         equal(try PlannerReturn.address("  https://FIRST.example/app/ \n").absoluteString, first)
@@ -37,6 +37,37 @@ import Foundation
             rejects { _ = try PlannerReturn.launch(URL(string: invalid)!, savedAddress: first) }
         }
         rejects { _ = try PlannerReturn.capturedAddress("http://invalid.example", manualAddress: first) }
+        let retiredHost = "furniture-ar-studio-eric.ericshengyanjin.chatgpt.site"
+        let retired = "https://\(retiredHost)/"
+        let current = PlannerReturn.currentAddress
+        equal(current, "https://furniture-ar-mobile-20261024.notyourmewtwo.chatgpt.site/")
+        equal(try PlannerReturn.configuredAddress("").absoluteString, current)
+        equal(try PlannerReturn.configuredAddress(" \n ").absoluteString, current)
+        equal(try PlannerReturn.configuredAddress(retired).absoluteString, current)
+        equal(try PlannerReturn.configuredAddress(second).absoluteString, second)
+        equal(try PlannerReturn.capturedAddress(nil, manualAddress: "").absoluteString, current)
+        equal(try PlannerReturn.capturedAddress("", manualAddress: retired).absoluteString, current)
+        equal(try PlannerReturn.capturedAddress(retired, manualAddress: retired).absoluteString, current)
+        equal(try PlannerReturn.capturedAddress(retired, manualAddress: "").absoluteString, current)
+        equal(try PlannerReturn.capturedAddress(retired, manualAddress: current).absoluteString, current)
+        equal(try PlannerReturn.capturedAddress(retired, manualAddress: second).absoluteString, second)
+        equal(try PlannerReturn.capturedAddress(second, manualAddress: retired).absoluteString, second)
+        equal(try PlannerReturn.launch(link(current), savedAddress: retired)?.absoluteString, current)
+        equal(try PlannerReturn.launch(link(second), savedAddress: retired)?.absoluteString, second)
+        equal(try PlannerReturn.launch(URL(string: "furniturear-scan://scan")!, savedAddress: retired)?.absoluteString, current)
+        equal(try PlannerReturn.launch(link(retired), savedAddress: second)?.absoluteString, current)
+        for old in [retired, "https://\(retiredHost.uppercased())./old-planner/", "https://\(retiredHost):443/index.html"] {
+            // address() is also the validation path for RoomDocument.webURL.
+            equal(try PlannerReturn.address(old).absoluteString, current)
+            equal(try PlannerReturn.capturedAddress(old, manualAddress: second).absoluteString, second)
+        }
+        for similar in ["https://\(retiredHost).example/", "https://other-\(retiredHost)/"] {
+            equal(try PlannerReturn.address(similar).absoluteString, similar)
+            equal(try PlannerReturn.capturedAddress(similar, manualAddress: current).absoluteString, similar)
+        }
+        rejects { _ = try PlannerReturn.launch(link("https://\(retiredHost)/?token=private"), savedAddress: current) }
+        rejects { _ = try PlannerReturn.launch(link("http://\(retiredHost)/"), savedAddress: current) }
+        rejects { _ = try PlannerReturn.configuredAddress("https://current.example/?token=private") }
         print("Planner return checks passed: \(checks)")
     }
 }
