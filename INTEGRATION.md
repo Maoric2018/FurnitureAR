@@ -160,6 +160,8 @@ Entry points: `src/components/RoomDesigner.tsx`, `src/lib/design-client.ts`, sha
 
 Anthropic references: [models](https://platform.claude.com/docs/en/models/overview), [structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs), [vision](https://platform.claude.com/docs/en/build-with-claude/vision).
 
+Browser layout previews use `ar-scale="auto"` to allow Quick Look/WebXR resizing; individual product previews keep `ar-scale="fixed"`. This removes the layout’s scale lock without changing model geometry or saved dimensions. Use 100% scale for fit checks. Apple Quick Look still owns placement and device limits; there is no supported web force-placement flag. See [model-viewer AR scale](https://modelviewer.dev/docs/#entrydocs-augmentedreality-attributes-arScale).
+
 ## Native room alignment
 
 The updated scanner embeds the existing web planner in WKWebView and injects `furnitureARNativeVersion: 1` only for the configured planner origin. `src/lib/native-room.ts` uses the reply-capable `window.webkit.messageHandlers.furnitureAR` channel with `{version:1,kind,payload}`. Supported kinds are `ready`, `scan`, and `preview`. Native messages require the exact trusted origin and the main frame; external product links leave the embedded planner. An old deployment that never sends `ready` produces a visible compatibility message.

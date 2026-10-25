@@ -96,7 +96,7 @@ Open the HTTPS deployment in Safari on iPhone or Chrome on an ARCore-compatible 
 - The phone places the **whole arrangement as one group**. Edit relative positions in the floor plan, then reopen AR. Individual object movement inside the AR session and automatic alignment to a previously scanned room are not implemented.
 - `<model-viewer>` uses WebXR and iOS Quick Look. Single-product WebXR has live finish controls for finishes that share the currently selected GLB; choose finishes with a different GLB before opening AR. On iPhone, choose the finish before opening Quick Look; native Quick Look cannot display the app’s buttons. To change it, return to the app and reopen AR.
 - Runtime material overrides use automatically generated USDZ, ignoring any supplied `iosSrc`, so the exported solid colors follow the selection. Dedicated unmodified variants can use their matching prebuilt USDZ. The implemented AR paths are WebXR and Quick Look; Scene Viewer remains disabled.
-- AR scale is locked. The app checks GLB bounds against product dimensions before enabling AR. For layouts it validates each constituent model too.
+- Browser layout AR allows pinch resizing so large arrangements are not locked at 100% scale. Use 100% when checking physical fit. Saved layouts, exported geometry, individual product AR, and native room-aligned previews retain their original scale. The app still checks GLB bounds against product dimensions before enabling AR and validates each constituent layout model.
 - Material changes and GLB/USDZ export are covered by automated tests. Live WebXR placement and iPhone Quick Look remain **untested on a physical device**. A compatible phone is required to verify camera tracking. AR is a visual guide; confirm purchase-critical measurements with a tape measure.
 
 ## Supplied models
@@ -128,7 +128,7 @@ The same-origin route runs in the Cloudflare Worker for local development and ho
 - `src/lib/layout-model.ts`: model loading, geometry checks and combined scene export.
 - `src/lib/material-colors.ts`: exact-name material overrides, original texture restoration and isolated instance materials.
 - `src/lib/workspace.ts`: workspace types, validation, persistence and layout operations.
-- `src/components/Viewer.tsx`: fixed-scale AR activation, tracking, errors and capability fallback.
+- `src/components/Viewer.tsx`: AR activation with fixed or adjustable scale, tracking, errors and capability fallback.
 - `src/lib/products.ts`: product/variant schema and geometry dimension validation.
 - `src/lib/amazon.ts`: live listing validation and import request.
 - `src/lib/amazon-search.ts`: search result validation and keyword-search requests.

@@ -16,12 +16,13 @@ declare module 'react' {
 export interface ViewerHandle { startAR: () => void; reset: () => void }
 interface Props {
   src: string; iosSrc?: string; name: string; interactive?: boolean; ar?: boolean;
+  arScale?: 'fixed' | 'auto';
   autoRotate?: boolean; onReady?: (ready: boolean) => void;
   expectedDimensions?: FurnitureProduct['dimensions'];
   onUnavailable?: () => void; onStatus?: (status: string) => void;
   materialOverrides?: MaterialColorOverride[]; arControls?: ReactNode;
 }
-export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSrc,name,interactive=false,ar=false,autoRotate=false,onReady,onUnavailable,onStatus,expectedDimensions,materialOverrides,arControls}, ref) {
+export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSrc,name,interactive=false,ar=false,arScale='fixed',autoRotate=false,onReady,onUnavailable,onStatus,expectedDimensions,materialOverrides,arControls}, ref) {
   const element = useRef<ModelViewerElement>(null);
   const [state,setState] = useState<'loading'|'loaded'|'error'>('loading');
   const [attempt,setAttempt] = useState(0);
@@ -29,8 +30,8 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSr
   const [colorError,setColorError] = useState('');
   const hadColorError = useRef(false);
   const ready = useRef(false);
-  const latest = useRef({onReady,onUnavailable,onStatus,expectedDimensions,materialOverrides});
-  latest.current = {onReady,onUnavailable,onStatus,expectedDimensions,materialOverrides};
+  const latest = useRef({onReady,onUnavailable,onStatus,expectedDimensions,materialOverrides,arScale});
+  latest.current = {onReady,onUnavailable,onStatus,expectedDimensions,materialOverrides,arScale};
   const colorController = useRef<{model: NonNullable<ModelViewerElement['model']>; controller: ReturnType<typeof createViewerColorController>} | null>(null);
   const syncColors = useCallback(() => {
     const viewer = element.current;
@@ -73,17 +74,20 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSr
       syncColors();
     };
     const error = () => { if (!cancelled) { setState('error'); ready.current=false; latest.current.onReady?.(false); } };
+    const placedMessage = () => latest.current.arScale === 'auto'
+      ? 'Drag to move · Pinch to resize · 100% is actual size'
+      : 'Actual size · Drag to move · Two fingers to rotate';
     const status = (event: Event) => {
       const value = (event as CustomEvent).detail.status;
       const onStatus = latest.current.onStatus;
       if (value === 'session-started') onStatus?.('Move slowly. Drag to position furniture.');
-      if (value === 'object-placed') { setArMessage('Actual size · Drag to move · Two fingers to rotate'); onStatus?.('Placed at actual size.'); }
+      if (value === 'object-placed') { setArMessage(placedMessage()); onStatus?.(latest.current.arScale === 'auto' ? 'Placed. Pinch to resize; use 100% to check fit.' : 'Placed at actual size.'); }
       if (value === 'failed') onStatus?.('AR couldn’t start. Allow camera access in Safari (iPhone) or Chrome (Android).');
       if (value === 'not-presenting') onStatus?.('');
     };
     const tracking = (event: Event) => {
       if ((event as CustomEvent).detail.status === 'not-tracking') setArMessage('Tracking paused. Aim at a well-lit, textured floor.');
-      else setArMessage('Actual size · Drag to move · Two fingers to rotate');
+      else setArMessage(placedMessage());
     };
     viewer.addEventListener('load',loaded); viewer.addEventListener('error',error);
     viewer.addEventListener('ar-status',status); viewer.addEventListener('ar-tracking',tracking);
@@ -109,7 +113,7 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSr
       camera-orbit="32deg 72deg auto" field-of-view="30deg" min-camera-orbit="auto 12deg 70%" max-camera-orbit="auto 90deg 180%"
       shadow-intensity="1.15" shadow-softness="1" environment-image="neutral" exposure="1.1"
       interaction-prompt="none" touch-action="pan-y" loading="eager" reveal="auto"
-      ar={ar || undefined} ar-modes="webxr quick-look" ar-scale="fixed" ar-placement="floor" xr-environment={ar || undefined}>
+      ar={ar || undefined} ar-modes="webxr quick-look" ar-scale={arScale} ar-placement="floor" xr-environment={ar || undefined}>
       <span slot="ar-button" />
       <div slot="ar-prompt" className="ar-coach"><span className="pulse-dot"/>{arMessage}</div>
       {arControls && <div className="ar-color-controls" onPointerDown={event=>event.stopPropagation()} onClick={event=>event.stopPropagation()}>{arControls}</div>}
