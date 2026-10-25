@@ -49,6 +49,22 @@ async function pixels(blob:Blob) {
   for(let offset=0;offset<bytes.length;offset+=4)for(let channel=0;channel<3;channel++){mean[channel]+=bytes[offset+channel]/1024;min=Math.min(min,bytes[offset+channel]);max=Math.max(max,bytes[offset+channel]);}
   return {mean:mean.map(value=>Math.round(value)),min,max};
 }
+async function assertVertexAtlasPixels(blob:Blob) {
+  const bitmap=await createImageBitmap(blob);
+  const canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;
+  const context=canvas.getContext('2d',{willReadFrequently:true})!;
+  context.drawImage(bitmap,0,0);bitmap.close();
+  const rgba=context.getImageData(0,0,canvas.width,canvas.height).data;
+  // These are the three authored, linear COLOR_0 values in the fixture. A file
+  // containing only an unconnected displayColor primvar cannot pass this check.
+  for(const expected of [[1,.05,.02],[.02,.1,1],[.03,.8,.1]]){
+    let present=false;
+    for(let offset=0;offset<rgba.length;offset+=4){
+      if(expected.every((channel,index)=>Math.abs(rgba[offset+index]/255-channel)<.008)){present=true;break;}
+    }
+    assert(present,`Vertex-color atlas lost fixture color ${expected.join(', ')}`);
+  }
+}
 async function texturePixels(doc:Document,textureIndex:number) {
   const image=doc.json.images[doc.json.textures[textureIndex].source];
   let blob:Blob;
@@ -81,19 +97,26 @@ async function checkUsdzBytes(target:Document,name:string,bytes:Uint8Array,route
   const text=Object.entries(files).filter(([name])=>/\.usda?$/.test(name)).map(([,bytes])=>new TextDecoder().decode(bytes)).join('\n');
   assert(text.includes('UsdPreviewSurface'),'USDZ has no surface shader');
   const textures=Object.keys(files).filter(name=>name.startsWith('textures/'));
-  const diffuseIds=[...text.matchAll(/Texture_(\d+)_diffuse\.outputs:rgb/g)].map(match=>match[1]);
+  const diffuseShaders=[...stage.matchAll(/color3f inputs:diffuseColor.connect = <([^>]+)\.outputs:rgb>/g)].map(match=>match[1].split('/').at(-1)!);
   const hasBaseTextures=materials(target).some((material:any)=>material.baseColorTexture!==null);
-  if(hasBaseTextures)assert(diffuseIds.length>0,'USDZ dropped diffuse texture connections');
-  for(const material of materials(target)){
-    if(material.baseColorTexture===null)assert(text.includes(`color3f inputs:diffuseColor = (${material.factor.slice(0,3).join(', ')})`),`${material.name}: USDZ lost the solid material color`);
+  const hasVertexColors=vertexColors(target).length>0;
+  if(hasBaseTextures||hasVertexColors)assert(diffuseShaders.length>0,'USDZ dropped diffuse texture connections');
+  if(hasVertexColors){
+    assert(stage.includes('VertexColorTexture_'),'USDZ did not bake vertex colors into a surface texture');
+    assert(text.includes('primvars:vertexColorUV'),'USDZ lost the baked vertex-color texture coordinates');
   }
-  for(const id of new Set(diffuseIds)){
-    const entry=text.match(new RegExp(`def Shader "Texture_${id}_diffuse"\\s*\\{[\\s\\S]*?asset inputs:file = @([^@]+)@`))?.[1];
-    assert(entry&&files[entry],`USDZ is missing diffuse texture ${id}`);
-    const sample=await pixels(new Blob([files[entry!]],{type:'image/png'}));
+  for(const material of materials(target)){
+    if(material.baseColorTexture===null&&!hasVertexColors)assert(text.includes(`color3f inputs:diffuseColor = (${material.factor.slice(0,3).join(', ')})`),`${material.name}: USDZ lost the solid material color`);
+  }
+  for(const shader of new Set(diffuseShaders)){
+    const entry=text.match(new RegExp(`def Shader "${shader}"\\s*\\{[\\s\\S]*?asset inputs:file = @([^@]+)@`))?.[1];
+    assert(entry&&files[entry],`USDZ is missing diffuse texture ${shader}`);
+    const blob=new Blob([files[entry!]],{type:'image/png'});
+    const sample=await pixels(blob);
+    if(name==='Authored vertex-color fixture'&&shader.startsWith('VertexColorTexture_'))await assertVertexAtlasPixels(blob);
     log({case:name,usdzDiffuseTexture:entry,pixels:sample});
   }
-  log({case:name,route,usdzBytes:bytes.byteLength,usdzTextures:textures.length,usdzDiffuseConnections:diffuseIds.length,usdzDisplayColor:text.includes('primvars:displayColor'),scopedMaterialBindings:bindings.length});
+  log({case:name,route,usdzBytes:bytes.byteLength,usdzTextures:textures.length,usdzDiffuseConnections:diffuseShaders.length,usdzDisplayColor:text.includes('primvars:displayColor'),vertexColorsBaked:hasVertexColors,scopedMaterialBindings:bindings.length});
 }
 async function checkUsdz(target:Document,name:string) {
   const loaded=await new GLTFLoader().parseAsync(target.bytes,location.href);

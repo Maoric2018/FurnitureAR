@@ -5,14 +5,16 @@ import { USDZExporter as ThreeUSDZExporter } from 'three/addons/exporters/USDZEx
 import type { USDZExporterOptions } from 'three/addons/exporters/USDZExporter.js';
 import { strToU8, unzipSync, zipSync } from 'three/addons/libs/fflate.module.js';
 import type { Zippable } from 'three/addons/libs/fflate.module.js';
+import { bakeVertexColorsIntoUsd, collectVertexColorGeometry } from './quick-look-vertex-colors';
 
 /** Keep materials inside the active scene, not just the file's default prim.
  * Object view can read /Root while AR imports /Root/Scenes/Scene separately.
  * References outside that scene are discarded and become white surfaces.
  * https://developer.apple.com/documentation/usd/scenelibrary */
-export function scopeQuickLookMaterials(archive: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
+export function scopeQuickLookMaterials(archive: Uint8Array<ArrayBuffer>, vertexColors?: ReturnType<typeof collectVertexColorGeometry>): Uint8Array<ArrayBuffer> {
   const files = unzipSync(archive);
   if (!files['model.usda']) throw new Error('The AR export is missing its model.');
+  if (vertexColors?.size) bakeVertexColorsIntoUsd(files, vertexColors);
   const stage = new TextDecoder().decode(files['model.usda']);
   const marker = '\n\ndef "Materials"';
   const split = stage.indexOf(marker);
@@ -54,7 +56,8 @@ export function scopeQuickLookMaterials(archive: Uint8Array<ArrayBuffer>): Uint8
  * use this exporter for layouts, individual products, and generated models. */
 export class USDZExporter extends ThreeUSDZExporter {
   override async parseAsync(scene: Object3D, options?: USDZExporterOptions): Promise<Uint8Array<ArrayBuffer>> {
-    return scopeQuickLookMaterials(await super.parseAsync(scene, options));
+    const vertexColors = collectVertexColorGeometry(scene, options?.onlyVisible ?? true);
+    return scopeQuickLookMaterials(await super.parseAsync(scene, options), vertexColors);
   }
 }
 
