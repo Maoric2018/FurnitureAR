@@ -47,16 +47,16 @@ export function createSam3dGenerator({ fetchImpl = fetch } = {}) {
     try { job = parseProviderJob(JSON.parse(new TextDecoder().decode(await readLimited(response, 16384)))); }
     catch { return { status: 'failed' }; }
     if (input.jobId && job.id !== input.jobId) return { status: 'failed' };
-    if (job.status === 'failed') return { status: 'failed' };
+    if (job.status === 'failed') return { status: 'failed', failureConfirmed: true, jobId: job.id };
     if (job.status !== 'succeeded') return { status: 'pending', jobId: job.id, stage: job.stage };
     const model = await call(config, `/${encodeURIComponent(job.id)}/model`, input);
     if (!model.ok) { await model.body?.cancel(); throw new Error('Generated model unavailable.'); }
     let bytes;
     try { bytes = await readLimited(model, MAX_MODEL); }
-    catch (error) { if (error?.code === 'TOO_LARGE') return { status: 'failed' }; throw error; }
+    catch (error) { if (error?.code === 'TOO_LARGE') return { status: 'failed', failureConfirmed: true, jobId: job.id }; throw error; }
     input.signal?.throwIfAborted();
     try { return { status: 'ready', ...normalizeSamGlb(bytes, input.listing?.dimensions) }; }
-    catch { return { status: 'failed' }; }
+    catch { return { status: 'failed', failureConfirmed: true, jobId: job.id }; }
   }
   return {
     version: 'sam3d-amazon-v1',

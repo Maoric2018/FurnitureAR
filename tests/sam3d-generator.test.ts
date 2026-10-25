@@ -98,6 +98,21 @@ test('Only approved Amazon CDN photos are downloaded; redirects, oversized files
   }
 });
 
+test('SAM distinguishes confirmed provider failures from ambiguous start responses for safe explicit retries', async () => {
+  const confirmed = createSam3dGenerator({ fetchImpl: async (url: string) => url === input.imageUrl
+    ? new Response(photo) : Response.json({ id: 'job_1', status: 'failed', stage: 'preparing' }) });
+  assert.deepEqual(await confirmed.start(input, env), { status: 'failed', failureConfirmed: true, jobId: 'job_1' });
+  assert.deepEqual(await confirmed.poll({ ...input, jobId: 'job_1' }, env), { status: 'failed', failureConfirmed: true, jobId: 'job_1' });
+  const ambiguous = createSam3dGenerator({ fetchImpl: async (url: string) => url === input.imageUrl
+    ? new Response(photo) : new Response('invalid response after submission') });
+  assert.deepEqual(await ambiguous.start(input, env), { status: 'failed' });
+  const lost = createSam3dGenerator({ fetchImpl: async (url: string) => {
+    if (url === input.imageUrl) return new Response(photo);
+    throw new Error('Connection lost after upload');
+  } });
+  await assert.rejects(lost.start(input, env));
+});
+
 class Bucket {
   entries=new Map<string,{bytes:Uint8Array;etag:string}>(); n=0;
   async get(key:string){const value=this.entries.get(key);return value?{size:value.bytes.length,etag:value.etag,body:value.bytes,text:async()=>new TextDecoder().decode(value.bytes)}:null;}
@@ -114,10 +129,10 @@ test('Latest cache passes credentials privately, survives a poll outage, persist
     start:async (_:unknown,received:unknown)=>{assert.equal(received,configured);starts++;return {status:'pending',jobId:'private-job'};},
     poll:async()=>{if(++polls===1)throw new Error('temporary secret failure');return {status:'ready',...normalizeSamGlb(mesh(),null)};}}});
   const configured={...env,MODEL_BUCKET:bucket};
-  assert.equal((await service.load(input.asin,configured)).model.status,'pending');time+=3001;
-  const retry=await service.load(input.asin,configured,true);assert.equal(retry.model.status,'pending');
+  assert.equal((await service.load(input.asin,configured,'generate')).model.status,'pending');time+=3001;
+  const retry=await service.load(input.asin,configured,'status');assert.equal(retry.model.status,'pending');
   assert(!JSON.stringify(retry).includes(env.MODEL_API_KEY));time+=3001;
-  const result=await service.load(input.asin,configured,true);assert.equal(result.model.status,'ready');
+  const result=await service.load(input.asin,configured,'status');assert.equal(result.model.status,'ready');
   const parsed=parseAmazonProductResult(result);assert.equal(parsed.product?.scaleReference,'preview');
   assert.throws(()=>placeItem(createLayout('Room','Living room',5,4),createImportedItem(parsed.listing,parsed.product)),/measurement/);
   const cached=await createModelService({lookup:async()=>{throw new Error('No lookup on cache hit');}}).load(input.asin,configured);
