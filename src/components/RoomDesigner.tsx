@@ -7,6 +7,8 @@ import type { DesignStatus } from '../lib/design-client';
 import Modal from './Modal';
 import FloorPlan from './FloorPlan';
 import './room-designer.css';
+import { ROOM_DESIGN_DEMO_ENABLED } from '../lib/design-mode';
+import DemoRoomDesigner from './DemoRoomDesigner';
 
 type Brief = { brief: string; style: string; budget: string; rules: Record<string, PieceRule> };
 const styles = ['Let the room lead', 'Warm minimal', 'Mid-century', 'Japandi', 'Colorful & playful', 'Industrial'];
@@ -24,7 +26,11 @@ function readBrief(layout: RoomLayout): Brief {
   } catch { /* A brief is optional; corrupted storage must not block the editor. */ }
   return defaults;
 }
-export default function RoomDesigner({ layout, onClose, onApply }: { layout: RoomLayout; onClose: () => void; onApply: (proposal: DesignProposal) => void }) {
+type Props={ layout: RoomLayout; onClose: () => void; onApply: (proposal: DesignProposal) => void };
+export default function RoomDesigner(props:Props){
+  return ROOM_DESIGN_DEMO_ENABLED?<DemoRoomDesigner {...props}/>:<LiveRoomDesigner {...props}/>;
+}
+function LiveRoomDesigner({ layout, onClose, onApply }: Props) {
   const [brief, setBrief] = useState(() => readBrief(layout));
   const [photos, setPhotos] = useState<DesignPhoto[]>([]), [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState<DesignStatus | null>(null), [statusError, setStatusError] = useState('');

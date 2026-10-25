@@ -18,12 +18,15 @@ import type { AmazonProductResult } from './lib/amazon';
 import { resolveModelItem } from './lib/model-resolution';
 import { useModelJobs } from './lib/use-model-jobs';
 import ModelJobsPanel from './components/ModelJobsPanel';
+import { ROOM_DESIGN_DEMO_ENABLED } from './lib/design-mode';
+import { createUrbanDemoRoom, createUrbanDemoProposal, URBAN_DEMO_ROOM_ID, URBAN_DEMO_READY_ID } from './lib/urban-demo';
 const PreviewModal=lazy(()=>import('./components/PreviewModal'));
 const RoomEditor=lazy(()=>import('./components/RoomEditor'));
 
 const PhotoStudio=lazy(()=>import('./components/PhotoStudio'));
 const HeroShowcase=lazy(()=>import('./components/HeroShowcase'));
 import './components/photo-studio.css';
+import './components/urban-demo.css';
 
 type Page='home'|'layouts'|'photo';
 // Page changes run inside a view transition where supported, so the shell morphs instead of jumping.
@@ -132,7 +135,15 @@ export default function App(){
     if(hasNativeRoomAR())void nativeRequest('ready').catch(()=>{});
     return()=>{window.removeEventListener('hashchange',receiveLink);window.removeEventListener('furniture-ar:scan',receiveNative);};
   },[finishScan]);
-  const designRoom=()=>{const latest=layouts[0];if(latest)openRoom(latest.id,true);else{startRoom();notify('Create a layout first, then choose Design my room.');}};
+  const openUrbanDemo=(ready=false)=>{
+    const id=ready?URBAN_DEMO_READY_ID:URBAN_DEMO_ROOM_ID;
+    if(!workspace.layouts.some(room=>room.id===id)){
+      const preset=ready?{...createUrbanDemoProposal().layout,id}:createUrbanDemoRoom();
+      setWorkspace(current=>({...current,layouts:[preset,...current.layouts]}));
+    }
+    openRoom(id,!ready);
+  };
+  const designRoom=()=>{if(ROOM_DESIGN_DEMO_ENABLED){openUrbanDemo();return;}const latest=layouts[0];if(latest)openRoom(latest.id,true);else{startRoom();notify('Create a layout first, then choose Design my room.');}};
   const emptyLayouts=(text:string)=><div className="empty-state"><img src="/images/empty-room.webp" alt="" width={220} height={220}/><h3>No layouts yet</h3><p>{text}</p><button className="button primary" onClick={()=>startRoom()}><Plus size={16}/>New layout</button></div>;
   const layoutCards=(items:RoomLayout[])=><div className="layout-grid">{items.map(item=><article className="layout-card" key={item.id} data-spotlight><button className="layout-card-plan" style={{viewTransitionName:`plan-${item.id}`}} onClick={()=>openRoom(item.id)} aria-label={`Open ${item.name}`}><FloorPlan layout={item} compact/><span className="tag room-type-tag">{item.roomType}</span></button><div className="layout-card-info"><button onClick={()=>openRoom(item.id)}><h3>{item.name}</h3><p>{item.items.length+(item.survey?.obstacles.length??0)} {item.items.length+(item.survey?.obstacles.length??0)===1?'piece':'pieces'} · Edited {relativeDate(item.updatedAt).toLowerCase()}</p></button><div className="card-actions"><button className="icon-button" aria-label={`Duplicate ${item.name}`} title="Duplicate" onClick={()=>{const copy=duplicateLayout(item);setWorkspace(current=>({...current,layouts:[copy,...current.layouts]}));notify('Layout duplicated.');}}><Copy size={15}/></button><button className="icon-button" aria-label={`Delete ${item.name}`} title="Delete" onClick={()=>removeRoom(item)}><Trash2 size={15}/></button></div></div></article>)}</div>;
   const brand=<a className="brand" href="#" onClick={event=>{event.preventDefault();navigate('home');}} aria-label="Roomify home"><img src="/icon.svg" alt="" width={32} height={32}/><span>Roomify</span></a>;
@@ -148,15 +159,15 @@ export default function App(){
             <div className="hero-copy">
               <span className="eyebrow reveal" style={stagger(0)}><span className="live-dot"/>Spatial design studio · LiDAR · 3D · AI</span>
               <h1 id="hero-title" className="hero-title">{words('Your room,',0)} <em className="word gradient-text" style={stagger(2)}>reimagined</em> {words('before you buy.',3)}</h1>
-              <p className="hero-lede reveal" style={stagger(5)}>Scan your space, turn real Amazon listings into true-to-scale 3D models, and let AI lay out the room. Then walk around it in AR.</p>
+              <p className="hero-lede reveal" style={stagger(5)}>{ROOM_DESIGN_DEMO_ENABLED?'Scan your space, explore real Amazon products, and try our prepared Urban High-Rise design demo. Then walk around the arrangement in AR.':'Scan your space, turn real Amazon listings into true-to-scale 3D models, and let AI lay out the room. Then walk around it in AR.'}</p>
               <div className="hero-search reveal" style={stagger(6)}><LinkInput onProduct={openPreview}/></div>
-              <div className="hero-proof reveal" style={stagger(7)}><span><ScanLine/>LiDAR room scans</span><span><Box/>Photo to 3D model</span><span><Wand2/>AI layouts with real prices</span></div>
+              <div className="hero-proof reveal" style={stagger(7)}><span><ScanLine/>LiDAR room scans</span><span><Box/>Photo to 3D model</span><span><Wand2/>{ROOM_DESIGN_DEMO_ENABLED?'Prepared design demo':'AI layouts with real prices'}</span></div>
             </div>
             <Suspense fallback={<div className="hero-stage"/>}><HeroShowcase/></Suspense>
           </section>
           <section className="bento" aria-label="Ways to start">
             <article className="bento-tile wide scroll-reveal" data-spotlight><img src="/images/feature-plan.webp" alt="" loading="lazy" decoding="async"/><div className="bento-copy"><span className="bento-badge"><Layers/>Floor planner</span><h3>Plan a room to the centimeter</h3><p>Start from your measurements or a LiDAR scan, then drag real products into place with collision and doorway checks.</p><button className="button primary" onClick={()=>startRoom()}><Plus size={16}/>New layout</button></div></article>
-            <article className="bento-tile narrow dark scroll-reveal" data-spotlight><img src="/images/ai-highrise.webp" alt="" loading="lazy" decoding="async"/><div className="bento-copy"><span className="bento-badge"><Wand2/>Claude</span><h3>Design with AI</h3><p>Describe a vibe. Get three layouts that fit your room and budget.</p><button className="button secondary" onClick={designRoom}>Try it<ArrowRight size={16}/></button></div></article>
+            <article className="bento-tile narrow dark scroll-reveal" data-spotlight><img src="/images/ai-highrise.webp" alt="" loading="lazy" decoding="async"/><div className="bento-copy"><span className="bento-badge"><Wand2/>{ROOM_DESIGN_DEMO_ENABLED?'Claude experience · Demo':'Claude'}</span><h3>{ROOM_DESIGN_DEMO_ENABLED?'Urban High-Rise':'Design with AI'}</h3><p>{ROOM_DESIGN_DEMO_ENABLED?'Try any prompt, then choose from three prepared arrangements of real Amazon finds. Live AI is off.':'Describe a vibe. Get three layouts that fit your room and budget.'}</p><button className="button secondary" onClick={designRoom}>{ROOM_DESIGN_DEMO_ENABLED?'Try design demo':'Try it'}<ArrowRight size={16}/></button>{ROOM_DESIGN_DEMO_ENABLED&&<button className="text-button demo-preview-link" onClick={()=>openUrbanDemo(true)}>Open furnished 3D layout<ArrowRight size={14}/></button>}</div></article>
             <article className="bento-tile half scroll-reveal" data-spotlight><img src="/images/feature-photo3d.webp" alt="" loading="lazy" decoding="async"/><div className="bento-copy"><span className="bento-badge"><Camera/>SAM 3D</span><h3>Photo to 3D</h3><p>Photograph furniture you already own and get a textured 3D model you can place in AR.</p><button className="button secondary" onClick={openPhoto}><Camera size={16}/>Open camera</button></div></article>
             <article className="bento-tile half scroll-reveal" data-spotlight><img src="/images/feature-scan.webp" alt="" loading="lazy" decoding="async"/><div className="bento-copy"><span className="bento-badge"><ScanLine/>iPhone LiDAR</span><h3>Scan your room</h3><p>RoomPlan maps walls, doors, windows and existing furniture into a measured floor plan.</p><button className="button secondary" onClick={()=>startRoom()}><ScanLine size={16}/>Start a layout</button></div></article>
           </section>

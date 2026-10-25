@@ -4,7 +4,9 @@ import { createImportHandler } from '../server/import-handler.js';
 // @ts-expect-error Partner transport and adapter are JavaScript and tested separately.
 import { createSearchHandler } from '../server/search-handler.js';
 import { createDesignHandler } from '../server/design-handler';
-const designRoom = createDesignHandler();
+import { handleDemoDesign } from '../server/demo-design-handler';
+import { ROOM_DESIGN_DEMO_ENABLED } from '../src/lib/design-mode';
+const designRoom = ROOM_DESIGN_DEMO_ENABLED ? handleDemoDesign : createDesignHandler();
 const reconstruct = createReconstructionHandler();
 const importProduct = createImportHandler();
 const searchProducts = createSearchHandler();

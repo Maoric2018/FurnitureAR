@@ -43,6 +43,12 @@ For Amazon models, scale uses the first available labeled height, width or depth
 
 ## Design my room — Claude Opus
 
+**Current deployment: prepared Urban High-Rise demo.** Live Claude design is disabled by `ROOM_DESIGN_DEMO_ENABLED` in `src/lib/design-mode.ts`, including the Worker endpoint, even when provider credentials are configured. Any prompt followed by **Generate designs** runs a short, cancelable preparation animation and shows three arrangements of the supplied `Room-D91C5C1E` scan. Choose **Use this design** to save only that arrangement as a new layout and open 3D/AR. Existing layouts remain unchanged. The Overview also offers a direct **Open furnished 3D layout** shortcut.
+
+All three arrangements use the same five modeled pieces: the [KAIRNE three-panel abstract canvas set](https://www.amazon.com/dp/B0D7MGQ5H6), [JONATHAN Y Khalil 4 × 6 rug](https://www.amazon.com/dp/B081D81DBX), and [Ambimall floor lamp](https://www.amazon.com/dp/B0C4DGFFCM). Listings were verified when preparing the demo; prices and stock are not cached or claimed. Bundled GLBs are original product-inspired approximations, with measured dimensions and estimates recorded in `public/models/urban-demo/metadata.json`. Existing scanned furniture remains outlines, not newly generated furniture. Wall art retains its height in saved layouts, GLB and native AR exports. The demo performs no Claude, SerpApi or photo-to-3D calls.
+
+To restore the live designer described below, set `ROOM_DESIGN_DEMO_ENABLED` to `false`, rebuild and redeploy both browser and Worker together. The other Amazon search and photo-to-3D features keep their normal behavior.
+
 Open a layout and choose **Design my room**. Describe the goal, choose a style, set a USD budget for additions, and optionally attach up to four room photos. Existing layout pieces can be kept in place, moved, or left out. Scanned obstacles remain fixed and anonymous. Photos help describe appearance; they do not create a measured floor plan or automatically identify scanned objects.
 
 The designer returns up to three distinct, validated proposals. Compare their floor plans and product subtotals, refine a direction in plain language, then choose **Use this design**. It saves a new editable layout; the starting layout is preserved. The usual floor-plan dragging, undo/redo, 3D, and grouped AR preview work on the result.

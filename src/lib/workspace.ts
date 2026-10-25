@@ -14,7 +14,11 @@ export interface ProductItem {
   variantId?: string;
   createdAt: string;
 }
-export interface PlacedItem extends ProductItem { product: FurnitureProduct; x: number; z: number; rotation: number }
+export interface PlacedItem extends ProductItem {
+  product: FurnitureProduct; x: number; z: number; rotation: number;
+  /** Height of the model's bottom above the floor, in metres. Omitted means zero. */
+  elevation?: number;
+}
 export interface RoomLayout {
   id: string; name: string; roomType: string; width: number; depth: number;
   items: PlacedItem[]; updatedAt: string; survey?: RoomSurvey;
@@ -92,14 +96,20 @@ export function createLayout(name: string, roomType='Living room', width=5, dept
 export function createScannedLayout(scan:ImportedRoom):RoomLayout {
   return {...createLayout(scan.name,'Scanned room',scan.width,scan.depth),survey:structuredClone(scan.survey)};
 }
-export function clampPlacement(item: PlacedItem, room: Pick<RoomLayout,'width'|'depth'>): PlacedItem {
+export function placementElevationLimit(product:FurnitureProduct,room:Partial<Pick<RoomLayout,'survey'>>):number {
+  if(product.placementKind==='rug')return 0;
+  const ceiling=room.survey?.walls.length?Math.max(...room.survey.walls.map(wall=>wall.height)):12;
+  return Math.max(0,Math.min(12,ceiling-product.dimensions.height));
+}
+export function clampPlacement(item: PlacedItem, room: Pick<RoomLayout,'width'|'depth'>&Partial<Pick<RoomLayout,'survey'>>): PlacedItem {
   const rotation=((item.rotation%360)+360)%360, radians=rotation*Math.PI/180;
   const {width,depth}=item.product.dimensions;
   const cos=Math.cos(radians),sin=Math.sin(radians),round=item.product.footprint==='ellipse';
   const extentX=(round?Math.hypot(cos*width,sin*depth):Math.abs(cos)*width+Math.abs(sin)*depth)/2;
   const extentZ=(round?Math.hypot(sin*width,cos*depth):Math.abs(sin)*width+Math.abs(cos)*depth)/2;
   const limitX=Math.max(0,room.width/2-extentX),limitZ=Math.max(0,room.depth/2-extentZ);
-  return {...item,rotation,x:Math.max(-limitX,Math.min(limitX,item.x)),z:Math.max(-limitZ,Math.min(limitZ,item.z))};
+  const elevation=item.elevation===undefined?undefined:Math.max(0,Math.min(placementElevationLimit(item.product,room),Number.isFinite(item.elevation)?item.elevation:0));
+  return {...item,rotation,x:Math.max(-limitX,Math.min(limitX,item.x)),z:Math.max(-limitZ,Math.min(limitZ,item.z)),...(elevation===undefined?{}:{elevation})};
 }
 /** Snap before clamping so the entire rotated footprint can still sit flush with a wall. */
 export function movePlacement(item: PlacedItem, room: Pick<RoomLayout,'width'|'depth'>, x: number, z: number, snap=false): PlacedItem {
@@ -156,12 +166,18 @@ export function parseWorkspace(raw:unknown):Workspace {
   const layouts:RoomLayout[]=[];
   if(Array.isArray(data.layouts)) for(const value of data.layouts){
     if(!value||typeof value.id!=='string'||typeof value.name!=='string'||!value.name.trim()||typeof value.roomType!=='string'||!Number.isFinite(Date.parse(value.updatedAt))||![value.width,value.depth].every(n=>Number.isFinite(n)&&n>=1&&n<=20)||!Array.isArray(value.items))continue;
+    let survey:RoomSurvey|undefined;
+    try{if(value.survey)survey=parseSurvey(value.survey);}catch{continue;}
+    const bounds={width:value.width,depth:value.depth,...(survey?{survey}:{})};
     const items:PlacedItem[]=[];
     for(const entry of value.items.slice(0,30)){
       const item=readItem(entry);
-      if(item?.product&&[entry.x,entry.z,entry.rotation].every(Number.isFinite))items.push(clampPlacement({...item,product:item.product,x:entry.x,z:entry.z,rotation:entry.rotation},value));
+      if(item?.product&&[entry.x,entry.z,entry.rotation].every(Number.isFinite)
+          &&(entry.elevation===undefined||typeof entry.elevation==='number'&&Number.isFinite(entry.elevation)&&entry.elevation>=0&&entry.elevation<=12)){
+        items.push(clampPlacement({...item,product:item.product,x:entry.x,z:entry.z,rotation:entry.rotation},bounds));
+      }
     }
-    try { layouts.push({...value,items,...(value.survey?{survey:parseSurvey(value.survey)}:{})}); } catch { /* Ignore corrupt room geometry without affecting other layouts. */ }
+    layouts.push({...value,items,...(survey?{survey}:{})});
   }
   return {layouts,items:Array.isArray(data.items)?data.items.map(readItem).filter((item):item is ProductItem=>!!item):[]};
 }

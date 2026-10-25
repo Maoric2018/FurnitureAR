@@ -1,0 +1,210 @@
+{
+  "format": "furniture-ar-room",
+  "version": 1,
+  "units": "meters",
+  "source": "apple-roomplan",
+  "scanId": "3F7A5800-332F-4B60-833F-93F44845CB58",
+  "walls": [
+    {
+      "confidence": "high",
+      "end": {
+        "x": -2.071334,
+        "z": 2.2510042
+      },
+      "height": 2.725,
+      "id": "45C8347D-106D-4D93-850F-4EE493F990A5",
+      "start": {
+        "x": 0.53820795,
+        "z": 0.046192884
+      }
+    },
+    {
+      "confidence": "high",
+      "end": {
+        "x": -3.7725163,
+        "z": 0.23754144
+      },
+      "height": 2.725,
+      "id": "FFFC316A-1A96-4150-ACB6-6EA9D7805F04",
+      "start": {
+        "x": -2.071334,
+        "z": 2.251004
+      }
+    },
+    {
+      "confidence": "high",
+      "end": {
+        "x": 0.5382077,
+        "z": 0.046193123
+      },
+      "height": 2.725,
+      "id": "EF04B943-32EE-4147-854D-99874395D7F3",
+      "start": {
+        "x": -1.1493247,
+        "z": -1.9511145
+      }
+    },
+    {
+      "confidence": "high",
+      "end": {
+        "x": -2.771429,
+        "z": -1.9080563
+      },
+      "height": 2.4899998,
+      "id": "C18B1489-0E3C-480E-BF22-CBA10738DCA7",
+      "start": {
+        "x": -3.9283996,
+        "z": -0.93052745
+      }
+    },
+    {
+      "confidence": "high",
+      "end": {
+        "x": -1.1493248,
+        "z": -1.9511147
+      },
+      "height": 2.725,
+      "id": "084FEEE3-F4A3-4486-9A3C-D00BD9311135",
+      "start": {
+        "x": -2.117013,
+        "z": -1.1335113
+      }
+    },
+    {
+      "confidence": "high",
+      "end": {
+        "x": -2.117013,
+        "z": -1.1335113
+      },
+      "height": 2.4899998,
+      "id": "711EEA4B-088B-4160-9A40-F9E5F663FB35",
+      "start": {
+        "x": -2.771429,
+        "z": -1.9080563
+      }
+    },
+    {
+      "confidence": "high",
+      "end": {
+        "x": -3.9283996,
+        "z": -0.9305274
+      },
+      "height": 2.4899998,
+      "id": "E7077B2D-7052-49EA-A7D7-8BAAB13B2BFE",
+      "start": {
+        "x": -3.2876334,
+        "z": -0.17213792
+      }
+    },
+    {
+      "confidence": "high",
+      "end": {
+        "x": -3.2876332,
+        "z": -0.1721379
+      },
+      "height": 2.725,
+      "id": "F9793A7A-6CEB-4E3A-99E1-1216F3464883",
+      "start": {
+        "x": -3.772516,
+        "z": 0.23754145
+      }
+    },
+    {
+      "confidence": "high",
+      "end": {
+        "x": -2.1170127,
+        "z": -1.1335112
+      },
+      "height": 2.725,
+      "id": "B4020CF6-3BAC-4C1A-8C82-03C968ABDA83",
+      "start": {
+        "x": -3.2876332,
+        "z": -0.17213789
+      }
+    }
+  ],
+  "openings": [
+    {
+      "confidence": "high",
+      "end": {
+        "x": -1.8907628,
+        "z": 2.0984392
+      },
+      "height": 2.2612126,
+      "id": "0AF62B16-D925-4CD6-99BA-0A25CE875CC2",
+      "kind": "door",
+      "start": {
+        "x": -0.5743423,
+        "z": 0.9861907
+      }
+    },
+    {
+      "confidence": "high",
+      "end": {
+        "x": -1.2240148,
+        "z": -1.8880088
+      },
+      "height": 2.1796565,
+      "id": "58D40277-8658-435D-BB03-B49F3BABCBC2",
+      "kind": "door",
+      "start": {
+        "x": -1.9059384,
+        "z": -1.3118489
+      }
+    },
+    {
+      "confidence": "high",
+      "end": {
+        "x": -2.117013,
+        "z": -1.1335112
+      },
+      "height": 2.06,
+      "id": "120E0A0E-132A-44DA-BEDB-CF8A3573FDA8",
+      "kind": "opening",
+      "start": {
+        "x": -2.7760959,
+        "z": -0.59223866
+      }
+    }
+  ],
+  "obstacles": [
+    {
+      "category": "bed",
+      "confidence": "medium",
+      "depth": 1.9436767,
+      "height": 0.7355568,
+      "id": "3C49CFCA-8DEB-4302-8C8D-9948754C0BFF",
+      "name": "Bed",
+      "rotation": -40.1946,
+      "width": 1.3034472,
+      "x": -2.6414561,
+      "z": 0.566406
+    },
+    {
+      "category": "table",
+      "confidence": "high",
+      "depth": 0.51969063,
+      "height": 0.7491199,
+      "id": "9BCF3542-70D1-46B9-BF4C-2C4673BD1AED",
+      "name": "Table",
+      "rotation": 49.805416,
+      "width": 1.4643751,
+      "x": -0.22850221,
+      "z": -0.45863897
+    },
+    {
+      "category": "chair",
+      "confidence": "medium",
+      "depth": 0.677998,
+      "height": 1.003341,
+      "id": "88B0F6ED-B013-4A71-A30D-AC9D5198F26D",
+      "name": "Chair",
+      "rotation": 178.06999,
+      "width": 0.5905956,
+      "x": -0.5144635,
+      "z": -0.19142276
+    }
+  ],
+  "name": "Urban High-Rise \u00b7 Scanned room",
+  "capturedAt": "2026-10-25T06:23:03Z"
+}

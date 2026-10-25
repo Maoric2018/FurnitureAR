@@ -148,6 +148,15 @@ function segmentBox(w: ScanWall, thickness: number): Point[] {
     width:Math.hypot(w.end.x-w.start.x,w.end.z-w.start.z),depth:thickness,
     rotation:Math.atan2(w.end.z-w.start.z,w.end.x-w.start.x)*180/Math.PI});
 }
+function verticalOverlap(bottom:number,height:number,otherBottom:number,otherHeight:number):boolean {
+  return bottom+height>otherBottom+.001&&otherBottom+otherHeight>bottom+.001;
+}
+/** A mounted frame may touch a wall's surface but must not straddle its plane. */
+function crossesWallPlane(polygon:Point[],wall:ScanWall):boolean {
+  const dx=wall.end.x-wall.start.x,dz=wall.end.z-wall.start.z,length=Math.hypot(dx,dz);
+  const distances=polygon.map(p=>(dx*(p.z-wall.start.z)-dz*(p.x-wall.start.x))/length);
+  return Math.min(...distances)<-.003&&Math.max(...distances)>.003;
+}
 /** Cut actual openings out of wall segments, so an open doorway is not a solid wall. */
 export function solidWallSegments(wall: ScanWall, openings: ScanOpening[]): ScanWall[] {
   const dx=wall.end.x-wall.start.x,dz=wall.end.z-wall.start.z,length=Math.hypot(dx,dz);
@@ -164,11 +173,18 @@ export function solidWallSegments(wall: ScanWall, openings: ScanOpening[]): Scan
 }
 export function placementWarnings(item: PlacedItem, layout: RoomLayout): string[] {
   const polygon=itemPolygon(item),survey=layout.survey,messages:string[]=[];
+  const bottom=item.elevation??0,height=item.product.dimensions.height,rug=item.product.placementKind==='rug';
   if(polygon.some(p=>Math.abs(p.x)>layout.width/2+.001||Math.abs(p.z)>layout.depth/2+.001))messages.push('Too large for these room dimensions');
-  if(layout.items.some(other=>other.id!==item.id&&polygonsOverlap(polygon,itemPolygon(other))))messages.push('Overlaps another piece');
+  if(!rug&&layout.items.some(other=>other.id!==item.id&&other.product.placementKind!=='rug'
+      &&verticalOverlap(bottom,height,other.elevation??0,other.product.dimensions.height)
+      &&polygonsOverlap(polygon,itemPolygon(other))))messages.push('Overlaps another piece');
   if(!survey)return messages;
-  if(survey.obstacles.some(obstacle=>polygonsOverlap(polygon,footprintCorners(obstacle))))messages.push('Overlaps an existing object');
-  if(survey.walls.some(w=>solidWallSegments(w,survey.openings).some(segment=>polygonsOverlap(polygon,segmentBox(segment,.10)))))messages.push('Crosses a scanned wall');
-  if(survey.openings.some(o=>o.kind!=='window'&&polygonsOverlap(polygon,segmentBox(o,.9))))messages.push('Near a doorway — check access');
+  if(bottom+height>Math.max(...survey.walls.map(wall=>wall.height))+.001)messages.push('Above the scanned ceiling');
+  if(!rug&&survey.obstacles.some(obstacle=>verticalOverlap(bottom,height,0,obstacle.height)
+      &&polygonsOverlap(polygon,footprintCorners(obstacle))))messages.push('Overlaps an existing object');
+  if(survey.walls.some(w=>verticalOverlap(bottom,height,0,w.height)&&solidWallSegments(w,survey.openings).some(segment=>
+      polygonsOverlap(polygon,segmentBox(segment,.10))&&(item.product.placementKind!=='wall'||crossesWallPlane(polygon,segment)))))messages.push('Crosses a scanned wall');
+  if(survey.openings.some(o=>o.kind!=='window'&&verticalOverlap(bottom,height,0,o.height)
+      &&polygonsOverlap(polygon,segmentBox(o,.9))))messages.push('Near a doorway — check access');
   return messages;
 }

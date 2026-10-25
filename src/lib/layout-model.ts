@@ -16,7 +16,7 @@ export function arrangeModels(items:PlacedItem[],models:Map<string,Group>):Scene
     if(!source)throw new Error(`The model for ${item.name} is missing.`);
     const object=cloneModelMaterials(source);
     createThreeColorController(object).apply(variant.materialOverrides);
-    object.position.set(item.x,0,item.z);
+    object.position.set(item.x,item.elevation??0,item.z);
     object.rotation.y=-item.rotation*Math.PI/180;
     object.name=item.name;
     scene.add(object);

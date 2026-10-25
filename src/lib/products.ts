@@ -1,6 +1,6 @@
 import catalogData from '../data/catalog.json';
 
-export type Category = 'Seating' | 'Tables' | 'Lighting' | 'Storage';
+export type Category = 'Seating' | 'Tables' | 'Lighting' | 'Storage' | 'Decor';
 export type Unit = 'cm' | 'in';
 export interface MaterialColorOverride { materialName: string; color: string }
 export interface FurnitureVariant {
@@ -15,11 +15,13 @@ export interface FurnitureProduct {
   dimensions: { width: number; height: number; depth: number };
   material: string; badge?: string; background: string;
   footprint?: 'rectangle' | 'ellipse';
+  /** Rugs may sit under furniture; wall decor uses the placed item's elevation. */
+  placementKind?: 'floor' | 'wall' | 'rug';
   scaleReference?: 'height' | 'width' | 'depth' | 'preview';
   variants: FurnitureVariant[];
 }
 export const catalog = catalogData as FurnitureProduct[];
-export const categories: Category[] = ['Seating', 'Tables', 'Lighting', 'Storage'];
+export const categories: Category[] = ['Seating', 'Tables', 'Lighting', 'Storage', 'Decor'];
 export function getVariant(product: FurnitureProduct, variantId?: string): FurnitureVariant {
   const variant = product.variants.find(candidate => candidate.id === variantId) ?? product.variants[0];
   if (!variant) throw new Error('This product has no available finishes.');
@@ -87,6 +89,7 @@ export function parseProduct(value: unknown): FurnitureProduct {
   if (!['id','name','description','material','tagline'].every(validText) || !categories.includes(p.category as Category)
       || (p.scaleReference !== undefined && !['height','width','depth','preview'].includes(p.scaleReference as string))
       || (p.footprint !== undefined && !['rectangle','ellipse'].includes(p.footprint as string))
+      || (p.placementKind !== undefined && !['floor','wall','rug'].includes(p.placementKind as string))
       || !dims || !['width','height','depth'].every(k => typeof dims[k] === 'number' && Number.isFinite(dims[k]) && Number(dims[k]) > 0 && Number(dims[k]) <= 20)
       || !Array.isArray(p.variants) || !p.variants.length
       || !p.variants.every(validVariant)) {

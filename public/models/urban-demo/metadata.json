@@ -1,0 +1,91 @@
+{
+  "license": "Original procedural demo assets",
+  "accuracy": "Approximate product visualization. No manufacturer model or listing photograph is embedded.",
+  "models": [
+    {
+      "id": "ambimall-floor-lamp",
+      "name": "Ambimall offset-arm floor lamp",
+      "asin": "B0C4DGFFCM",
+      "url": "https://www.amazon.com/dp/B0C4DGFFCM",
+      "modelSrc": "/models/urban-demo/ambimall-floor-lamp.glb",
+      "thumbnailSrc": "/models/urban-demo/ambimall-floor-lamp.svg",
+      "dimensions": {
+        "width": 0.5,
+        "height": 1.56972,
+        "depth": 0.2794
+      },
+      "bytes": 590424,
+      "triangles": 6096,
+      "materials": 5,
+      "notes": "Shade diameter11in, base8.66in, listed height61.8in. Overall0.50m width/arm reach is estimated from the reference; not the misleading11in listing width."
+    },
+    {
+      "id": "jonathan-y-khalil-rug",
+      "name": "JONATHAN Y Khalil cream/black 4×6 rug",
+      "asin": "B081D81DBX",
+      "url": "https://www.amazon.com/dp/B081D81DBX",
+      "modelSrc": "/models/urban-demo/jonathan-y-khalil-rug.glb",
+      "thumbnailSrc": "/models/urban-demo/jonathan-y-khalil-rug.svg",
+      "dimensions": {
+        "width": 1.2192,
+        "height": 0.009906,
+        "depth": 1.8288
+      },
+      "bytes": 676596,
+      "triangles": 7000,
+      "materials": 4,
+      "notes": "Nominal4×6ft rug; .39in pile from manufacturer. Original irregular stripe geometry approximates the listed pattern."
+    },
+    {
+      "id": "kairne-abstract-1",
+      "name": "KAIRNE neutral abstract wall art · panel 1",
+      "asin": "B0D7MGQ5H6",
+      "url": "https://www.amazon.com/dp/B0D7MGQ5H6",
+      "modelSrc": "/models/urban-demo/kairne-abstract-1.glb",
+      "thumbnailSrc": "/models/urban-demo/kairne-abstract-1.svg",
+      "dimensions": {
+        "width": 0.4064,
+        "height": 0.6096,
+        "depth": 0.025
+      },
+      "bytes": 353684,
+      "triangles": 3597,
+      "materials": 8,
+      "notes": "One panel of the16×24in three-panel set. Overalldepth0.025m and frame width estimated; original geometric interpretation of the listed artwork."
+    },
+    {
+      "id": "kairne-abstract-2",
+      "name": "KAIRNE neutral abstract wall art · panel 2",
+      "asin": "B0D7MGQ5H6",
+      "url": "https://www.amazon.com/dp/B0D7MGQ5H6",
+      "modelSrc": "/models/urban-demo/kairne-abstract-2.glb",
+      "thumbnailSrc": "/models/urban-demo/kairne-abstract-2.svg",
+      "dimensions": {
+        "width": 0.4064,
+        "height": 0.6096,
+        "depth": 0.025
+      },
+      "bytes": 348632,
+      "triangles": 3555,
+      "materials": 7,
+      "notes": "One panel of the16×24in three-panel set. Overalldepth0.025m and frame width estimated; original geometric interpretation of the listed artwork."
+    },
+    {
+      "id": "kairne-abstract-3",
+      "name": "KAIRNE neutral abstract wall art · panel 3",
+      "asin": "B0D7MGQ5H6",
+      "url": "https://www.amazon.com/dp/B0D7MGQ5H6",
+      "modelSrc": "/models/urban-demo/kairne-abstract-3.glb",
+      "thumbnailSrc": "/models/urban-demo/kairne-abstract-3.svg",
+      "dimensions": {
+        "width": 0.4064,
+        "height": 0.6096,
+        "depth": 0.025
+      },
+      "bytes": 344184,
+      "triangles": 3509,
+      "materials": 7,
+      "notes": "One panel of the16×24in three-panel set. Overalldepth0.025m and frame width estimated; original geometric interpretation of the listed artwork."
+    }
+  ]
+}
