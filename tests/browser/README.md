@@ -1,0 +1,26 @@
+# Layout appearance checks
+
+Start the development server, then open `/tests/browser/layout-textures.html`.
+These checks run in a real browser because image decoding, canvas texture
+embedding, and model-viewer rendering are not exercised by the Node tests.
+They do not call Amazon or any model-generation service.
+
+- **Run texture round-trip checks** loads the authored oak table, a black finish,
+  the Ambimall lamp, a textured catalog chair, and a synthetic vertex-color
+  fixture. Each goes through production `exportLayout`. Checks cover source and
+  exported material factors, real decoded albedo pixels, normal-map references,
+  GLB vertex-color values, and textures embedded in the browser's USDZ export.
+  Source and exported models render through the production `Viewer` component.
+- **Run texture fallback check** temporarily fails `createImageBitmap`, disables
+  the Three.js image cache, and verifies the HTML-image fallback retains the oak
+  texture pixels and maps. Browser globals are restored afterward.
+- **Run complete decoder failure check** also makes HTML-image blob decoding
+  fail. Export must stop with a useful error instead of returning white geometry.
+
+`fixtures/vertex-colors.glb` is an authored, self-contained 1-meter cube standing
+on the floor, with alternating red, blue, and green vertex colors. It is a test
+fixture, not an Amazon product. It was exported using Three.js GLTFExporter from
+BoxGeometry plus a `color` Float32BufferAttribute and a vertex-colored material.
+
+The USDZ checks verify the generated files, shaders, and image bytes. They do
+not verify native Quick Look display, camera tracking, or physical-device AR.
