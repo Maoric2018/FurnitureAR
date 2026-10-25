@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { ArrowUpRight, Link2, LoaderCircle, Search } from 'lucide-react';
+import { ArrowRight, Link2, LoaderCircle, Search } from 'lucide-react';
 import { importAmazonProduct } from '../lib/amazon';
 import { createImportedItem } from '../lib/workspace';
 import type { ProductItem } from '../lib/workspace';
@@ -28,18 +28,18 @@ export default function LinkInput({ onProduct, buttonLabel = 'Preview product', 
   };
 
   return <div className={`product-entry ${compact ? 'compact' : ''}`}>
-    <div className="product-entry-modes" role="group" aria-label="Find an Amazon product">
+    <div className="product-entry-modes segmented" role="group" aria-label="Find an Amazon product">
       <button type="button" aria-pressed={mode === 'search'} onClick={() => changeMode('search')}><Search size={14}/>Search Amazon</button>
       <button type="button" aria-pressed={mode === 'link'} onClick={() => changeMode('link')}><Link2 size={14}/>Paste link</button>
     </div>
-    {mode === 'search' ? <form className={`product-link-form amazon-search-entry ${compact ? 'compact' : ''}`} onSubmit={event => {
+    {mode === 'search' ? <form className={`product-link-form ${compact ? 'compact' : ''}`} onSubmit={event => {
       event.preventDefault();
       const value = query.trim();
       if (value.length < 2) { setError('Enter at least two characters, such as a lamp or dining table.'); return; }
       setError(''); setSearchQuery(value);
     }} noValidate>
       <div className={`product-link-field ${error ? 'invalid' : ''}`}><Search size={17}/><input id={fieldId} type="search" aria-label="Search Amazon products" placeholder="Lamps, dining tables, sofas…" value={query} maxLength={200} onChange={event => { setQuery(event.target.value); setError(''); }} aria-invalid={!!error} aria-describedby={error ? errorId : undefined}/>{compact && <button aria-label="Search Amazon products" type="submit"><Search size={18}/></button>}</div>
-      {!compact && <button type="submit" className="button primary">Find furniture<Search size={17}/></button>}
+      {!compact && <button type="submit" className="button primary">Search</button>}
       {error && <p id={errorId} className="form-error" role="alert">{error}</p>}
     </form> : <form className={`product-link-form ${compact ? 'compact' : ''}`} onSubmit={async event => {
       event.preventDefault(); setError('');
@@ -65,8 +65,8 @@ export default function LinkInput({ onProduct, buttonLabel = 'Preview product', 
         if (request.current === controller) { request.current = null; setBusy(false); }
       }
     }} noValidate>
-      <div className={`product-link-field ${error ? 'invalid' : ''}`}><Link2 size={17}/><input id={fieldId} type="url" aria-label="Product link" placeholder="Paste an Amazon.com link" value={link} onChange={event => { setLink(event.target.value); setError(''); }} disabled={busy} aria-invalid={!!error} aria-describedby={error ? errorId : undefined}/>{compact && <button aria-label={buttonLabel} disabled={busy} type="submit">{busy ? <LoaderCircle size={17} className="spin"/> : <ArrowUpRight size={18}/>}</button>}</div>
-      {!compact && <button type="submit" className="button primary" disabled={busy}>{busy ? 'Loading product…' : buttonLabel}{busy ? <LoaderCircle size={17} className="spin"/> : <ArrowUpRight size={17}/>}</button>}
+      <div className={`product-link-field ${error ? 'invalid' : ''}`}><Link2 size={17}/><input id={fieldId} type="url" aria-label="Product link" placeholder="Paste an Amazon.com link" value={link} onChange={event => { setLink(event.target.value); setError(''); }} disabled={busy} aria-invalid={!!error} aria-describedby={error ? errorId : undefined}/>{compact && <button aria-label={buttonLabel} disabled={busy} type="submit">{busy ? <LoaderCircle size={16} className="spin"/> : <ArrowRight size={16}/>}</button>}</div>
+      {!compact && <button type="submit" className="button primary" disabled={busy}>{busy && <LoaderCircle size={16} className="spin"/>}{busy ? 'Loading product…' : buttonLabel}</button>}
       {busy && <button className="text-button cancel-product-import" type="button" onClick={cancelImport}>Cancel</button>}
       {error && <p id={errorId} className="form-error" role="alert">{error}</p>}
     </form>}

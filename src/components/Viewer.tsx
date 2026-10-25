@@ -115,7 +115,7 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSr
       {arControls && <div className="ar-color-controls" onPointerDown={event=>event.stopPropagation()} onClick={event=>event.stopPropagation()}>{arControls}</div>}
       <div slot="progress-bar" />
     </model-viewer>
-    {state === 'loading' && <div className="viewer-loading" aria-label="Loading 3D furniture"><span className="loading-ring"/><span>Getting your piece ready</span></div>}
+    {state === 'loading' && <div className="viewer-loading" aria-label="Loading 3D furniture"><span className="loading-ring"/><span>Loading 3D model</span></div>}
     {state === 'error' && <div className="viewer-error"><Box size={28}/><p>This 3D model couldn’t load.</p><button className="text-button" onClick={() => setAttempt(v=>v+1)}><RotateCcw size={15}/> Try again</button></div>}
     {state === 'loaded' && colorError && <p role="alert" className="viewer-color-error">{colorError}</p>}
   </div>;

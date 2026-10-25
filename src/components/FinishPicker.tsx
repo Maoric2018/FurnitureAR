@@ -24,7 +24,7 @@ export default function FinishPicker({variants,selected,onChange,compact=false,l
     return ()=>element?.removeEventListener('beforexrselect',keepControlTap);
   },[]);
   return <fieldset ref={fieldset} className={`finish-picker${compact?' finish-picker-compact':''}`} onPointerDown={event=>event.stopPropagation()} onClick={event=>event.stopPropagation()}>
-    <legend>{listing?'Amazon colors':'Color'}{(!listing||confirmed)&&<><strong>{displayed.name}</strong>{displayed.approximate&&<span className="color-preview-label">Color preview</span>}</>}</legend>
+    <legend>{listing?'Amazon colors':'Color'}{(!listing||confirmed)&&<><strong>{displayed.name}</strong>{displayed.approximate&&<span className="color-preview-label tag">Color preview</span>}</>}</legend>
     {listing&&!confirmed&&<p className="finish-current-preview">Current preview: {selected.name}. This color is not confirmed for this item.</p>}
     <div className="finish-choices">{variants.map(variant=><button key={variant.id} type="button" className="finish-choice" aria-label={`Select ${variant.name} color${variant.approximate?', color preview':''}`} aria-pressed={variant.id===selected.id} onClick={()=>{if(variant.id!==selected.id)onChange(variant.id);}}>
       <span className="finish-swatch" style={{backgroundColor:variant.color}} aria-hidden="true"/>
