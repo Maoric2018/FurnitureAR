@@ -7,7 +7,7 @@ export interface AmazonColors {
   status: 'observed' | 'unconfirmed'; options: AmazonColorOption[];
 }
 export interface AmazonModel {
-  status: 'ready' | 'not_configured' | 'pending' | 'failed' | 'storage_unavailable' | 'no_image';
+  status: 'ready' | 'not_requested' | 'not_configured' | 'pending' | 'failed' | 'storage_unavailable' | 'no_image';
   source?: 'registered' | 'generated' | 'cache';
   retryAfterMs?: number;
   stage?: 'preparing' | 'reconstructing' | 'texturing' | 'exporting';
@@ -29,7 +29,7 @@ export class ImportError extends Error {
 const credentialName = /^(?:api[_-]?key|key|token|access[_-]?token|refresh[_-]?token|auth|authorization|password|secret|client[_-]?secret|credential|signature|sig|x-amz-(?:credential|signature|security-token))$/i;
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 export function parseAmazonModel(value: unknown): AmazonModel {
-  if (!record(value) || !['ready', 'not_configured', 'pending', 'failed', 'storage_unavailable', 'no_image'].includes(value.status as string)
+  if (!record(value) || !['ready', 'not_requested', 'not_configured', 'pending', 'failed', 'storage_unavailable', 'no_image'].includes(value.status as string)
       || (value.source !== undefined && !['registered', 'generated', 'cache'].includes(value.source as string))
       || (value.stage !== undefined && !['preparing','reconstructing','texturing','exporting'].includes(value.stage as string))
       || (value.retryAfterMs !== undefined && (typeof value.retryAfterMs !== 'number' || !Number.isInteger(value.retryAfterMs) || value.retryAfterMs < 0 || value.retryAfterMs > 300000))) {
@@ -154,13 +154,13 @@ async function readProductResponse(response: Response, signal?: AbortSignal, exp
   if (!response.ok) throw importServiceError(response.status, data);
   return parseAmazonProductResult(data, expectedAsin);
 }
-export async function importAmazonProduct(url: string, signal?: AbortSignal): Promise<AmazonProductResult> {
+export async function importAmazonProduct(url: string, signal?: AbortSignal, generateModel = false): Promise<AmazonProductResult> {
   signal?.throwIfAborted();
   let response: Response;
   try {
     response = await fetch(import.meta.env?.VITE_PRODUCT_API_URL || '/api/products/import', {
       method: 'POST', credentials: 'omit', redirect: 'error',
-      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }), signal,
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, ...(generateModel ? { generateModel: true } : {}) }), signal,
     });
   } catch (error) {
     signal?.throwIfAborted();
@@ -168,6 +168,10 @@ export async function importAmazonProduct(url: string, signal?: AbortSignal): Pr
     throw new ImportError('Could not reach Amazon. Check your connection and try again.', 'IMPORT_UNAVAILABLE');
   }
   return readProductResponse(response, signal, requestedAsin(url));
+}
+/** Only an explicit user choice calls this; ordinary product browsing stays fast. */
+export function generateAmazonProductModel(url: string, signal?: AbortSignal): Promise<AmazonProductResult> {
+  return importAmazonProduct(url, signal, true);
 }
 export async function getAmazonProductModel(asin: string, signal?: AbortSignal): Promise<AmazonProductResult> {
   signal?.throwIfAborted();

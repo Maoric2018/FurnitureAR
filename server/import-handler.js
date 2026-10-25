@@ -25,7 +25,10 @@ export function createImportHandler(options = {}) {
       try { const buffer = new Uint8Array(bytes); let at = 0; for (const chunk of chunks) { buffer.set(chunk, at); at += chunk.length; } body = JSON.parse(new TextDecoder().decode(buffer)); }
       catch { throw new ApiError(400, 'INVALID_REQUEST', 'Send a valid product link.'); }
       const asin = parseAmazonLink(body?.url);
-      return json(await service.load(asin, env));
+      if (body.generateModel !== undefined && typeof body.generateModel !== 'boolean') {
+        throw new ApiError(400, 'INVALID_REQUEST', 'Choose whether to generate a 3D model.');
+      }
+      return json(await service.load(asin, env, body.generateModel === true ? 'generate' : 'lookup'));
     } catch (error) { return failure(error); }
   };
   handler.models = async (request, env = {}) => {
@@ -38,7 +41,7 @@ export function createImportHandler(options = {}) {
       if (request.method !== 'GET') return json({ error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET to check a model.' } }, 405, { Allow: 'GET' });
       const origin = request.headers.get('Origin');
       if (origin && origin !== new URL(request.url).origin) throw new ApiError(403, 'ORIGIN_NOT_ALLOWED', 'Open Furniture AR to check a model.');
-      return json(await service.load(status[1], env, true));
+      return json(await service.load(status[1], env, 'status'));
     } catch (error) { return failure(error, 'MODEL_LOOKUP_FAILED'); }
   };
   return handler;

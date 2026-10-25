@@ -2188,20 +2188,7 @@ select,
   margin-top: -8px;
 }
 
-.generation-inline {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-2);
-  font-size: 13px;
-}
 
-.model-check {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-}
 
 .listing-colors {
   display: flex;
@@ -2685,8 +2672,7 @@ model-viewer[ar-status="object-placed"]:has(.ar-color-controls) .ar-coach {
   }
 
   .source-link,
-  .save-item,
-  .model-check .text-button {
+  .save-item {
     min-height: 40px;
   }
 

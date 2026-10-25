@@ -1,0 +1,79 @@
+/* Product preview: 3D viewer loading */
+.product-stage > .preview-viewer-loading {
+  position: absolute;
+  top: var(--stage-top);
+  right: 0;
+  bottom: var(--stage-bottom);
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-2);
+}
+
+/* Product preview: optional 3D generation */
+.preview-model-choice {
+  display: grid;
+  gap: 10px;
+}
+
+.preview-model-choice > .button {
+  width: 100%;
+}
+
+.preview-model-choice > p {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.preview-model-choice > .text-button {
+  justify-self: start;
+}
+
+/* Product preview: generation progress */
+.preview-model-progress {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.preview-model-progress-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+
+.preview-model-progress-title strong {
+  font-weight: 600;
+}
+
+.preview-model-progress-title .loading-ring {
+  flex: none;
+}
+
+.preview-model-progress > .text-button {
+  justify-self: start;
+}
+
+.preview-model-progress > .button {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.preview-model-notice {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .preview-model-choice > .text-button,
+  .preview-model-progress > .text-button {
+    min-height: 40px;
+  }
+}

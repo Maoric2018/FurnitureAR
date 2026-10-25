@@ -1,17 +1,28 @@
 # Amazon photo-to-GLB integration
 
-The product-selection path now uses the real SAM 3D service through `server/model-generator.js`. It downloads the verified Amazon CDN photo (maximum 8 MiB), submits a private asynchronous job, polls its actual stage, and normalizes the returned GLB before caching. The existing exact-ASIN cache and registered models take priority. No demo model is substituted.
+Amazon model generation uses the real SAM 3D service through `server/model-generator.js`, after the user explicitly requests it. The adapter downloads the verified Amazon CDN photo (maximum 8 MiB), submits a private asynchronous job, polls its actual stage, and normalizes the returned GLB before caching. Browsing a product only looks up its listing and existing model metadata. The existing exact-ASIN cache and registered models take priority. No demo model is substituted.
 
 ## Selection and reuse
 
-1. Search selection and pasted Amazon links both call `POST /api/products/import`.
+1. Search selection and pasted Amazon links both call `POST /api/products/import` with `{ "url": "https://www.amazon.com/dp/<ASIN>" }`. Omitting `generateModel`, or setting it to `false`, performs a lookup without starting or polling the generator. The field must be a boolean when supplied.
 2. The server normalizes the link to an exact Amazon.com ASIN and checks persistent model storage before contacting SerpApi. Tracking tags and different Amazon URL formats resolve to the same key. A different color or size ASIN gets its own key.
-3. A completed generated model returns immediately with the stored listing snapshot. This skips both the product API lookup and generation. Keyword search is a separate API call and is not eliminated by the model cache.
-4. On a cache miss, the server imports the listing, preserves any registered model, and otherwise passes the confirmed product identity and primary photo to the generator adapter. Recent product details can be reused without another lookup.
-5. A generator can return a completed model immediately or a pending job. Pending jobs are checked through `GET /api/products/models/<ASIN>`, which does not call Amazon. The preview updates when the job finishes.
-6. The server validates the returned GLB, writes its bytes, and only then records a ready model. Incomplete generation and failed storage writes never become a reusable ready entry.
+3. A completed generated model returns immediately with the stored listing snapshot and model URL. This skips both the product API lookup and generation. The browser shows photos first and downloads/renders the GLB only when the user chooses **Load 3D model**. Keyword search is a separate API call and is not eliminated by the model cache.
+4. On a cache miss, the server imports the listing, preserves any registered model, and otherwise returns `model.status: "not_requested"`. Recent product details can be reused without another lookup. Browsing an already pending or failed item returns its recorded status without calling the provider.
+5. **Generate 3D model** sends `POST /api/products/import` with `{ "url": "https://www.amazon.com/dp/<ASIN>", "generateModel": true }`. The server passes the confirmed product identity and primary photo to the generator adapter only for this explicit request. Repeated requests reuse a ready model or an existing pending attempt.
+6. A generator can return a completed model immediately or a pending job. `GET /api/products/models/<ASIN>` checks an already accepted pending job without calling Amazon. It never submits new work for an unknown product or a `not_requested`, `failed`, `not_configured`, or `no_image` record.
+7. The server validates the returned GLB, writes its bytes, and only then records a ready model. Incomplete generation and failed storage writes never become a reusable ready entry.
 
 Prices, stock, images, and color options stored beside a completed model are import snapshots, not a current availability guarantee. They retain their original `retrievedAt`. Generated geometry is kept until explicitly replaced or removed by the operator; it does not expire just because a listing snapshot is old. The exact ASIN establishes cache identity, not proof that an Amazon listing can never change.
+
+## Background tracking and retries
+
+The App-level job manager owns requests and polling, independently of product previews. Requested items are saved, and the **3D models** panel shows their progress while another product or room is open. Completion updates the matching saved item without replacing a different open product or its selected finish. Loading the completed model is still optional; AR and room placement require usable scale measurements.
+
+Jobs are persisted in this browser under `furniture-ar:model-jobs:v1`. Reopening the app resumes active jobs with GET status checks, never an automatic generation POST. Closing a preview does not cancel the job. Closing the tab stops browser polling, but a job already accepted by the provider continues there; server normalization and caching complete when polling retrieves the result. Browser storage is local to the device, and clearing it removes this local job list.
+
+Only an explicit retry after a **confirmed provider failure** or unusable completed output creates a new persisted attempt ID and idempotency key. This allows **Try generating again** to submit new work even while the provider retains its failed job. A timeout or lost start response is ambiguous: a job may already have been accepted. Retrying that attempt keeps its original key, including across restarts, so the provider can return the existing job instead of duplicating it. Browsing, GET status checks, and pending-job recovery never create a new attempt.
+
+This improves browsing responsiveness and avoids unwanted generation/downloads. It does not increase GPU parallelism: the existing one-worker execution and inference lock are unchanged.
 
 ## Persistent files
 
@@ -23,7 +34,7 @@ Objects are grouped under:
 generated-models/amazon-com/<ASIN>/
 ```
 
-`metadata.json` records the canonical `https://www.amazon.com/dp/<ASIN>` link, listing, model description, generator version, status, and timestamps. GLB filenames include their SHA-256 hash. The model URL has the form:
+`metadata.json` records the canonical `https://www.amazon.com/dp/<ASIN>` link, listing, model description, generator version, status, timestamps, and generation attempt identity where applicable. GLB filenames include their SHA-256 hash. The model URL has the form:
 
 ```text
 /api/products/models/<ASIN>/<sha256>.glb
@@ -39,13 +50,13 @@ Cloudflare documents the [R2 Worker binding and object API](https://developers.c
 
 Set `MODEL_API_URL` and `MODEL_API_KEY` in the ignored `.dev.vars` locally, or in server runtime secrets for deployment. These are the same settings as the camera studio. The current temporary HTTPS connection must remain running alongside the existing Runpod service. If its address changes, update the URL and restart the website; credentials never enter the frontend. Fresh Amazon searches/imports also need `SERPAPI_API_KEY`.
 
-The adapter converts its stable versioned cache identity into the UUID-shaped idempotency key accepted by the Pod and uses a dedicated catalog owner. Camera jobs remain isolated to their signed-in owners. Amazon imports remain available to guests. The Pod limits the shared catalog to four new jobs per five minutes and four queued/running jobs overall. Temporary polling outages retain the accepted job instead of creating another. Actual inference failures stay failed for that idempotency key until provider retention expires (24 hours); inspect its private job logs before retrying.
+The adapter converts its stable per-attempt identity into the UUID-shaped idempotency key accepted by the Pod and uses a dedicated catalog owner. The first attempt uses the ASIN and generator version; an explicit retry after a confirmed failure adds a persisted attempt nonce. Camera jobs remain isolated to their signed-in owners. Amazon imports remain available to guests. The Pod limits the shared catalog to four new jobs per five minutes and four queued/running jobs overall. Temporary polling outages retain the accepted job instead of creating another. Actual inference failures stay failed for that provider key until retention expires (24 hours), so confirmed retries use a new attempt key.
 
 `server/sam3d-glb.js` reads actual static mesh positions and node transforms, retains embedded materials/binary data, and adds a uniform scale/translation. Height is preferred, then width, then depth. `product.scaleReference` records the chosen listing axis. With no usable axis it is `preview`: a reference height of 1 m, explicitly labeled, with AR/layout placement blocked. The other dimensions follow reconstructed proportions, not forced listing dimensions. Animated, skinned, externally referenced, invalid, or excessively complex meshes fail validation.
 
 ## Adapter contract
 
-The exported `modelGenerator` implements a versioned `start(input, env)` / `poll(input, env)` contract. Runtime secrets are supplied in the second argument and are never stored in model metadata. Input includes the exact ASIN, canonical product URL, chosen photo URL, full imported listing, a stable idempotency key, and an `AbortSignal`. The generator must use that key when submitting work to prevent duplicate jobs across Worker instances. Repeated requests within one Worker are coalesced. Conditional R2 writes coordinate short job leases and prevent a late pending response from replacing a completed model; the provider idempotency key covers retries after a crash or expired lease.
+The exported `modelGenerator` implements a versioned `start(input, env)` / `poll(input, env)` contract. Runtime secrets are supplied in the second argument and are never stored in model metadata. Input includes the exact ASIN, canonical product URL, chosen photo URL, full imported listing, a stable per-attempt idempotency key, and an `AbortSignal`. The generator must use that key when submitting work to prevent duplicate jobs across Worker instances. Requests within one Worker are coalesced by ASIN and mode, with shared listing lookups, so a lookup cannot swallow an explicit start or turn a GET into generation. Conditional R2 writes coordinate short job leases and prevent a late pending response from replacing a completed model; the provider idempotency key covers ambiguous retries after a crash or expired lease.
 
 The adapter returns one of these results:
 
@@ -67,11 +78,17 @@ The adapter returns one of these results:
   color: '#b68d5d'
 }
 
-// A conversion failed. Provider errors and secrets are not shown to visitors.
+// Failure with an unknown provider outcome, such as a lost start response.
 { status: 'failed' }
+
+// A provider job is confirmed failed, or its completed output is unusable.
+// This internal flag permits a new attempt on an explicit user retry.
+{ status: 'failed', failureConfirmed: true, jobId: 'provider-job-id' }
 ```
 
-Long conversions should be submitted as remote jobs; `start` and `poll` must finish within the 15-second adapter timeout and honor the supplied abort signal. Do not run GPU reconstruction inside the Worker or keep one HTTP request open for the full reconstruction. Keep provider credentials in server secrets and never embed them in model URLs or metadata. Pending jobs are polled at most once per three seconds on the server; the browser shows a stage animation, polls for up to twenty minutes, and then offers a manual status check.
+`not_requested` is a model-service lookup state, not an adapter result: the adapter has not been called. Provider errors, internal failure flags and secrets are not shown to visitors.
+
+Long conversions should be submitted as remote jobs; `start` and `poll` must finish within the 15-second adapter timeout and honor the supplied abort signal. Do not run GPU reconstruction inside the Worker or keep one HTTP request open for the full reconstruction. Keep provider credentials in server secrets and never embed them in model URLs or metadata. Pending jobs are polled at most once per three seconds on the server; the App-level manager shows their stages, polls for up to twenty minutes, and then offers a manual status check. Transient status errors use bounded retries; neither those retries nor page reloads automatically submit generation again.
 
 The GLB must be self-contained glTF 2.0 with embedded resources, no external resource URLs, and no more than 25 MiB. It must contain usable geometry in meters, Y up, with its base at Y=0 and its X/Z footprint centered. Returned dimensions describe the actual exported geometry. The existing viewer checks the model bounds before enabling AR; the cache does not stretch a model to hide incorrect scale. Listing dimensions remain separately labeled.
 
