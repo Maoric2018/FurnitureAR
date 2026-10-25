@@ -5,7 +5,7 @@ A mobile web app with two ways to plan furniture:
 - **One product:** search Amazon or paste a link, inspect its 3D model, choose a finish, and preview it in AR. This flow does not save products.
 - **A whole room:** enter room dimensions to create a named layout (scanning is a placeholder for the future unified app), find products through search or links, move and rotate pieces on a floor plan, choose each piece’s finish, then view the complete arrangement in 3D or AR.
 
-The home screen is a workspace. **Search Amazon by keyword** or paste an **Amazon.com product link** to import real product details. Search opens a photo-card list with prices and ratings when supplied, model-availability labels, and pagination. Selecting a result loads its full listing through the existing importer. The table and lamp supplied by the project team have approximate 3D previews. Other products can be viewed with their details; AR and room placement remain unavailable until a matching model exists. No unrelated placeholder is substituted.
+The home screen is a workspace. **Search Amazon by keyword** or paste an **Amazon.com product link** to import real product details. Search opens a photo-card list with prices and ratings when supplied, model-availability labels, and pagination. Selecting a result checks the saved model for that exact Amazon product before fetching more product details. The table and lamp supplied by the project team have approximate 3D previews. Other products can be viewed with their details; AR and room placement remain unavailable until a matching model exists. No unrelated placeholder is substituted.
 
 Search is also available inside each room layout. It returns the products supplied for each Amazon search page, rather than attempting to download the entire catalog. Search results do not guarantee current stock; confirm price, availability, size, and finish on Amazon. Product search and import share the configured SerpApi account allowance; search runs only on submission or pagination, not on every keystroke.
 
@@ -25,6 +25,12 @@ npm test
 npm run build
 npm run preview
 ```
+
+## Generated model cache
+
+Amazon selections share a persistent model cache, keyed by marketplace and exact ASIN rather than tracking parameters in a product link. A completed model is reused before calling SerpApi or the generator again. Its GLB and product-link metadata live under `generated-models/amazon-com/<ASIN>/` in the website's R2 storage. Local development uses persistent local R2 storage; deployed storage is shared across visitors and devices.
+
+The image-to-GLB generator is deliberately a disabled adapter for now. It receives the verified product's photo and supports both immediate results and jobs that finish later. No sample shape is substituted for an unknown product. See [generator integration and storage](MODEL_GENERATION.md) for the adapter contract, cache layout, and deployment requirements. Stored prices, stock, and colors are snapshots; the cache does not continuously refresh Amazon availability.
 
 ## Room layouts
 
@@ -48,7 +54,7 @@ Choose a named finish in the product preview or on a selected room piece when it
 
 The retained Little Tree sample palette offers textured Oak plus Black, Grey, Light Brown, Rustic Brown, White, and Brown **approximate solid-color previews**. These are authored previews, not color-matched scans or verified live availability. Dedicated GLBs can represent alternate appearances more faithfully. Exact variant ASINs and product links are optional metadata; when available, the product link follows the selected variant.
 
-Every Amazon import now carries the listing’s observed color options and exact variant ASINs. Product, room, and in-AR color controls offer only reported options that also have a compatible modeled finish. Explicitly unavailable choices and different size/style combinations are excluded. Missing or ambiguous color data keeps the current model appearance but offers no unverified color changes; old saved imports without this data must be imported again to obtain current options.
+Every Amazon import now carries the listing’s observed color options and exact variant ASINs. Product, room, and in-AR color controls offer only reported options that also have a compatible modeled finish. Explicitly unavailable choices and different size/style combinations are excluded. Missing or ambiguous color data keeps the current model appearance but offers no unverified color changes. Saved model results reuse their listing snapshot; reopening or reimporting them does not promise refreshed stock or colors.
 
 Color discovery also works for listings without a model, but does not create new geometry or material presets. The Little Tree table maps supported options to its authored palette; the lamp currently has only its original Beige and Black model. Options reflect the import snapshot and provider cache, not a continuous stock check. Changing color follows the exact variant’s Amazon link; the originally imported price and stock are not presented as the new variant’s price and stock.
 
@@ -96,10 +102,12 @@ The same-origin route runs in the Cloudflare Worker for local development and ho
 - `src/lib/amazon.ts`: live listing validation and import request.
 - `src/lib/amazon-search.ts`: search result validation and keyword-search requests.
 - `server/`: adapted partner transport, normalizer, importer, caching and access checks.
+- `server/model-generator.js`: disabled photo-to-GLB adapter and future provider contract.
+- `server/model-service.js`: exact-product model resolution, persistent files, and generation status.
 - `worker/index.ts`: hosted API route and static asset serving.
 - `tests/`: dimensions, importer contracts, input validation, finish persistence, material isolation/restoration and combined GLB/USDZ colors and transforms.
 
-Original procedural furniture GLBs remain as development fixtures and can be regenerated with `npm run models`. Live imports only associate the explicitly registered models above. The supplied table and lamp are independent of these procedural fixtures.
+Original procedural furniture GLBs remain as development fixtures and can be regenerated with `npm run models`. Live imports associate registered models or completed generated models cached for the exact product. Procedural fixtures are never substituted for an unmodeled Amazon product. The supplied table and lamp are independent of those fixtures.
 
 ## Credits
 

@@ -128,12 +128,12 @@ export default function AmazonSearch({ initialQuery, buttonLabel, onClose, onPro
           return <article className="amazon-result-card" key={product.asin}>
             <ProductPhoto key={product.imageUrl ?? 'missing'} product={product}/>
             <div className="amazon-result-info">
-              <span className={`amazon-model-badge ${product.modelAvailable ? 'available' : ''}`}><Box size={12}/>{product.modelAvailable ? 'AR model available' : '3D model needed'}</span>
+              <span className={`amazon-model-badge ${product.modelAvailable ? 'available' : ''}`}><Box size={12}/>{product.modelAvailable ? 'AR model available' : 'Check 3D availability'}</span>
               <h3>{product.title}</h3>
               {(product.rating !== null || product.ratingsTotal !== null) && <p className="amazon-result-rating">{product.rating !== null && <><Star size={13} fill="currentColor"/><span>{product.rating.toFixed(1)}<span className="sr-only"> out of 5 stars</span></span></>}{product.ratingsTotal !== null && <span>({product.ratingsTotal.toLocaleString()} ratings)</span>}</p>}
               <div className="amazon-result-price">{priceText(product) ? <strong>{priceText(product)}</strong> : <span>Price unavailable</span>}<a href={product.url} target="_blank" rel="noreferrer" aria-label={`View ${product.title} on Amazon`}><ExternalLink size={14}/></a></div>
               {product.availability && <p className="amazon-result-availability">{product.availability}</p>}
-              <button className={`button ${product.modelAvailable ? 'primary' : 'outlined'}`} type="button" aria-label={`${action}: ${product.title}`} disabled={!!importing} onClick={() => void chooseProduct(product)}>{loading ? 'Opening product…' : action}{loading ? <LoaderCircle size={15} className="spin"/> : <ArrowUpRight size={15}/>}</button>
+              <button className={`button ${product.modelAvailable ? 'primary' : 'outlined'}`} type="button" aria-label={`${action}: ${product.title}`} disabled={!!importing} onClick={() => void chooseProduct(product)}>{loading ? 'Checking saved model…' : action}{loading ? <LoaderCircle size={15} className="spin"/> : <ArrowUpRight size={15}/>}</button>
               {failure && <div className="amazon-product-error"><p role="alert">{failure.message}</p></div>}
             </div>
           </article>;
@@ -142,6 +142,6 @@ export default function AmazonSearch({ initialQuery, buttonLabel, onClose, onPro
         {results?.nextPage && !searchError && <div className="amazon-load-more"><button type="button" className="button outlined" disabled={!!searching || !!importing} onClick={() => void runSearch(results.query, results.nextPage!)}>{searching === 'more' ? <><LoaderCircle size={16} className="spin"/>Finding more items…</> : 'Load more products'}</button></div>}
       </>}
     </div>
-    <div className="amazon-search-footer"><p>{importing ? 'Opening the product and checking its 3D model…' : 'AR placement requires a matching 3D model. You can save other finds for later.'}</p>{importing ? <button type="button" className="text-button" onClick={() => { importRequest.current?.abort(); importRequest.current = null; setImporting(null); }}>Cancel</button> : <span>Prices and availability may change.</span>}</div>
+    <div className="amazon-search-footer"><p>{importing ? 'Opening the product and checking for a saved 3D model…' : 'AR placement requires a matching 3D model. You can save other finds for later.'}</p>{importing ? <button type="button" className="text-button" onClick={() => { importRequest.current?.abort(); importRequest.current = null; setImporting(null); }}>Cancel</button> : <span>Prices and availability may change.</span>}</div>
   </Modal>;
 }

@@ -1,14 +1,18 @@
-import { createImporter, parseAmazonLink } from './amazon-import.js';
+import { parseAmazonLink } from './amazon-import.js';
 import { ApiError } from './partner/errors.js';
+import { createModelService } from './model-service.js';
 
 const json = (value, status = 200, headers = {}) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers } });
 
 // Cache and coalesce repeated lookups so opening the same product does not
 // repeatedly use the shared provider allowance. Limits are per worker instance.
-export function createImportHandler({ lookup, now = Date.now } = {}) {
-  const cache = new Map(), inFlight = new Map();
-  let importer, key;
-  return async (request, env = {}) => {
+export function createImportHandler(options = {}) {
+  const service = createModelService(options);
+  const failure = (error, fallbackCode = 'IMPORT_FAILED') => {
+    const known = error instanceof ApiError;
+    return json({ error: { code: known ? error.code : fallbackCode, message: known ? error.message : 'We couldn’t load this product. Please try again.' } }, known ? error.status : 500, known && error.retryAfter ? { 'Retry-After': String(error.retryAfter) } : {});
+  };
+  const handler = async (request, env = {}) => {
     try {
       if (request.method !== 'POST') return json({ error: { code: 'METHOD_NOT_ALLOWED', message: 'Use POST for product imports.' } }, 405, { Allow: 'POST' });
       const origin = request.headers.get('Origin');
@@ -21,20 +25,21 @@ export function createImportHandler({ lookup, now = Date.now } = {}) {
       try { const buffer = new Uint8Array(bytes); let at = 0; for (const chunk of chunks) { buffer.set(chunk, at); at += chunk.length; } body = JSON.parse(new TextDecoder().decode(buffer)); }
       catch { throw new ApiError(400, 'INVALID_REQUEST', 'Send a valid product link.'); }
       const asin = parseAmazonLink(body?.url);
-      const cached = cache.get(asin);
-      if (cached && now() < cached.expires) return json({ ...cached.value, cached: true });
-      if (!lookup && (!importer || key !== env.SERPAPI_API_KEY)) { key = env.SERPAPI_API_KEY; importer = createImporter(env); }
-      if (!inFlight.has(asin)) {
-        if (inFlight.size >= 4) throw new ApiError(503, 'LOOKUP_BUSY', 'A few products are loading. Try again shortly.', 2);
-        inFlight.set(asin, (lookup || importer)(asin).then(value => {
-          if (cache.size >= 100) cache.delete(cache.keys().next().value);
-          cache.set(asin, { value, expires: now() + 3600000 }); return value;
-        }).finally(() => inFlight.delete(asin)));
-      }
-      return json({ ...await inFlight.get(asin), cached: false });
-    } catch (error) {
-      const known = error instanceof ApiError;
-      return json({ error: { code: known ? error.code : 'IMPORT_FAILED', message: known ? error.message : 'We couldn’t import this product. Please try again.' } }, known ? error.status : 500, known && error.retryAfter ? { 'Retry-After': String(error.retryAfter) } : {});
-    }
+      return json(await service.load(asin, env));
+    } catch (error) { return failure(error); }
   };
+  handler.models = async (request, env = {}) => {
+    const pathname = new URL(request.url).pathname;
+    const asset = pathname.match(/^\/api\/products\/models\/([A-Z0-9]{10})\/([a-f0-9]{64})\.glb$/);
+    if (asset) return service.asset(request, env, asset[1], asset[2]);
+    const status = pathname.match(/^\/api\/products\/models\/([A-Z0-9]{10})$/);
+    if (!status) return json({ error: { code: 'MODEL_NOT_FOUND', message: 'This saved model was not found.' } }, 404);
+    try {
+      if (request.method !== 'GET') return json({ error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET to check a model.' } }, 405, { Allow: 'GET' });
+      const origin = request.headers.get('Origin');
+      if (origin && origin !== new URL(request.url).origin) throw new ApiError(403, 'ORIGIN_NOT_ALLOWED', 'Open Furniture AR to check a model.');
+      return json(await service.load(status[1], env, true));
+    } catch (error) { return failure(error, 'MODEL_LOOKUP_FAILED'); }
+  };
+  return handler;
 }

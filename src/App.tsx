@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowDownLeft, ArrowRight, ArrowUpRight, Armchair, Check, ChevronRight, Copy, Grid2X2, HelpCircle, Home, Layers, LayoutGrid, Link2, MonitorSmartphone, Plus, ScanLine, Search, Trash2, X } from 'lucide-react';
 import type { ProductItem, RoomLayout } from './lib/workspace';
 import { createLayout, duplicateLayout, readWorkspace, relativeDate, saveWorkspace, selectItemVariant } from './lib/workspace';
@@ -10,6 +10,8 @@ import FloorPlan from './components/FloorPlan';
 import NewLayout from './components/NewLayout';
 import RoomScanImport from './components/RoomScanImport';
 import { readRoomScanFragment } from './lib/room-scan';
+import type { AmazonProductResult } from './lib/amazon';
+import { resolveModelItem } from './lib/model-resolution';
 const PreviewModal=lazy(()=>import('./components/PreviewModal'));
 const RoomEditor=lazy(()=>import('./components/RoomEditor'));
 
@@ -43,6 +45,9 @@ export default function App(){
   const room=workspace.layouts.find(item=>item.id===roomId);
   const layouts=[...workspace.layouts].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).filter(item=>`${item.name} ${item.roomType}`.toLowerCase().includes(query.toLowerCase()));
   const startRoom=()=>setCreateOpen(true);
+  const resolveModel=useCallback((id:string,result:AmazonProductResult)=>{
+    setPreview(current=>current?resolveModelItem(current,id,result):current);
+  },[]);
   const createRoom=(created:RoomLayout)=>{
     setWorkspace(current=>({...current,layouts:[created,...current.layouts]}));
     setCreateOpen(false);setScanOpen(false);setIncomingScan({scan:undefined,error:undefined});openRoom(created.id);
@@ -62,7 +67,7 @@ export default function App(){
         {page==='layouts'&&<><div className="page-heading list-page-heading"><div><div className="overline">YOUR ROOMS, YOUR IDEAS</div><h1>My layouts</h1><p>A place for every version of your room.</p></div><div className="layout-heading-actions"><button className="button primary" onClick={()=>startRoom()}><Plus size={17}/>New layout</button></div></div><div className="list-toolbar"><span>{layouts.length} {layouts.length===1?'layout':'layouts'}</span><label className="search-field"><Search size={16}/><input placeholder="Search layouts" aria-label="Search layouts" value={query} onChange={event=>setQuery(event.target.value)}/></label></div>{layoutCards(layouts)}{query&&!layouts.length&&<p className="no-results">No layouts match “{query}”.</p>}<div className="storage-note"><Check size={13}/>Your layouts save automatically in this browser.</div></>}
       </>}
     </main></div>
-    {preview&&<Suspense fallback={<Modal label="Loading preview" onClose={()=>setPreview(null)} className="small-modal"><div className="workspace-loading"><span className="loading-ring"/>Opening product preview…</div></Modal>}><PreviewModal item={preview} onVariant={id=>setPreview(current=>current?.product?selectItemVariant(current,id):current)} onClose={()=>setPreview(null)} onUnavailable={()=>setPhone(true)} unit={unit} onUnit={value=>{setUnit(value);writeUnit(value);}}/></Suspense>}
+    {preview&&<Suspense fallback={<Modal label="Loading preview" onClose={()=>setPreview(null)} className="small-modal"><div className="workspace-loading"><span className="loading-ring"/>Opening product preview…</div></Modal>}><PreviewModal key={preview.id} item={preview} onResolved={resolveModel} onVariant={id=>setPreview(current=>current?.product?selectItemVariant(current,id):current)} onClose={()=>setPreview(null)} onUnavailable={()=>setPhone(true)} unit={unit} onUnit={value=>{setUnit(value);writeUnit(value);}}/></Suspense>}
     {scanOpen&&<RoomScanImport initial={incomingScan.scan} initialError={incomingScan.error} onClose={()=>{setScanOpen(false);setIncomingScan({scan:undefined,error:undefined});}} onImport={scan=>createRoom({...createLayout(scan.name,'Scanned room',scan.width,scan.depth),survey:scan.survey})}/>}
     {createOpen&&<NewLayout onClose={()=>setCreateOpen(false)} onCreate={createRoom}/>}
     {(help||phone)&&<Modal label={phone?'Preview on your phone':'How Furniture AR works'} onClose={()=>{setHelp(false);setPhone(false);setCopied(false);}} className="small-modal"><div className="modal-form help-content"><span className="modal-symbol"><ScanLine size={26}/></span><span className="overline">FROM PLAN TO PLACE</span><h2>{phone?'Take it into your room.':'Two ways to find your fit.'}</h2>{phone?<><p>Open this site in Safari on an iPhone or Chrome on an AR-capable Android phone. Choose a product or layout, then tap the AR button.</p><div className="help-note">Allow camera access and slowly scan a well-lit floor. Drag to move and use two fingers to rotate. Scaling stays locked.</div><button className="button primary" onClick={async()=>{try{await navigator.clipboard.writeText(window.location.href);setCopied(true);}catch{notify('Copy this page’s address from your browser.');}}}>{copied?<Check size={16}/>:<Link2 size={16}/>} {copied?'Link copied':'Copy link for your phone'}</button></>:<><div className="help-option"><Armchair size={23}/><div><h3>Check one product</h3><p>Search Amazon or paste a link, inspect a matching model, and place it in your room. Choose a finish and see how it looks at actual scale.</p></div></div><div className="help-option"><Layers size={23}/><div><h3>Plan a whole room</h3><p>Enter your room dimensions, then add Amazon products and arrange them on the floor plan. Room scanning is coming to the app. Your layout saves automatically.</p></div></div><button className="button primary" onClick={()=>{setHelp(false);setPhone(true);}}>Using AR on your phone<ArrowUpRight size={16}/></button></>}<p className="help-fineprint">AR needs a compatible phone and HTTPS. Layouts save on this device; they don’t sync between devices yet. Use a tape measure to confirm fit before buying.</p></div></Modal>}
