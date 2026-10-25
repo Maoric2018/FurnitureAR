@@ -11,6 +11,7 @@ import { Viewer } from '../../src/components/Viewer';
 import { placeholderProduct, createProductItem } from '../../src/lib/workspace';
 import type { RoomLayout } from '../../src/lib/workspace';
 import type { FurnitureProduct, FurnitureVariant } from '../../src/lib/products';
+import { catalog as furnitureCatalog } from '../../src/lib/products';
 
 const report=document.querySelector<HTMLPreElement>('#report')!;
 const status=document.querySelector<HTMLParagraphElement>('#status')!;
@@ -35,7 +36,7 @@ function glb(bytes:ArrayBuffer):Document {
   return {json:JSON.parse(new TextDecoder().decode(new Uint8Array(bytes,20,length))),binaryOffset:28+length,bytes};
 }
 function materials(doc:Document) {
-  return (doc.json.materials??[]).map((material:any)=>({name:material.name??'',factor:material.pbrMetallicRoughness?.baseColorFactor??[1,1,1,1],baseColorTexture:material.pbrMetallicRoughness?.baseColorTexture?.index??null,normalTexture:material.normalTexture?.index??null}));
+  return (doc.json.materials??[]).map((material:any,index:number)=>({index,name:material.name??'',factor:material.pbrMetallicRoughness?.baseColorFactor??[1,1,1,1],baseColorTexture:material.pbrMetallicRoughness?.baseColorTexture?.index??null,normalTexture:material.normalTexture?.index??null}));
 }
 async function pixels(blob:Blob) {
   assert(blob.size>32,'Embedded texture is empty');
@@ -75,8 +76,8 @@ async function checkUsdzBytes(target:Document,name:string,bytes:Uint8Array,route
   const stage=new TextDecoder().decode(files['model.usda']);
   const bindings=[...stage.matchAll(/rel material:binding = <([^>]+)>/g)].map(match=>match[1]);
   assert(bindings.length>0,'USDZ has no bound mesh materials');
-  assert(bindings.every(path=>path.startsWith('/Root/Materials/')),'USDZ material bindings leave the imported default prim');
-  assert(!stage.includes('</Materials/'),'USDZ shader connections leave the imported default prim');
+  assert(bindings.every(path=>path.startsWith('/Root/Scenes/Scene/Materials/')),'USDZ material bindings leave the imported active scene');
+  assert(!stage.includes('</Materials/')&&!stage.includes('</Root/Materials/'),'USDZ shader connections leave the imported active scene');
   const text=Object.entries(files).filter(([name])=>/\.usda?$/.test(name)).map(([,bytes])=>new TextDecoder().decode(bytes)).join('\n');
   assert(text.includes('UsdPreviewSurface'),'USDZ has no surface shader');
   const textures=Object.keys(files).filter(name=>name.startsWith('textures/'));
@@ -145,11 +146,13 @@ async function cases() {
   const lamp:FurnitureProduct={id:'qa-lamp',name:'Ambimall lamp',category:'Lighting',tagline:'QA',description:'QA',material:'Beige and black',background:'#eee9df',dimensions:{width:.5319242,height:1.524,depth:.4306782},variants:[{id:'original',name:'Original',color:'#c8b99f',modelSrc:'/models/ambimall-floor-lamp.glb'}]};
   const chairProduct:FurnitureProduct={id:chair.id,name:'Blue granite hand chair',category:'Seating',tagline:'QA',description:'QA',material:'Blue granite',background:'#eee9df',dimensions:chair.dimensionsMeters,variants:[{id:'original',name:'Original',color:'#365d8f',modelSrc:chair.modelSrc}]};
   const coloredFixture:FurnitureProduct={id:'qa-vertex-color-fixture',name:'Authored vertex-color test cube',category:'Seating',tagline:'Test fixture',description:'Synthetic fixture, not an Amazon product',material:'Per-vertex colors',background:'#eee9df',dimensions:{width:1,height:1,depth:1},variants:[{id:'original',name:'Original',color:'#3266bb',modelSrc:'/tests/browser/fixtures/vertex-colors.glb'}]};
+  const sofa=furnitureCatalog.find(product=>product.id==='sunday-sofa')!;
   return [
     {name:'Oak table with original wood textures',product:placeholderProduct,variant:placeholderProduct.variants[0]},
     {name:'Table with intentional black finish',product:placeholderProduct,variant:placeholderProduct.variants.find(value=>value.id==='black')!},
     {name:'Beige and black lamp',product:lamp,variant:lamp.variants[0]},
     {name:'Blue textured catalog chair',product:chairProduct,variant:chairProduct.variants[0]},
+    {name:'Sunday Sofa in Moss green saved layout',product:sofa,variant:sofa.variants.find(variant=>variant.id==='moss')!},
     {name:'Authored vertex-color fixture',product:coloredFixture,variant:coloredFixture.variants[0]},
   ];
 }
@@ -173,7 +176,9 @@ async function run() {
       log({case:entry.name,sourceMaterials,loadedMaps,exportedMaterials:targetMaterials,exportedImages:target.json.images?.length??0});
       for(const material of sourceMaterials){
         const override=entry.variant.materialOverrides?.find(value=>value.materialName===material.name);
-        const matches=targetMaterials.filter((candidate:any)=>candidate.name===material.name);
+        // Authored sofa materials have no names. Match those by their material
+        // index so fabric is compared with fabric rather than every unnamed leg.
+        const matches=targetMaterials.filter((candidate:any)=>material.name?candidate.name===material.name:candidate.index===material.index);
         assert(matches.length>0,`${material.name}: material vanished`);
         for(const match of matches){
           if(override){assert(match.baseColorTexture===null,`${material.name}: solid finish must remove albedo texture`);assert(match.factor.some((value:number,index:number)=>index<3&&value<.1),`${material.name}: black finish became white`);continue;}
