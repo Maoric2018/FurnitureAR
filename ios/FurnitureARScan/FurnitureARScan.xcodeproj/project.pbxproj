@@ -1,25 +1,223 @@
 // !$*UTF8*$!
-{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {
-000000000000000000000010 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FurnitureARScanApp.swift; sourceTree = "<group>"; };
-000000000000000000000011 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomDocument.swift; sourceTree = "<group>"; };
-000000000000000000000012 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerController.swift; sourceTree = "<group>"; };
-000000000000000000000016 = { isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-000000000000000000000013 = { isa = PBXBuildFile; fileRef = 000000000000000000000010; };
-000000000000000000000014 = { isa = PBXBuildFile; fileRef = 000000000000000000000011; };
-000000000000000000000015 = { isa = PBXBuildFile; fileRef = 000000000000000000000012; };
-000000000000000000000005 = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FurnitureARScan.app; sourceTree = BUILT_PRODUCTS_DIR; };
-000000000000000000000003 = { isa = PBXGroup; children = (000000000000000000000010,000000000000000000000011,000000000000000000000012,000000000000000000000016,); path = FurnitureARScan; sourceTree = "<group>"; };
-000000000000000000000004 = { isa = PBXGroup; children = (000000000000000000000005,); name = Products; sourceTree = "<group>"; };
-000000000000000000000002 = { isa = PBXGroup; children = (000000000000000000000003,000000000000000000000004,); sourceTree = "<group>"; };
-000000000000000000000007 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (000000000000000000000013,000000000000000000000014,000000000000000000000015,); runOnlyForDeploymentPostprocessing = 0; };
-000000000000000000000008 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-000000000000000000000009 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-00000000000000000000000C = { isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SWIFT_VERSION = 5.0; }; name = Debug; };
-00000000000000000000000D = { isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SWIFT_VERSION = 5.0; }; name = Release; };
-00000000000000000000000E = { isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; PRODUCT_BUNDLE_IDENTIFIER = com.furniturear.scan; PRODUCT_NAME = "$(TARGET_NAME)"; INFOPLIST_FILE = FurnitureARScan/Info.plist; TARGETED_DEVICE_FAMILY = "1,2"; SWIFT_VERSION = 5.0; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SWIFT_OPTIMIZATION_LEVEL = -Onone; ENABLE_USER_SCRIPT_SANDBOXING = YES; }; name = Debug; };
-00000000000000000000000F = { isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; PRODUCT_BUNDLE_IDENTIFIER = com.furniturear.scan; PRODUCT_NAME = "$(TARGET_NAME)"; INFOPLIST_FILE = FurnitureARScan/Info.plist; TARGETED_DEVICE_FAMILY = "1,2"; SWIFT_VERSION = 5.0; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SWIFT_OPTIMIZATION_LEVEL = -O; ENABLE_USER_SCRIPT_SANDBOXING = YES; }; name = Release; };
-00000000000000000000000A = { isa = XCConfigurationList; buildConfigurations = (00000000000000000000000C,00000000000000000000000D,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-00000000000000000000000B = { isa = XCConfigurationList; buildConfigurations = (00000000000000000000000E,00000000000000000000000F,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-000000000000000000000006 = { isa = PBXNativeTarget; buildConfigurationList = 00000000000000000000000B; buildPhases = (000000000000000000000007,000000000000000000000008,000000000000000000000009,); buildRules = (); dependencies = (); name = FurnitureARScan; productName = FurnitureARScan; productReference = 000000000000000000000005; productType = "com.apple.product-type.application"; };
-000000000000000000000001 = { isa = PBXProject; attributes = { LastUpgradeCheck = 2600; }; buildConfigurationList = 00000000000000000000000A; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en,Base,); mainGroup = 000000000000000000000002; productRefGroup = 000000000000000000000004; projectDirPath = ""; projectRoot = ""; targets = (000000000000000000000006,); };
-}; rootObject = 000000000000000000000001; }
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		000000000000000000000013 /* FurnitureARScanApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000010 /* FurnitureARScanApp.swift */; };
+		000000000000000000000014 /* RoomDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000011 /* RoomDocument.swift */; };
+		000000000000000000000015 /* ScannerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000012 /* ScannerController.swift */; };
+		000000000000000000000030 /* RoomAlignment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000020 /* RoomAlignment.swift */; };
+		000000000000000000000031 /* RoomTrackingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000021 /* RoomTrackingStore.swift */; };
+		000000000000000000000032 /* AlignedRoomPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000022 /* AlignedRoomPreview.swift */; };
+		000000000000000000000033 /* NativeWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000023 /* NativeWorkspace.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		000000000000000000000005 /* FurnitureARScan.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FurnitureARScan.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000010 /* FurnitureARScanApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FurnitureARScanApp.swift; sourceTree = "<group>"; };
+		000000000000000000000011 /* RoomDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomDocument.swift; sourceTree = "<group>"; };
+		000000000000000000000012 /* ScannerController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerController.swift; sourceTree = "<group>"; };
+		000000000000000000000016 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		000000000000000000000020 /* RoomAlignment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomAlignment.swift; sourceTree = "<group>"; };
+		000000000000000000000021 /* RoomTrackingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomTrackingStore.swift; sourceTree = "<group>"; };
+		000000000000000000000022 /* AlignedRoomPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlignedRoomPreview.swift; sourceTree = "<group>"; };
+		000000000000000000000023 /* NativeWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeWorkspace.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		000000000000000000000008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		000000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000003 /* FurnitureARScan */,
+				000000000000000000000004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		000000000000000000000003 /* FurnitureARScan */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000010 /* FurnitureARScanApp.swift */,
+				000000000000000000000011 /* RoomDocument.swift */,
+				000000000000000000000012 /* ScannerController.swift */,
+				000000000000000000000020 /* RoomAlignment.swift */,
+				000000000000000000000021 /* RoomTrackingStore.swift */,
+				000000000000000000000022 /* AlignedRoomPreview.swift */,
+				000000000000000000000023 /* NativeWorkspace.swift */,
+				000000000000000000000016 /* Info.plist */,
+			);
+			path = FurnitureARScan;
+			sourceTree = "<group>";
+		};
+		000000000000000000000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000005 /* FurnitureARScan.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		000000000000000000000006 /* FurnitureARScan */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 00000000000000000000000B /* Build configuration list for PBXNativeTarget "FurnitureARScan" */;
+			buildPhases = (
+				000000000000000000000007 /* Sources */,
+				000000000000000000000008 /* Frameworks */,
+				000000000000000000000009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FurnitureARScan;
+			productName = FurnitureARScan;
+			productReference = 000000000000000000000005 /* FurnitureARScan.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 2600;
+			};
+			buildConfigurationList = 00000000000000000000000A /* Build configuration list for PBXProject "FurnitureARScan" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 000000000000000000000002;
+			productRefGroup = 000000000000000000000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				000000000000000000000006 /* FurnitureARScan */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		000000000000000000000009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		000000000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000013 /* FurnitureARScanApp.swift in Sources */,
+				000000000000000000000014 /* RoomDocument.swift in Sources */,
+				000000000000000000000015 /* ScannerController.swift in Sources */,
+				000000000000000000000033 /* NativeWorkspace.swift in Sources */,
+				000000000000000000000032 /* AlignedRoomPreview.swift in Sources */,
+				000000000000000000000031 /* RoomTrackingStore.swift in Sources */,
+				000000000000000000000030 /* RoomAlignment.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		00000000000000000000000C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		00000000000000000000000D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		00000000000000000000000E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = SS8XKAG4WH;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				INFOPLIST_FILE = FurnitureARScan/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.furniturear.scan;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		00000000000000000000000F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = SS8XKAG4WH;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				INFOPLIST_FILE = FurnitureARScan/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.furniturear.scan;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		00000000000000000000000A /* Build configuration list for PBXProject "FurnitureARScan" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00000000000000000000000C /* Debug */,
+				00000000000000000000000D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		00000000000000000000000B /* Build configuration list for PBXNativeTarget "FurnitureARScan" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00000000000000000000000E /* Debug */,
+				00000000000000000000000F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 000000000000000000000001 /* Project object */;
+}

@@ -10,7 +10,7 @@ export default function ModelJobsPanel({ jobs, onClose, onOpen, onCheck }: {
 }) {
   return <Modal label="Your 3D models" onClose={onClose} className="small-modal">
     <div className="modal-form model-jobs-panel"><h2>Your 3D models</h2>
-      <p>Models keep generating while you browse. Requested items stay in Saved items, ready to add to a layout when their models finish.</p>
+      <p>Models keep generating while you browse. Requested models stay here, ready to preview or add to a layout when they finish.</p>
       {jobs.length ? <ul className="model-job-list">{jobs.map(job => <li key={job.asin}>
         <div className={`model-job-heading ${job.state}`}>{job.state === 'ready' ? <Check size={16}/> : ['starting', 'pending', 'checking'].includes(job.state) ? <LoaderCircle size={16} className="spin"/> : job.state === 'failed' ? <CircleAlert size={16}/> : <Clock3 size={16}/>}
           <div><strong>{job.item.name}</strong><span>{modelJobLabel(job)}</span></div></div>

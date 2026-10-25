@@ -1,20 +1,20 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { Armchair, Bookmark, Box, Camera, Check, Copy, ExternalLink, Eye, Grid2X2, HelpCircle, Home, Layers, Link2, Plus, ScanLine, Search, Trash2, X } from 'lucide-react';
+import { Armchair, Box, Camera, Check, Copy, Grid2X2, HelpCircle, Home, Layers, Link2, Plus, Search, Trash2, X } from 'lucide-react';
 import type { ProductItem, RoomLayout } from './lib/workspace';
-import { createLayout, duplicateLayout, placeItem, readWorkspace, relativeDate, saveWorkspace, selectItemVariant, sourceLabel } from './lib/workspace';
+import { createScannedLayout, duplicateLayout, placeItem, readWorkspace, relativeDate, saveWorkspace, selectItemVariant } from './lib/workspace';
 import { readUnit, writeUnit } from './lib/storage';
 import type { Unit } from './lib/products';
-import { getVariant } from './lib/products';
 import Modal from './components/Modal';
 import LinkInput from './components/LinkInput';
 import FloorPlan from './components/FloorPlan';
-import ProductIcon from './components/ProductIcon';
+import NewLayout from './components/NewLayout';
 import RoomScanImport from './components/RoomScanImport';
-import { readRoomScanFragment } from './lib/room-scan';
+import { parseRoomScan, readRoomScanFragment } from './lib/room-scan';
+import type { ImportedRoom } from './lib/room-scan';
+import { hasNativeRoomAR, nativeRequest } from './lib/native-room';
 import type { AmazonProductResult } from './lib/amazon';
 import { resolveModelItem } from './lib/model-resolution';
 import { useModelJobs } from './lib/use-model-jobs';
-import { modelJobLabel } from './lib/model-jobs';
 import ModelJobsPanel from './components/ModelJobsPanel';
 const PreviewModal=lazy(()=>import('./components/PreviewModal'));
 const RoomEditor=lazy(()=>import('./components/RoomEditor'));
@@ -22,22 +22,10 @@ const RoomEditor=lazy(()=>import('./components/RoomEditor'));
 const PhotoStudio=lazy(()=>import('./components/PhotoStudio'));
 import './components/photo-studio.css';
 
-type Page='home'|'layouts'|'items'|'photo';
+type Page='home'|'layouts'|'photo';
 export default function App(){
   const [workspace,setWorkspace]=useState(readWorkspace),[persisted,setPersisted]=useState(true);
-  const [incomingScan,setIncomingScan]=useState(()=>{try{return {scan:readRoomScanFragment(window.location.hash),error:undefined};}catch(error){return {scan:undefined,error:(error as Error).message};}});
-  const [scanOpen,setScanOpen]=useState(!!incomingScan.scan||!!incomingScan.error);
-  useEffect(()=>{
-    const receiveScan=()=>{
-      if(!window.location.hash.startsWith('#room-scan='))return;
-      try{setIncomingScan({scan:readRoomScanFragment(window.location.hash),error:undefined});}
-      catch(error){setIncomingScan({scan:undefined,error:(error as Error).message});}
-      setPendingItem(null);setScanOpen(true);
-      window.history.replaceState(null,'',window.location.pathname+window.location.search);
-    };
-    receiveScan();window.addEventListener('hashchange',receiveScan);
-    return()=>window.removeEventListener('hashchange',receiveScan);
-  },[]);
+  const [scanOpen,setScanOpen]=useState(false),[scanError,setScanError]=useState<string>();
   const [page,setPage]=useState<Page>(()=>new URLSearchParams(window.location.search).has('photo')?'photo':'home'),[roomId,setRoomId]=useState<string|null>(null),[query,setQuery]=useState('');
   const [preview,setPreview]=useState<ProductItem|null>(null),[createOpen,setCreateOpen]=useState(false),[pendingItem,setPendingItem]=useState<ProductItem|null>(null);
   const [unit,setUnit]=useState<Unit>(readUnit),[help,setHelp]=useState(false),[phone,setPhone]=useState(false),[copied,setCopied]=useState(false);
@@ -47,22 +35,19 @@ export default function App(){
   const [toast,setToast]=useState<{message:string;undo?:()=>void}|null>(null);const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
   useEffect(()=>{setPersisted(saveWorkspace(workspace));},[workspace]);
   useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current);},[]);
-  const notify=(message:string,undo?:()=>void)=>{setToast({message,undo});if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>setToast(null),6000);};
+  const notify=useCallback((message:string,undo?:()=>void)=>{setToast({message,undo});if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>setToast(null),6000);},[]);
   const navigate=(next:Page)=>{setAutoOpenCamera(false);setPage(next);setRoomId(null);setQuery('');window.scrollTo({top:0});};
   const openRoom=(id:string)=>{setRoomId(id);setPage('layouts');window.scrollTo({top:0});};
   const updateRoom=(room:RoomLayout)=>setWorkspace(current=>({...current,layouts:current.layouts.map(item=>item.id===room.id?room:item)}));
   const removeRoom=(room:RoomLayout)=>{setWorkspace(current=>({...current,layouts:current.layouts.filter(item=>item.id!==room.id)}));notify('Layout deleted.',()=>setWorkspace(current=>({...current,layouts:[room,...current.layouts]})));};
-  const removeItem=(item:ProductItem)=>{setWorkspace(current=>({...current,items:current.items.filter(value=>value.id!==item.id)}));notify('Item removed from your library.',()=>setWorkspace(current=>({...current,items:[item,...current.items]})));};
   const room=workspace.layouts.find(item=>item.id===roomId);
   const layouts=[...workspace.layouts].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).filter(item=>`${item.name} ${item.roomType}`.toLowerCase().includes(query.toLowerCase()));
   const startRoom=(item?:ProductItem)=>{setPendingItem(item??null);setCreateOpen(true);};
   const resolveModel=useCallback((id:string,result:AmazonProductResult)=>{
     setPreview(current=>current?resolveModelItem(current,id,result,true):current);
-    setWorkspace(current=>({...current,items:current.items.map(item=>resolveModelItem(item,id,result,true))}));
   },[]);
   const {jobs,manager}=useModelJobs(resolveModel,item=>notify(`3D model ready: ${item.name}`));
   const activeJobs=jobs.filter(job=>['starting','pending','checking'].includes(job.state)).length;
-  useEffect(()=>{for(const item of workspace.items)manager.track(item);},[manager,workspace.items]);
   const openPreview=(item:ProductItem)=>{
     manager.track(item,true);
     const tracked=manager.getSnapshot().find(job=>job.asin===item.listing?.asin);
@@ -75,47 +60,76 @@ export default function App(){
     if(!preview?.listing)return;
     try{
       manager.generate(preview);
-      setWorkspace(current=>({...current,items:current.items.some(item=>item.listing?.asin===preview.listing?.asin)
-        ?current.items:[preview,...current.items]}));
-      notify('3D model requested. Keep browsing; we’ll update Saved items when it’s ready.');
+      notify('3D model requested. Keep browsing; follow its progress in 3D models.');
     }catch(error){notify((error as Error).message);}
   };
   const checkModel=()=>{
     if(!preview?.listing)return;
     manager.track(preview);manager.check(preview.listing.asin);
   };
-  const saveItem=()=>{
-    if(!preview)return;
-    const exists=workspace.items.some(item=>item.sourceUrl===preview.sourceUrl);
-    setWorkspace(current=>({...current,items:current.items.some(item=>item.sourceUrl===preview.sourceUrl)
-      ?current.items.map(item=>item.sourceUrl===preview.sourceUrl?{...preview,id:item.id,createdAt:item.createdAt}:item)
-      :[preview,...current.items]}));
-    notify(exists?(preview.product?'Saved color updated.':'Saved product updated.'):'Product saved to your items.');
-  };
   const addToRoom=(id:string)=>{if(!preview)return;const layout=workspace.layouts.find(item=>item.id===id);if(!layout)return;try{updateRoom(placeItem(layout,preview));setPreview(null);openRoom(id);notify('Product added to layout.');}catch(error){notify((error as Error).message);}};
-  const layoutCards=(items:RoomLayout[])=><div className="layout-grid">{items.map(item=><article className="layout-card" key={item.id}><button className="layout-card-plan" onClick={()=>openRoom(item.id)} aria-label={`Open ${item.name}`}><FloorPlan layout={item} compact/><span className="tag room-type-tag">{item.roomType}</span></button><div className="layout-card-info"><button onClick={()=>openRoom(item.id)}><h3>{item.name}</h3><p>{item.items.length} {item.items.length===1?'piece':'pieces'} · Edited {relativeDate(item.updatedAt).toLowerCase()}</p></button><div className="card-actions"><button className="icon-button" aria-label={`Duplicate ${item.name}`} title="Duplicate" onClick={()=>{const copy=duplicateLayout(item);setWorkspace(current=>({...current,layouts:[copy,...current.layouts]}));notify('Layout duplicated.');}}><Copy size={15}/></button><button className="icon-button" aria-label={`Delete ${item.name}`} title="Delete" onClick={()=>removeRoom(item)}><Trash2 size={15}/></button></div></div></article>)}</div>;
-  const brand=<a className="brand" href="#" onClick={event=>{event.preventDefault();navigate('home');}} aria-label="Furniture AR home"><img src="/icon.svg" alt="" width={24} height={24}/><span>Furniture AR</span></a>;
+  const createRoom=(layout:RoomLayout)=>{
+    try{
+      const created=pendingItem?placeItem(layout,pendingItem):layout;
+      setWorkspace(current=>({...current,layouts:[created,...current.layouts]}));
+      setCreateOpen(false);setScanOpen(false);setScanError(undefined);setPendingItem(null);openRoom(created.id);
+    }catch(error){notify((error as Error).message);}
+  };
+  // Files, Safari links and the native scanner all enter the regular layout editor.
+  const finishScan=useCallback((scan:ImportedRoom,item?:ProductItem)=>{
+    let created=createScannedLayout(scan);
+    let message='Room scan saved as a new layout. Your main walls are aligned with the grid.';
+    if(item){try{created=placeItem(created,item);}catch(error){message=`Room scan saved. ${(error as Error).message}`;}}
+    setWorkspace(current=>({...current,layouts:[created,...current.layouts]}));
+    setCreateOpen(false);setScanOpen(false);setScanError(undefined);setPendingItem(null);setPreview(null);
+    setRoomId(created.id);setPage('layouts');setQuery('');window.scrollTo({top:0});notify(message);
+  },[notify]);
+  const receivedNativeScan=useRef<string | undefined>(undefined);
+  const pendingScanItem=useRef<ProductItem|null>(pendingItem);
+  pendingScanItem.current=pendingItem;
+  useEffect(()=>{
+    const failed=(error:unknown)=>{setScanError((error as Error).message);setCreateOpen(false);setPreview(null);setScanOpen(true);};
+    const receiveLink=()=>{
+      const hash=window.location.hash;if(!hash.startsWith('#room-scan='))return;
+      // Consume before importing so StrictMode or a reload cannot duplicate this handoff.
+      window.history.replaceState(null,'',window.location.pathname+window.location.search);
+      try{const scan=readRoomScanFragment(hash);if(scan)finishScan(scan,pendingScanItem.current??undefined);}catch(error){failed(error);}
+    };
+    const receiveNative=(event:Event)=>{
+      try{
+        const scan=parseRoomScan((event as CustomEvent).detail);
+        const key=JSON.stringify(scan);
+        if(receivedNativeScan.current===key)return;
+        receivedNativeScan.current=key;finishScan(scan,pendingScanItem.current??undefined);
+      }catch(error){failed(error);}
+    };
+    receiveLink();window.addEventListener('hashchange',receiveLink);
+    window.addEventListener('furniture-ar:scan',receiveNative);
+    if(hasNativeRoomAR())void nativeRequest('ready').catch(()=>{});
+    return()=>{window.removeEventListener('hashchange',receiveLink);window.removeEventListener('furniture-ar:scan',receiveNative);};
+  },[finishScan]);
+  const layoutCards=(items:RoomLayout[])=><div className="layout-grid">{items.map(item=><article className="layout-card" key={item.id}><button className="layout-card-plan" onClick={()=>openRoom(item.id)} aria-label={`Open ${item.name}`}><FloorPlan layout={item} compact/><span className="tag room-type-tag">{item.roomType}</span></button><div className="layout-card-info"><button onClick={()=>openRoom(item.id)}><h3>{item.name}</h3><p>{item.items.length+(item.survey?.obstacles.length??0)} {item.items.length+(item.survey?.obstacles.length??0)===1?'piece':'pieces'} · Edited {relativeDate(item.updatedAt).toLowerCase()}</p></button><div className="card-actions"><button className="icon-button" aria-label={`Duplicate ${item.name}`} title="Duplicate" onClick={()=>{const copy=duplicateLayout(item);setWorkspace(current=>({...current,layouts:[copy,...current.layouts]}));notify('Layout duplicated.');}}><Copy size={15}/></button><button className="icon-button" aria-label={`Delete ${item.name}`} title="Delete" onClick={()=>removeRoom(item)}><Trash2 size={15}/></button></div></div></article>)}</div>;
+  const brand=<a className="brand" href="#" onClick={event=>{event.preventDefault();navigate('home');}} aria-label="Roomify home"><img src="/icon.svg" alt="" width={32} height={32}/><span>Roomify</span></a>;
   return <div className="app-shell"><a href="#main-content" className="skip-link">Skip to content</a>
-    <aside className="sidebar">{brand}<nav aria-label="Main navigation">{([{id:'home',label:'Overview',icon:Home},{id:'photo',label:'Photo to 3D',icon:Camera},{id:'layouts',label:'My layouts',icon:Layers},{id:'items',label:'Saved items',icon:Bookmark}] as const).map(({id,label,icon:Icon})=><button key={id} className={`side-link ${page===id?'active':''}`} aria-current={page===id?'page':undefined} title={label} onClick={()=>navigate(id)}><Icon size={16}/><span>{label}</span>{id==='layouts'&&workspace.layouts.length>0&&<small>{workspace.layouts.length}</small>}{id==='items'&&workspace.items.length>0&&<small>{workspace.items.length}</small>}</button>)}</nav>
+    <aside className="sidebar">{brand}<nav aria-label="Main navigation">{([{id:'home',label:'Overview',icon:Home},{id:'photo',label:'Photo to 3D',icon:Camera},{id:'layouts',label:'My layouts',icon:Layers}] as const).map(({id,label,icon:Icon})=><button key={id} className={`side-link ${page===id?'active':''}`} aria-current={page===id?'page':undefined} title={label} onClick={()=>navigate(id)}><Icon size={16}/><span>{label}</span>{id==='layouts'&&workspace.layouts.length>0&&<small>{workspace.layouts.length}</small>}</button>)}</nav>
       <div className="sidebar-footer"><button className="side-link jobs-link" title="3D models" aria-label={`Your 3D models${activeJobs?`, ${activeJobs} in progress`:''}`} onClick={()=>setJobsOpen(true)}><Box size={16}/><span>3D models</span>{activeJobs>0&&<small>{activeJobs}</small>}</button><button className="side-link" title="Help" onClick={()=>setHelp(true)}><HelpCircle size={16}/><span>Help</span></button><p className="storage-status"><span className={persisted?'status-dot':'status-dot offline'}/>{persisted?'Saved in this browser':'Browser storage unavailable'}</p></div>
     </aside>
     <div className="app-main"><header className="mobile-header">{brand}<div className="mobile-header-actions"><button className="icon-button jobs-button" aria-label={`Your 3D models${activeJobs?`, ${activeJobs} in progress`:''}`} onClick={()=>setJobsOpen(true)}><Box size={18}/>{activeJobs>0&&<small>{activeJobs}</small>}</button><button className="icon-button" aria-label="Help" onClick={()=>setHelp(true)}><HelpCircle size={18}/></button></div></header><main id="main-content" className={room?'main-content editor-content':'main-content'}>
-      {room?<Suspense fallback={<div className="workspace-loading"><span className="loading-ring"/>Opening your layout…</div>}><RoomEditor key={room.id} layout={room} onChange={updateRoom} onBack={()=>navigate('layouts')} onUnavailable={()=>setPhone(true)} onNotify={notify} savedItems={workspace.items} persisted={persisted} onPreview={openPreview}/></Suspense>:<>
+      {room?<Suspense fallback={<div className="workspace-loading"><span className="loading-ring"/>Opening your layout…</div>}><RoomEditor onScan={()=>{setPendingItem(null);setScanError(undefined);setScanOpen(true);}} onCreateDesign={createRoom} key={room.id} layout={room} onChange={updateRoom} onBack={()=>navigate('layouts')} onUnavailable={()=>setPhone(true)} onNotify={notify} persisted={persisted} onPreview={openPreview}/></Suspense>:<>
         {page==='photo'&&<Suspense fallback={<div className="workspace-loading"><span className="loading-ring"/>Opening photo studio…</div>}><PhotoStudio autoOpenCamera={autoOpenCamera}/></Suspense>}
         {page==='home'&&<><div className="page-heading"><div><h1>Overview</h1></div></div>
-          <div className="start-grid"><section className="start-card"><div className="start-card-body"><h2>Preview a product</h2><p>Search Amazon or paste a product link to view it in 3D and place it in your room.</p><LinkInput onProduct={openPreview}/><p className="start-card-note">Only products with a matching 3D model can be placed in AR.</p></div></section><section className="start-card room-start"><img src="/images/room.jpg" alt="A bright living room with natural wood furniture and a neutral sofa"/><div className="start-card-body"><h2>Plan a room</h2><p>Create a layout, arrange pieces on a floor plan, and view the whole room in AR.</p><div className="start-card-actions"><button className="button primary" onClick={()=>startRoom()}><Plus size={16}/>New layout</button><button className="button secondary" onClick={()=>setScanOpen(true)}><ScanLine size={16}/>Room scan</button></div></div></section></div>
+          <div className="start-grid"><section className="start-card"><div className="start-card-body"><h2>Preview a product</h2><p>Search Amazon or paste a product link to view it in 3D and place it in your room.</p><LinkInput onProduct={openPreview}/><p className="start-card-note">Only products with a matching 3D model can be placed in AR.</p></div></section><section className="start-card room-start"><img src="/images/room.jpg" alt="A bright living room with natural wood furniture and a neutral sofa"/><div className="start-card-body"><h2>Plan a room</h2><p>Create a layout, arrange pieces on a floor plan, and view the whole room in AR.</p><div className="start-card-actions"><button className="button primary" onClick={()=>startRoom()}><Plus size={16}/>New layout</button></div></div></section></div>
           <section className="photo-entry"><Camera size={20}/><div><h2>Photo to 3D</h2><p>Turn a photo of furniture you own into a 3D model you can place in AR.</p></div><button className="button secondary" onClick={openPhoto}><Camera size={16}/>Open camera</button></section>
           <section className="saved-layouts-section"><div className="section-heading"><h2>Recent layouts</h2>{workspace.layouts.length>0&&<button className="text-button" onClick={()=>navigate('layouts')}>View all</button>}</div>{workspace.layouts.length?layoutCards(layouts.slice(0,3)):<div className="empty-state"><Grid2X2 size={28}/><h3>No layouts yet</h3><p>Create a layout to arrange furniture on a floor plan of your room.</p></div>}</section>
         </>}
-        {page==='layouts'&&<><div className="page-heading"><div><h1>My layouts</h1><p>Layouts save automatically in this browser.</p></div><div className="page-actions"><button className="button secondary" onClick={()=>setScanOpen(true)}><ScanLine size={16}/>Room scan</button><button className="button primary" onClick={()=>startRoom()}><Plus size={16}/>New layout</button></div></div>{workspace.layouts.length?<><div className="list-toolbar"><label className="search-field"><Search size={16}/><input placeholder="Search layouts" aria-label="Search layouts" value={query} onChange={event=>setQuery(event.target.value)}/></label><span>{layouts.length} {layouts.length===1?'layout':'layouts'}</span></div>{layoutCards(layouts)}{query&&!layouts.length&&<p className="no-results">No layouts match “{query}”.</p>}</>:<div className="empty-state"><Grid2X2 size={28}/><h3>No layouts yet</h3><p>Start from your room’s measurements, or import an iPhone room scan.</p></div>}</>}
-        {page==='items'&&<><div className="page-heading"><div><h1>Saved items</h1><p>Products you save can be added to any layout.</p></div></div><div className="library-import"><span>Add a product</span><LinkInput compact onProduct={openPreview}/></div>{workspace.items.length?<div className="saved-items-list"><div className="saved-list-header"><span>Product</span><span>Source</span><span>Added</span><span/></div>{workspace.items.map(item=><article key={item.id} className="saved-item-row"><button className="saved-item-name" onClick={()=>openPreview(item)}><span className="item-mini">{item.listing?.images[0]?<img src={item.listing.images[0]} alt="" referrerPolicy="no-referrer"/>:<ProductIcon category={item.product?.category||'Storage'} size={25}/>}</span><span><strong>{item.name}</strong><small>{item.product?<>{getVariant(item.product,item.variantId).name}{getVariant(item.product,item.variantId).approximate?' · Color preview':''}</>:(jobs.find(job=>job.asin===item.listing?.asin)?modelJobLabel(jobs.find(job=>job.asin===item.listing?.asin)!):'Product saved · 3D is optional')}</small></span></button><a href={(item.product?getVariant(item.product,item.variantId).productUrl:undefined)??item.sourceUrl} target="_blank" rel="noreferrer">{sourceLabel((item.product?getVariant(item.product,item.variantId).productUrl:undefined)??item.sourceUrl)}<ExternalLink size={12}/></a><span>{relativeDate(item.createdAt)}</span><div className="saved-item-actions"><button className="icon-button" aria-label={`Preview ${item.name}`} title="Preview" onClick={()=>openPreview(item)}><Eye size={15}/></button><button className="icon-button" aria-label={`Remove saved ${item.name}`} title="Remove" onClick={()=>removeItem(item)}><Trash2 size={15}/></button></div></article>)}</div>:<div className="empty-state"><Bookmark size={28}/><h3>No saved items</h3><p>Search Amazon or paste a product link, then choose Save item in the preview.</p></div>}</>}
+        {page==='layouts'&&<><div className="page-heading"><div><h1>My layouts</h1><p>Layouts save automatically in this browser.</p></div><div className="page-actions"><button className="button primary" onClick={()=>startRoom()}><Plus size={16}/>New layout</button></div></div>{workspace.layouts.length?<><div className="list-toolbar"><label className="search-field"><Search size={16}/><input placeholder="Search layouts" aria-label="Search layouts" value={query} onChange={event=>setQuery(event.target.value)}/></label><span>{layouts.length} {layouts.length===1?'layout':'layouts'}</span></div>{layoutCards(layouts)}{query&&!layouts.length&&<p className="no-results">No layouts match “{query}”.</p>}</>:<div className="empty-state"><Grid2X2 size={28}/><h3>No layouts yet</h3><p>Start from your room’s measurements, or scan it in the iPhone app.</p></div>}</>}
       </>}
     </main></div>
-    {preview&&<Suspense fallback={<Modal label="Loading preview" onClose={()=>setPreview(null)} className="small-modal"><div className="workspace-loading"><span className="loading-ring"/>Opening product preview…</div></Modal>}><PreviewModal key={preview.id} item={preview} layouts={workspace.layouts} saved={workspace.items.some(item=>item.sourceUrl===preview.sourceUrl&&(item.product?getVariant(item.product,item.variantId).id:undefined)===(preview.product?getVariant(preview.product,preview.variantId).id:undefined))} onVariant={id=>setPreview(current=>current?.product?selectItemVariant(current,id):current)} onGenerate={generateModel} onCheckModel={checkModel} modelJob={jobs.find(job=>job.asin===preview.listing?.asin)} onSave={saveItem} onAdd={addToRoom} onNew={()=>{const item=preview;setPreview(null);startRoom(item);}} onClose={()=>setPreview(null)} onUnavailable={()=>setPhone(true)} unit={unit} onUnit={value=>{setUnit(value);writeUnit(value);}}/></Suspense>}
+    {preview&&<Suspense fallback={<Modal label="Loading preview" onClose={()=>setPreview(null)} className="small-modal"><div className="workspace-loading"><span className="loading-ring"/>Opening product preview…</div></Modal>}><PreviewModal key={preview.id} item={preview} layouts={workspace.layouts} onVariant={id=>setPreview(current=>current?.product?selectItemVariant(current,id):current)} onGenerate={generateModel} onCheckModel={checkModel} modelJob={jobs.find(job=>job.asin===preview.listing?.asin)} onAdd={addToRoom} onNew={()=>{const item=preview;setPreview(null);startRoom(item);}} onClose={()=>setPreview(null)} onUnavailable={()=>setPhone(true)} unit={unit} onUnit={value=>{setUnit(value);writeUnit(value);}}/></Suspense>}
     {jobsOpen&&<ModelJobsPanel jobs={jobs} onClose={()=>setJobsOpen(false)} onOpen={item=>{setJobsOpen(false);openPreview(item);}} onCheck={asin=>manager.check(asin)}/>}
-    {scanOpen&&<RoomScanImport initial={incomingScan.scan} initialError={incomingScan.error} onClose={()=>{setScanOpen(false);setIncomingScan({scan:undefined,error:undefined});setPendingItem(null);}} onImport={scan=>{let created={...createLayout(scan.name,'Scanned room',scan.width,scan.depth),survey:scan.survey};if(pendingItem)created={...placeItem(created,pendingItem),survey:scan.survey};setWorkspace(current=>({...current,layouts:[created,...current.layouts]}));setScanOpen(false);setIncomingScan({scan:undefined,error:undefined});setPendingItem(null);openRoom(created.id);notify('Room imported. Review the detected objects before arranging.');}}/>}
-    {createOpen&&<Modal label="Create a layout" onClose={()=>{setCreateOpen(false);setPendingItem(null);}} className="small-modal"><form className="modal-form" onSubmit={event=>{event.preventDefault();const data=new FormData(event.currentTarget);try{let created=createLayout(String(data.get('name')),String(data.get('type')),Number(data.get('width')),Number(data.get('depth')));if(pendingItem)created=placeItem(created,pendingItem);setWorkspace(current=>({...current,layouts:[created,...current.layouts]}));setCreateOpen(false);setPendingItem(null);openRoom(created.id);}catch(error){notify((error as Error).message);}}}><h2>New layout</h2><p>You can change these details later.</p><label className="field-label">Layout name<input name="name" placeholder="e.g. Living room" maxLength={80} required autoFocus/></label><label className="field-label">Room type<select name="type"><option>Living room</option><option>Bedroom</option><option>Dining room</option><option>Home office</option><option>Other space</option></select></label><div className="two-fields"><label className="field-label">Width (m)<input name="width" type="number" min="1" max="20" step=".1" defaultValue="5" required/></label><label className="field-label">Depth (m)<input name="depth" type="number" min="1" max="20" step=".1" defaultValue="4" required/></label></div><span className="field-hint">Rough measurements are fine to start.</span><button type="button" className="text-button" onClick={()=>{setCreateOpen(false);setScanOpen(true);}}><ScanLine size={15}/>Use measurements from an iPhone room scan</button><button className="button primary" type="submit">Create layout</button></form></Modal>}
-    {(help||phone)&&<Modal label={phone?'Use AR on your phone':'How Furniture AR works'} onClose={()=>{setHelp(false);setPhone(false);setCopied(false);}} className="small-modal"><div className="modal-form"><h2>{phone?'Use AR on your phone':'How Furniture AR works'}</h2>{phone?<><p>Open this site in Safari on an iPhone or Chrome on an AR-capable Android phone. Choose a product or layout, then tap the AR button.</p><div className="notice">Allow camera access and slowly scan a well-lit floor. Drag to move and use two fingers to rotate. Scaling stays locked.</div><button className="button primary" onClick={async()=>{try{await navigator.clipboard.writeText(window.location.href);setCopied(true);}catch{notify('Copy this page’s address from your browser.');}}}>{copied?<Check size={16}/>:<Link2 size={16}/>} {copied?'Link copied':'Copy link for your phone'}</button></>:<><div className="help-option"><Armchair size={18}/><div><h3>Check one product</h3><p>Search Amazon or paste a link, inspect a matching model, and place it in your room. Save the item or add it to a layout.</p></div></div><div className="help-option"><Layers size={18}/><div><h3>Plan a whole room</h3><p>Create a layout, find products on Amazon, and drag modeled pieces into place. Save different arrangements and preview the full group in AR.</p></div></div><div className="help-option"><Camera size={18}/><div><h3>Photo to 3D</h3><p>Photograph a piece you own, turn it into a 3D model, set its height, and place it in AR.</p></div></div><button className="button secondary" onClick={()=>{setHelp(false);setPhone(true);}}>Using AR on your phone</button></>}<p className="help-fineprint">AR needs a compatible phone and HTTPS. Layouts are saved in this browser; they don’t sync between devices yet. Use a tape measure to confirm fit before buying.</p></div></Modal>}
+    {scanOpen&&<RoomScanImport initialError={scanError} onClose={()=>{setScanOpen(false);setScanError(undefined);setPendingItem(null);}} onBack={()=>{setScanOpen(false);setScanError(undefined);setCreateOpen(true);}} onImport={scan=>finishScan(scan,pendingItem??undefined)}/>}
+    {createOpen&&<NewLayout onClose={()=>{setCreateOpen(false);setPendingItem(null);}} onCreate={createRoom} onScan={()=>{setCreateOpen(false);setScanError(undefined);setScanOpen(true);}}/>}
+    {(help||phone)&&<Modal label={phone?'Use AR on your phone':'How Roomify works'} onClose={()=>{setHelp(false);setPhone(false);setCopied(false);}} className="small-modal"><div className="modal-form"><h2>{phone?'Use AR on your phone':'How Roomify works'}</h2>{phone?<><p>Open this site in Safari on an iPhone or Chrome on an AR-capable Android phone. Choose a product or layout, then tap the AR button.</p><div className="notice">Allow camera access and slowly scan a well-lit floor. Drag to move and use two fingers to rotate. Scaling stays locked.</div><button className="button primary" onClick={async()=>{try{await navigator.clipboard.writeText(window.location.href);setCopied(true);}catch{notify('Copy this page’s address from your browser.');}}}>{copied?<Check size={16}/>:<Link2 size={16}/>} {copied?'Link copied':'Copy link for your phone'}</button></>:<><div className="help-option"><Armchair size={18}/><div><h3>Check one product</h3><p>Search Amazon or paste a link, inspect a matching model, and place it in your room. Add it to a layout when you want to keep planning.</p></div></div><div className="help-option"><Layers size={18}/><div><h3>Plan a whole room</h3><p>Create a layout, find products on Amazon, and drag modeled pieces into place. Save different arrangements and preview the full group in AR.</p></div></div><div className="help-option"><Camera size={18}/><div><h3>Photo to 3D</h3><p>Photograph a piece you own, turn it into a 3D model, set its height, and place it in AR.</p></div></div><button className="button secondary" onClick={()=>{setHelp(false);setPhone(true);}}>Using AR on your phone</button></>}<p className="help-fineprint">AR needs a compatible phone and HTTPS. Layouts are saved in this browser; they don’t sync between devices yet. Use a tape measure to confirm fit before buying.</p></div></Modal>}
     {toast&&<div className="toast" role="status"><Check size={16}/><span>{toast.message}</span>{toast.undo&&<button onClick={()=>{toast.undo?.();setToast(null);}}>Undo</button>}<button aria-label="Dismiss notification" onClick={()=>setToast(null)}><X size={15}/></button></div>}
   </div>;
 }

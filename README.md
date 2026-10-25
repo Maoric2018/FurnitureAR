@@ -1,15 +1,15 @@
-# Furniture AR
+# Roomify
 
 A mobile web app with two ways to plan furniture:
 
-- **One product:** search Amazon or paste a link, browse its photos, optionally generate or load its 3D model, choose a finish, then preview it in AR or add it to a room.
-- **A whole room:** create a named layout, find products through search or links, move and rotate pieces on a floor plan, choose each piece’s finish, then view the complete arrangement in 3D or AR.
+- **One product:** search Amazon or paste a link, browse its photos, optionally generate or load its 3D model, choose a finish, then preview it in AR or add it to a layout. There is no standalone saved-items library.
+- **A whole room:** create a named layout from manual dimensions or a scan in the iPhone app, arrange pieces on a floor plan, use **Design my room** for suggestions, then preview the layout in 3D or AR. Browser scanning remains an app handoff placeholder.
 
-The home screen is a workspace. **Search Amazon by keyword** or paste an **Amazon.com product link** to import real product details. Search opens a photo-card list with prices and ratings when supplied, model-availability labels, and pagination. Selecting a result checks the saved model for that exact Amazon product before fetching more product details. The table and lamp supplied by the project team have approximate 3D previews. Other products can be saved with their details; AR and room placement remain unavailable until a matching model exists. No unrelated placeholder is substituted.
+The home screen is a workspace. **Search Amazon by keyword** or paste an **Amazon.com product link** to import real product details. Search opens a photo-card list with prices and ratings when supplied, model-availability labels, and pagination. Selecting a result checks the saved model for that exact Amazon product before fetching more product details. The table and lamp supplied by the project team have approximate 3D previews. Other products can be viewed with their details; AR and room placement remain unavailable until a matching model exists. No unrelated placeholder is substituted.
 
-Product previews open with photos. Choose **Load 3D model** for an available model, or **Generate 3D model** to request one. Browsing alone neither starts generation nor downloads a GLB. Requested items are saved, and the **3D models** panel tracks their progress while you browse other products or edit a room. An accepted job continues on the GPU service after the tab closes; reopening the app resumes status checks from this browser’s saved jobs without submitting them again.
+Product previews open with photos. Choose **Load 3D model** for an available model, or **Generate 3D model** to request one. Browsing alone neither starts generation nor downloads a GLB. The **3D models** panel keeps requested jobs and their progress while you browse or edit a room. Accepted jobs continue on the GPU service after the tab closes; reopening resumes status checks without resubmitting them. Products are saved as furniture only when added to a layout.
 
-Search is also available in Saved items and the room editor. It returns the products supplied for each Amazon search page, rather than attempting to download the entire catalog. Search results do not guarantee current stock; confirm price, availability, size, and finish on Amazon. Product search and import share the configured SerpApi account allowance; search runs only on submission or pagination, not on every keystroke.
+Search is also available inside each room layout. It returns the products supplied for each Amazon search page, rather than attempting to download the entire catalog. Search results do not guarantee current stock; confirm price, availability, size, and finish on Amazon. Product search and import share the configured SerpApi account allowance; search runs only on submission or pagination, not on every keystroke.
 
 ## Run
 
@@ -41,21 +41,39 @@ Choose **Photo to 3D** or **Open camera**, sign in, capture/upload a photo, and 
 
 For Amazon models, scale uses the first available labeled height, width or depth while preserving proportions. Without a usable measurement, the model is a clearly labeled 1 m reference preview; AR and room placement stay unavailable. A single photo cannot determine real dimensions.
 
+## Design my room — Claude Opus
+
+Open a layout and choose **Design my room**. Describe the goal, choose a style, set a USD budget for additions, and optionally attach up to four room photos. Existing layout pieces can be kept in place, moved, or left out. Scanned obstacles remain fixed and anonymous. Photos help describe appearance; they do not create a measured floor plan or automatically identify scanned objects.
+
+The designer returns up to three distinct, validated proposals. Compare their floor plans and product subtotals, refine a direction in plain language, then choose **Use this design**. It saves a new editable layout; the starting layout is preserved. The usual floor-plan dragging, undo/redo, 3D, and grouped AR preview work on the result.
+
+**Connection:** add `ANTHROPIC_API_KEY` to the ignored `.dev.vars` file locally, or as a server secret on the deployed Site. Optional `CLAUDE_MODEL` defaults to `claude-opus-5-5`; set it to the Opus model enabled for your account. Restart local development after changing secrets. Never use a `VITE_` prefix or put the key in the hosting manifest. No OpenAI key or credits are used. This uses Anthropic's Messages API over HTTP, compatible with Cloudflare Workers; a Claude consumer subscription alone is not configured as an API credential.
+
+Without a key, the form is usable and saves the text brief on this device, but generation clearly stays disconnected. Photos remain in memory, are re-encoded without metadata, and are only sent to Claude when Generate is pressed. They are not saved in localStorage or included in the resulting layout. Closing the designer clears them.
+
+Amazon shopping uses the existing server-side SerpApi connection. Only exact retrieved products with a positive USD price and usable 3D geometry can be added. The supplied prototype inventory is available to the designer after checking exact ASIN, title similarity, and any reported dimensions against the live listing. These are approximate models, not manufacturer CAD. Products without usable previews are excluded while the separate 3D generator remains unconfigured. A $0 budget rearranges existing layout pieces without shopping calls.
+
+The backend checks required pieces, budget, rotated footprints, collisions, scan boundaries and doorway clearance, and searches for nearby valid positions. Incomplete scan outlines fail closed. These checks do not guarantee continuous walking routes or compensate for objects omitted from the scan. Prices exclude delivery and tax.
+
+See [the integration guide](INTEGRATION.md#claude-room-designer) for endpoints, limits, and activation details.
+
 ## Room layouts
 
-Layouts save automatically in this browser, including names, room dimensions, source links, product metadata, each piece’s selected finish, positions, and rotations. Create, reopen, rename, duplicate, or delete layouts. Deletion offers Undo. Editing supports undo, pointer/touch dragging, arrow-key nudges (Shift for larger steps), and R to rotate. Selected pieces also have finish choices, position sliders, rotation, duplicate, and remove controls. Finish changes participate in layout Undo. Room dimensions can be changed after creation for manually measured rooms. Scanned layouts preserve their measured outline.
+Layouts save automatically in this browser, including names, room dimensions, source links, product metadata, each piece’s selected finish, positions, and rotations. Create, reopen, rename, duplicate, or delete layouts. Deletion offers Undo. Editing supports Undo/Redo, pointer/touch dragging that commits once on release, optional 5 cm grid snapping (hold Shift to bypass), arrow-key nudges (Shift for larger steps), and R to rotate. Rotation, duplicate, and remove controls stay beside the floor plan, including on phones. Escape clears selection. Ctrl/Command Z undoes and Shift Z redoes. Selected pieces also have finish choices, numeric positions, rotation, duplicate, and remove controls. Finish changes participate in layout Undo. Room dimensions can be changed after creation for manually measured rooms. Scanned layouts preserve their measured outline.
 
-A room supports up to 30 pieces. Floor-plan units are meters. The editor keeps rotated footprints within room bounds when the item fits. Enter dimensions manually, or import a LiDAR room scan with walls, openings, and existing furniture. Real AR alignment is performed on the phone.
+A room supports up to 30 pieces. Floor-plan units are meters. The editor keeps rotated footprints within room bounds when the item fits. Enter dimensions manually or create a layout from a room scan. Scanned layouts keep their walls, openings, and obstacles. Real AR alignment is performed on the phone.
 
-Saved individual products form a separate library and can be reused across layouts when they have models. Saving or adding a product keeps its selected finish; duplicated pieces and layouts retain their choices and can then be changed independently. Persistence is **local to the current browser/device**, with no cross-device or account sync. Existing v1 favorites remain untouched in their original storage key; the new workspace uses `furniture-ar:workspace:v2`. Previously saved Little Tree placeholders still reopen with their approximate finish palette.
+Products are saved only as part of a layout. Single-product previews are temporary. Adding a product to a layout keeps its selected finish; duplicated pieces and layouts retain their choices and can then be changed independently. Persistence is **local to the current browser/device**, with no cross-device or account sync. Existing v1 favorites remain untouched in their original storage key; the new workspace uses `furniture-ar:workspace:v2`. Previously saved Little Tree placeholders still reopen with their approximate finish palette.
 
 ## Scan your room
 
-Choose **Room scan** from the overview, layout list, or editor, then **Upload a room scan** or **Perform a room scan**. The scan option opens the existing native [Furniture AR Scan companion](./ios/FurnitureARScan/README.md) through `furniturear-scan://scan` on a LiDAR iPhone or iPad. It uses Apple RoomPlan; the website does not implement a separate scanner. After capture, use **Save / share room file**, return to the website, and upload the exported JSON. Review the measured outline before creating the layout. The installed companion’s **Open in Furniture AR** button still targets the original Eric website; file sharing is the existing way to bring the scan to this hosted site without reinstalling the app. Incoming `#room-scan` handoffs continue to open the review directly.
+Choose **New layout → Scan your room**, then upload a saved JSON room file or open the native [Roomify Scan companion](./ios/FurnitureARScan/README.md) on a LiDAR iPhone or iPad. Completed files, Safari fragment links, and native scan handoffs automatically create a new saved layout and open the regular editor. There is no separate scan-review editor, and starting a scan from an existing layout never replaces that layout.
 
-Existing objects appear as fixed, hatched footprints. Select one to correct its measurements, name, position, or rotation; add missed objects or remove false detections. New furniture remains movable. Overlaps with existing furniture, wall crossings, and doorway access warnings appear in the editor. Corrections and scans persist with the layout and participate in Undo and duplication. Incomplete wall geometry requires rescanning. All measurements and overlap warnings are estimates.
+The importer finds the dominant parallel/perpendicular wall directions and rotates the entire room to the nearest grid axes before centering it. Walls, doors, windows, and detected furniture share one rigid transform; lengths, scale, relative placement, and genuinely diagonal wall angles are preserved. This normalization runs only on new imports, not when reopening an existing layout.
 
-The companion is an Xcode development project, not an App Store release. See [setup instructions](./public/room-scanner.html) or the companion README for signing and installing it. Camera images remain on the phone; the export contains only measurements and labels. The optional web handoff uses a URL fragment, with a file-sharing fallback for larger scans. The website does not directly access LiDAR, sync layouts, or automatically anchor later AR previews to the scan.
+Scanned objects appear as hatched outlines in the same **In this layout** list as added products. Drag or keyboard-nudge them on the floor plan, rotate them, edit measurements, add missed outlines, or remove false detections. They share the editor’s Undo/Redo and autosave; they remain approximate outlines, not generated 3D models. Overlaps with other pieces or existing furniture, oversized footprints, wall crossings, and doorway access warnings appear in the editor. Corrections and scans persist with the layout and participate in Undo and duplication. Incomplete wall geometry requires rescanning. All measurements and overlap warnings are estimates.
+
+The companion is an Xcode development project, not an App Store release. See [setup instructions](./public/room-scanner.html) or the companion README for signing and installing it. The iPhone app now opens the web planner inside a WKWebView while keeping the scanner’s ARSession alive. Scanned layouts export a metre-scale USDZ to the native camera viewer, preserving the room origin. On return visits the app restores a private on-device ARWorldMap; missing maps or failed recognition use a two-corner wall alignment flow. The regular website still uses manually placed browser AR and does not access LiDAR or sync layouts. Both the updated app and updated web build are needed; physical alignment has not yet been verified on the phone.
 
 ## Finish previews
 
@@ -95,7 +113,8 @@ The same-origin route runs in the Cloudflare Worker for local development and ho
 
 ## Source map
 
-- `src/App.tsx`: workspace overview, layouts, saved library, creation, navigation and background model updates.
+- `src/App.tsx`: workspace overview, layouts, scan handoff, navigation and background model updates.
+- `src/components/NewLayout.tsx`: manual room dimensions or room scan entry.
 - `src/components/LinkInput.tsx`: Amazon product-link entry and importer connection.
 - `src/components/PreviewModal.tsx`: photos-first listing details, generation choice and lazy product/AR preview.
 - `src/components/ModelJobsPanel.tsx`: app-wide model progress, status checks and reopening requested items.

@@ -2,8 +2,8 @@ import { getVariant, parseProduct } from './products';
 import type { FurnitureProduct, FurnitureVariant } from './products';
 import { parseListing } from './amazon';
 import type { AmazonListing } from './amazon';
-import { parseSurvey } from './room-scan';
-import type { RoomSurvey } from './room-scan';
+import { parseSurvey, placementWarnings } from './room-scan';
+import type { ImportedRoom, RoomSurvey } from './room-scan';
 
 export interface ProductItem {
   id: string;
@@ -19,6 +19,7 @@ export interface RoomLayout {
   id: string; name: string; roomType: string; width: number; depth: number;
   items: PlacedItem[]; updatedAt: string; survey?: RoomSurvey;
 }
+// Keep legacy library data readable; new products are saved only within layouts.
 export interface Workspace { layouts: RoomLayout[]; items: ProductItem[] }
 export const WORKSPACE_KEY = 'furniture-ar:workspace:v2';
 export const placeholderProduct: FurnitureProduct = {
@@ -87,6 +88,10 @@ export function createLayout(name: string, roomType='Living room', width=5, dept
   if(![width,depth].every(n=>Number.isFinite(n)&&n>=1&&n<=20)) throw new Error('Room dimensions must be between 1 and 20 meters.');
   return {id:crypto.randomUUID(),name:name.trim().slice(0,80),roomType,width,depth,items:[],updatedAt:new Date().toISOString()};
 }
+/** A scan is a normal saved layout; keep an independent copy of its measured outline. */
+export function createScannedLayout(scan:ImportedRoom):RoomLayout {
+  return {...createLayout(scan.name,'Scanned room',scan.width,scan.depth),survey:structuredClone(scan.survey)};
+}
 export function clampPlacement(item: PlacedItem, room: Pick<RoomLayout,'width'|'depth'>): PlacedItem {
   const rotation=((item.rotation%360)+360)%360, radians=rotation*Math.PI/180;
   const {width,depth}=item.product.dimensions;
@@ -95,6 +100,12 @@ export function clampPlacement(item: PlacedItem, room: Pick<RoomLayout,'width'|'
   const extentZ=(round?Math.hypot(sin*width,cos*depth):Math.abs(sin)*width+Math.abs(cos)*depth)/2;
   const limitX=Math.max(0,room.width/2-extentX),limitZ=Math.max(0,room.depth/2-extentZ);
   return {...item,rotation,x:Math.max(-limitX,Math.min(limitX,item.x)),z:Math.max(-limitZ,Math.min(limitZ,item.z))};
+}
+/** Snap before clamping so the entire rotated footprint can still sit flush with a wall. */
+export function movePlacement(item: PlacedItem, room: Pick<RoomLayout,'width'|'depth'>, x: number, z: number, snap=false): PlacedItem {
+  if (![x,z].every(Number.isFinite)) return item;
+  const grid=(value:number)=>Math.round(value/.05)*.05;
+  return clampPlacement({...item,x:snap?grid(x):x,z:snap?grid(z):z},room);
 }
 export function placeItem(room:RoomLayout, item:ProductItem): RoomLayout {
   if(item.product?.scaleReference==='preview')throw new Error('This reference model needs a real measurement before room placement.');
@@ -106,6 +117,18 @@ export function placeItem(room:RoomLayout, item:ProductItem): RoomLayout {
   const z=Math.floor(index/columns)*spacing-room.depth/4;
   const placed=clampPlacement({...reconcileItemVariant(item),product:item.product,id:crypto.randomUUID(),x,z,rotation:0},room);
   return {...room,items:[...room.items,placed],updatedAt:new Date().toISOString()};
+}
+export function duplicatePlacedItem(room:RoomLayout, source:PlacedItem): RoomLayout {
+  if(room.items.length>=30) throw new Error('This layout has 30 pieces. Start another layout to add more.');
+  const copy={...source,id:crypto.randomUUID()};
+  const candidates:PlacedItem[]=[];
+  for(let x=-room.width/2;x<=room.width/2;x+=.2)for(let z=-room.depth/2;z<=room.depth/2;z+=.2){
+    candidates.push(clampPlacement({...copy,x,z},room));
+  }
+  candidates.sort((a,b)=>Math.hypot(a.x-source.x,a.z-source.z)-Math.hypot(b.x-source.x,b.z-source.z));
+  const placed=candidates.find(item=>!placementWarnings(item,room).length)
+    ??clampPlacement({...copy,x:source.x+.25,z:source.z+.25},room);
+  return {...room,items:[...room.items,placed]};
 }
 export function duplicateLayout(layout:RoomLayout): RoomLayout {
   return {...structuredClone(layout),id:crypto.randomUUID(),name:`${layout.name} copy`.slice(0,80),items:layout.items.map(item=>({...item,id:crypto.randomUUID()})),updatedAt:new Date().toISOString()};

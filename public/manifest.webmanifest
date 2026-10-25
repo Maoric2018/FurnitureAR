@@ -1,1 +1,17 @@
-{"name":"Furniture AR","short_name":"Furniture AR","description":"Preview furniture and save room layouts.","start_url":"/","display":"standalone","background_color":"#f3f4f3","theme_color":"#ffffff","icons":[{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
+{
+  "name": "Roomify",
+  "short_name": "Roomify",
+  "description": "Plan your room, design around what is there, and preview furniture in AR.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3f4f3",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

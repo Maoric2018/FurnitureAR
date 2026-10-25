@@ -3,18 +3,20 @@ import RoomPlan
 import AVFoundation
 
 @MainActor final class ScanModel: ObservableObject {
+    let tracking: RoomTrackingStore
+    init(tracking: RoomTrackingStore) { self.tracking = tracking }
     @Published var processing = false
     @Published var error: String?
     @Published var result: RoomDocument?
     lazy var controller: ScannerController = {
-        let controller = ScannerController()
+        let controller = ScannerController(tracking: tracking)
         controller.onResult = { [weak self] room in
             guard let self else { return }
-            do { self.result = try RoomDocument(room: room) }
-            catch { self.error = error.localizedDescription }
+            do { let document = try RoomDocument(room: room); self.tracking.completeScan(document); self.result = document }
+            catch { self.tracking.suspend(); self.error = error.localizedDescription }
             self.processing = false
         }
-        controller.onError = { [weak self] error in self?.error = error; self?.processing = false }
+        controller.onError = { [weak self] error in self?.tracking.suspend(); self?.error = error; self?.processing = false }
         return controller
     }()
     func finish() { guard !processing else { return }; processing = true; controller.finish() }
@@ -22,6 +24,10 @@ import AVFoundation
 }
 
 @MainActor final class ScannerController: UIViewController, RoomCaptureViewDelegate, RoomCaptureSessionDelegate {
+    private let tracking: RoomTrackingStore
+    private var completed = false
+    init(tracking: RoomTrackingStore) { self.tracking = tracking; super.init(nibName:nil,bundle:nil) }
+    required init?(coder: NSCoder) { fatalError("Use init(tracking:)") }
     private var captureView: RoomCaptureView!
     private var started = false
     private var cancelled = false
@@ -29,7 +35,7 @@ import AVFoundation
     var onError: ((String) -> Void)?
     override func viewDidLoad() {
         super.viewDidLoad()
-        captureView = RoomCaptureView(frame: .zero)
+        captureView = RoomCaptureView(frame: .zero, arSession: tracking.session)
         captureView.delegate = self
         captureView.captureSession.delegate = self
         captureView.translatesAutoresizingMaskIntoConstraints = false
@@ -45,10 +51,11 @@ import AVFoundation
         super.viewDidAppear(animated)
         guard !started else { return }
         started = true
+        tracking.beginScan()
         captureView.captureSession.run(configuration: RoomCaptureSession.Configuration())
     }
-    func finish() { captureView?.captureSession.stop() }
-    func cancel() { cancelled = true; captureView?.captureSession.stop() }
+    func finish() { captureView?.captureSession.stop(pauseARSession:false) }
+    func cancel() { guard !completed else { return }; cancelled = true; captureView?.captureSession.stop(); tracking.suspend() }
     override func viewWillDisappear(_ animated: Bool) { super.viewWillDisappear(animated); cancel() }
     nonisolated func captureView(shouldPresent roomDataForProcessing: CapturedRoomData, error: Error?) -> Bool {
         if let error { Task { @MainActor [weak self] in if self?.cancelled == false { self?.onError?(error.localizedDescription) } }; return false }
@@ -58,7 +65,7 @@ import AVFoundation
         Task { @MainActor [weak self] in
             guard let self, !self.cancelled else { return }
             if let error { self.onError?(error.localizedDescription) }
-            else { self.onResult?(processedResult) }
+            else { self.completed = true; self.onResult?(processedResult) }
         }
     }
     nonisolated func captureSession(_ session: RoomCaptureSession, didEndWith data: CapturedRoomData, error: Error?) {
@@ -74,8 +81,11 @@ struct CaptureSurface: UIViewControllerRepresentable {
 }
 struct CaptureScreen: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var model = ScanModel()
+    @StateObject private var model: ScanModel
     let onComplete: (RoomDocument) -> Void
+    init(tracking: RoomTrackingStore, onComplete: @escaping (RoomDocument) -> Void) {
+        _model = StateObject(wrappedValue:ScanModel(tracking:tracking)); self.onComplete = onComplete
+    }
     var body: some View {
         NavigationStack {
             CaptureSurface(controller: model.controller).ignoresSafeArea(edges: .bottom)

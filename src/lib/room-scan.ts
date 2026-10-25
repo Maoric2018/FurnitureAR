@@ -11,10 +11,12 @@ export interface RoomObstacle extends Point {
 export interface RoomSurvey {
   source: 'apple-roomplan'; capturedAt: string; walls: ScanWall[];
   openings: ScanOpening[]; obstacles: RoomObstacle[];
+  /** Opaque key to the private tracking map on the scanning iPhone. */
+  scanId?: string;
 }
 export interface ImportedRoom { name: string; width: number; depth: number; survey: RoomSurvey }
 export const MAX_SCAN_BYTES = 512_000;
-const fail = (): never => { throw new Error('This room file is incomplete or unsupported. Export a new scan from Furniture AR Scan.'); };
+const fail = (): never => { throw new Error('This room file is incomplete or unsupported. Export a new scan from Roomify Scan.'); };
 const record = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : fail();
 const number = (v: unknown, min: number, max: number): number => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? v : fail();
 const label = (v: unknown, max = 80): string => typeof v === 'string' && v.trim().length > 0 && v.length <= max ? v.trim() : fail();
@@ -47,28 +49,65 @@ export function parseSurvey(value: unknown): RoomSurvey {
   if (walls.length < 2) return fail();
   const ids = [...walls, ...openings, ...obstacles].map(v => v.id);
   if (new Set(ids).size !== ids.length) return fail();
-  return { source: 'apple-roomplan', capturedAt: v.capturedAt, walls, openings, obstacles };
+  if (v.scanId !== undefined && (typeof v.scanId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v.scanId))) return fail();
+  return { source: 'apple-roomplan', capturedAt: v.capturedAt, walls, openings, obstacles,
+    ...(v.scanId ? { scanId: v.scanId as string } : {}) };
 }
-/** One shared X/Z ground plane, in metres. Recenter every layer together. */
+const quarterTurn = Math.PI / 2;
+/** Wall directions are equivalent after a quarter turn, including reversed endpoints. */
+function axisAngle(angle: number): number {
+  const wrapped = ((angle + quarterTurn / 2) % quarterTurn + quarterTurn) % quarterTurn - quarterTurn / 2;
+  return Math.abs(wrapped) < 1e-12 ? 0 : wrapped;
+}
+function roomAxis(walls: ScanWall[]): number {
+  const confidenceWeight: Record<Confidence, number> = { high: 1, medium: .75, low: .35, unknown: .6 };
+  const directions = walls.map(wall => {
+    const dx = wall.end.x - wall.start.x, dz = wall.end.z - wall.start.z;
+    return { angle: axisAngle(Math.atan2(dz, dx)), weight: Math.hypot(dx, dz) * confidenceWeight[wall.confidence] };
+  }).sort((a, b) => a.angle - b.angle || b.weight - a.weight);
+  const tolerance = 8 * Math.PI / 180;
+  // Find the main family of parallel/perpendicular walls before averaging. A
+  // diagonal bay or a short, low-confidence detection must not tilt the room.
+  const candidates = directions.map(seed => {
+    const members = directions.filter(wall => Math.abs(axisAngle(wall.angle - seed.angle)) <= tolerance);
+    const weight = members.reduce((sum, wall) => sum + wall.weight, 0);
+    const angle = axisAngle(Math.atan2(
+      members.reduce((sum, wall) => sum + Math.sin(4 * wall.angle) * wall.weight, 0),
+      members.reduce((sum, wall) => sum + Math.cos(4 * wall.angle) * wall.weight, 0),
+    ) / 4);
+    const error = members.reduce((sum, wall) => sum + axisAngle(wall.angle - angle) ** 2 * wall.weight, 0);
+    return { angle, weight, error };
+  });
+  candidates.sort((a, b) => Math.abs(a.weight - b.weight) > 1e-10 ? b.weight - a.weight
+    : Math.abs(a.error - b.error) > 1e-10 ? a.error - b.error
+    : Math.abs(a.angle) - Math.abs(b.angle) || a.angle - b.angle);
+  return candidates[0].angle;
+}
+/** Rotate and recenter every layer together in one shared X/Z plane, in metres. */
 export function parseRoomScan(raw: unknown): ImportedRoom {
   const v = record(raw);
   if (v.format !== 'furniture-ar-room' || v.version !== 1 || v.units !== 'meters') return fail();
-  const survey = parseSurvey(v), points = survey.walls.flatMap(w => [w.start, w.end]);
+  const survey = parseSurvey(v), angle = -roomAxis(survey.walls), c = Math.cos(angle), s = Math.sin(angle);
+  const rotate = (p: Point): Point => ({ x: p.x * c - p.z * s, z: p.x * s + p.z * c });
+  const points = survey.walls.flatMap(w => [rotate(w.start), rotate(w.end)]);
   const minX = Math.min(...points.map(p => p.x)), maxX = Math.max(...points.map(p => p.x));
   const minZ = Math.min(...points.map(p => p.z)), maxZ = Math.max(...points.map(p => p.z));
-  const width = maxX - minX, depth = maxZ - minZ;
+  // Allow floating-point drift at the supported dimension limits after rotation.
+  const dimension = (value: number) => Math.abs(value - 1) < 1e-10 ? 1 : Math.abs(value - 20) < 1e-10 ? 20 : value;
+  const width = dimension(maxX - minX), depth = dimension(maxZ - minZ);
   if (width < 1 || depth < 1 || width > 20 || depth > 20) throw new Error('Scan a complete room between 1 and 20 metres across. This scan has an incomplete or oversized outline.');
   const center = { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2 };
-  const shift = (p: Point): Point => ({ x: p.x - center.x, z: p.z - center.z });
+  const shift = (p: Point): Point => { const rotated = rotate(p); return { x: rotated.x - center.x, z: rotated.z - center.z }; };
+  const rotateObstacle = (rotation: number) => angle === 0 ? rotation : ((rotation + angle * 180 / Math.PI + 180) % 360 + 360) % 360 - 180;
   return { name: label(v.name), width, depth, survey: { ...survey,
     walls: survey.walls.map(w => ({ ...w, start: shift(w.start), end: shift(w.end) })),
     openings: survey.openings.map(w => ({ ...w, start: shift(w.start), end: shift(w.end) })),
-    obstacles: survey.obstacles.map(o => ({ ...o, ...shift(o) })) } };
+    obstacles: survey.obstacles.map(o => ({ ...o, ...shift(o), rotation: rotateObstacle(o.rotation) })) } };
 }
 export function readRoomScanText(text: string): ImportedRoom {
-  if (new TextEncoder().encode(text).length > MAX_SCAN_BYTES) throw new Error('This file is too large. Choose the room JSON exported by Furniture AR Scan.');
+  if (new TextEncoder().encode(text).length > MAX_SCAN_BYTES) throw new Error('This file is too large. Choose the room JSON exported by Roomify Scan.');
   let value: unknown;
-  try { value = JSON.parse(text); } catch { throw new Error('This isn’t a room JSON file. Choose the file exported by Furniture AR Scan.'); }
+  try { value = JSON.parse(text); } catch { throw new Error('This isn’t a room JSON file. Choose the file exported by Roomify Scan.'); }
   return parseRoomScan(value);
 }
 export function readRoomScanFragment(hash: string): ImportedRoom | undefined {
@@ -124,9 +163,11 @@ export function solidWallSegments(wall: ScanWall, openings: ScanOpening[]): Scan
   return segments;
 }
 export function placementWarnings(item: PlacedItem, layout: RoomLayout): string[] {
-  if(!layout.survey)return [];
   const polygon=itemPolygon(item),survey=layout.survey,messages:string[]=[];
-  for(const obstacle of survey.obstacles)if(polygonsOverlap(polygon,footprintCorners(obstacle)))messages.push(`Overlaps ${obstacle.name}`);
+  if(polygon.some(p=>Math.abs(p.x)>layout.width/2+.001||Math.abs(p.z)>layout.depth/2+.001))messages.push('Too large for these room dimensions');
+  if(layout.items.some(other=>other.id!==item.id&&polygonsOverlap(polygon,itemPolygon(other))))messages.push('Overlaps another piece');
+  if(!survey)return messages;
+  if(survey.obstacles.some(obstacle=>polygonsOverlap(polygon,footprintCorners(obstacle))))messages.push('Overlaps an existing object');
   if(survey.walls.some(w=>solidWallSegments(w,survey.openings).some(segment=>polygonsOverlap(polygon,segmentBox(segment,.10)))))messages.push('Crosses a scanned wall');
   if(survey.openings.some(o=>o.kind!=='window'&&polygonsOverlap(polygon,segmentBox(o,.9))))messages.push('Near a doorway — check access');
   return messages;

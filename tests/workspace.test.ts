@@ -6,7 +6,30 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { USDZExporter } from 'three/addons/exporters/USDZExporter.js';
 import { catalog, dimensionsMatch, parseProduct } from '../src/lib/products.ts';
 import { arrangeModels } from '../src/lib/layout-model.ts';
-import { clampPlacement, createLayout, createProductItem, duplicateLayout, normalizeProductLink, parseWorkspace, placeItem, placeholderProduct } from '../src/lib/workspace.ts';
+import { clampPlacement, createLayout, createProductItem, duplicateLayout, duplicatePlacedItem, movePlacement, normalizeProductLink, parseWorkspace, placeItem, placeholderProduct } from '../src/lib/workspace.ts';
+import { placementWarnings } from '../src/lib/room-scan.ts';
+
+test('Snapped dragging is precise, keeps wall clearance, and can move freely',()=>{
+  const room=createLayout('Room'),item={...createProductItem('example.com'),x:0,z:0,rotation:45};
+  const snapped=movePlacement(item,room,.123,-.178,true);
+  assert.ok(Math.abs(snapped.x-.1)<1e-9);assert.ok(Math.abs(snapped.z+.2)<1e-9);
+  assert.equal(movePlacement(item,room,.123,-.178).x,.123);
+  assert.equal(movePlacement(item,room,Infinity,0),item);
+  assert.deepEqual(movePlacement(item,room,50,50,true),clampPlacement({...item,x:50,z:50},room));
+});
+test('Duplicating a placed piece preserves rotation and finish and finds nearby free space',()=>{
+  let room=placeItem(createLayout('Room'),createProductItem('example.com'));
+  const original={...room.items[0],rotation:45,variantId:'black'};room={...room,items:[original]};
+  const next=duplicatePlacedItem(room,original),copy=next.items[1];
+  assert.notEqual(copy.id,original.id);assert.equal(copy.rotation,45);assert.equal(copy.variantId,'black');
+  assert.deepEqual(placementWarnings(copy,next),[]);assert.deepEqual(next.items[0],original);
+});
+test('Manual layouts flag overlapping pieces and oversized furniture',()=>{
+  const room=placeItem(createLayout('Room'),createProductItem('example.com'));
+  const copy={...room.items[0],id:'overlapping'};
+  assert.ok(placementWarnings(copy,{...room,items:[...room.items,copy]}).includes('Overlaps another piece'));
+  assert.ok(placementWarnings({...copy,x:0,z:0},{...room,width:1,depth:1,items:[copy]}).includes('Too large for these room dimensions'));
+});
 
 test('Any valid store URL works in the placeholder flow',()=>{
   for(const url of ['https://www.ikea.com/item','https://example.com','http://example.org/item','amazon.com/dp/123','https://www.wayfair.com/chair','https://google.com']) assert.ok(normalizeProductLink(url));
@@ -99,4 +122,20 @@ test('Supplied oak table preserves meter dimensions, floor alignment and embedde
   assert.ok(Math.abs(placedCenter.x-.4)<.0001&&Math.abs(placedCenter.z+.7)<.0001);
   assert.ok(Math.abs(placed.min.y)<.0001);
   assert.ok(Math.abs(placed.getSize(new Vector3()).x-size.x)<.001);
+});
+
+// A scan must be an independent regular layout, not a temporary editor state.
+test('scanned layouts have new identities, independent geometry, and normal persistence', async()=>{
+  const {createScannedLayout,parseWorkspace}=await import('../src/lib/workspace.ts');
+  const {parseRoomScan}=await import('../src/lib/room-scan.ts');
+  const {readFileSync}=await import('node:fs');
+  const scan=parseRoomScan(JSON.parse(readFileSync(new URL('./fixtures/room-scan.json',import.meta.url),'utf8')));
+  const first=createScannedLayout(scan),second=createScannedLayout(scan);
+  assert.notEqual(first.id,second.id);
+  assert.equal(first.name,scan.name);
+  assert.deepEqual(first.survey,scan.survey);
+  first.survey!.obstacles[0].x+=.5;
+  assert.notEqual(first.survey!.obstacles[0].x,second.survey!.obstacles[0].x);
+  assert.deepEqual(second.survey,scan.survey);
+  assert.deepEqual(parseWorkspace(JSON.parse(JSON.stringify({layouts:[first,second],items:[]}))).layouts,[first,second]);
 });

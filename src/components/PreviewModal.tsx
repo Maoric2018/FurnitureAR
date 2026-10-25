@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useRef, useState } from 'react';
-import { Bookmark, Check, ChevronRight, ExternalLink, FolderPlus, ImageOff, Plus, RotateCcw, ScanLine } from 'lucide-react';
+import { ChevronRight, ExternalLink, FolderPlus, ImageOff, Plus, RotateCcw, ScanLine } from 'lucide-react';
 import Modal from './Modal';
 import type { ViewerHandle } from './Viewer';
 import type { ProductItem, RoomLayout } from '../lib/workspace';
@@ -12,19 +12,19 @@ import type { ModelJob } from '../lib/model-jobs';
 import './model-jobs.css';
 
 const Viewer=lazy(()=>import('./Viewer').then(module=>({default:module.Viewer})));
-interface Props {item:ProductItem;layouts:RoomLayout[];saved:boolean;onVariant:(id:string)=>void;onGenerate:()=>void;onCheckModel:()=>void;modelJob?:ModelJob;onSave:()=>void;onAdd:(id:string)=>void;onNew:()=>void;onClose:()=>void;onUnavailable:()=>void;unit:Unit;onUnit:(unit:Unit)=>void}
+interface Props {item:ProductItem;layouts:RoomLayout[];onVariant:(id:string)=>void;onGenerate:()=>void;onCheckModel:()=>void;modelJob?:ModelJob;onAdd:(id:string)=>void;onNew:()=>void;onClose:()=>void;onUnavailable:()=>void;unit:Unit;onUnit:(unit:Unit)=>void}
 function modelMessage(model?: AmazonModel): string {
   switch(model?.status){
     case 'pending':return 'Your 3D model is being prepared. You can keep browsing while it runs.';
     case 'failed':return 'This model could not be prepared. You can try again or keep browsing its photos.';
-    case 'storage_unavailable':return '3D models are temporarily unavailable. You can still browse photos and save this item.';
-    case 'no_image':return 'This product has no usable photo for a 3D model yet. You can still save its details.';
-    case 'not_configured':return '3D generation is temporarily unavailable. You can still browse photos and save this item.';
+    case 'storage_unavailable':return '3D models are temporarily unavailable. You can still browse its photos.';
+    case 'no_image':return 'This product has no usable photo for a 3D model yet. You can still view its details on Amazon.';
+    case 'not_configured':return '3D generation is temporarily unavailable. You can still browse its photos.';
     case 'ready':return model.source==='cache'?'A saved 3D model is available for this product. Load it whenever you’re ready.':model.source==='generated'?'Your 3D model is ready. Review its shape and measurements before placing it.':'';
     default:return 'Browse the product photos, or choose to generate a 3D model for your room.';
   }
 }
-export default function PreviewModal({item,layouts,saved,onVariant,onGenerate,onCheckModel,modelJob,onSave,onAdd,onNew,onClose,onUnavailable,unit,onUnit}:Props){
+export default function PreviewModal({item,layouts,onVariant,onGenerate,onCheckModel,modelJob,onAdd,onNew,onClose,onUnavailable,unit,onUnit}:Props){
   const viewer=useRef<ViewerHandle>(null),[ready,setReady]=useState(false),[status,setStatus]=useState(''),[choosing,setChoosing]=useState(false);
   // Amazon previews never mount the model viewer or download a GLB until chosen.
   const [view,setView]=useState<'3d'|'photo'>(item.product&&!item.listing?'3d':'photo'),[photo,setPhoto]=useState(0),[imageFailed,setImageFailed]=useState(false);
@@ -73,8 +73,7 @@ export default function PreviewModal({item,layouts,saved,onVariant,onGenerate,on
       <div className="dimension-heading"><span>{product?(scaleKnown?'Model dimensions':'Reference preview dimensions'):'Listed dimensions'}</span><div className="unit-toggle segmented"><button aria-pressed={unit==='cm'} onClick={()=>onUnit('cm')}>cm</button><button aria-pressed={unit==='in'} onClick={()=>onUnit('in')}>in</button></div></div>
       <div className="dimension-values">{(['width','depth','height'] as const).map(key=><div key={key}><span>{key}</span><strong>{dimensions?.[key]!=null?dimension(dimensions[key]!,unit):'—'}{dimensions?.[key]!=null&&<small>{unit}</small>}</strong></div>)}</div>
       {listing?.dimensionText&&<p className="listing-measurements"><strong>Amazon lists</strong> {listing.dimensionText}</p>}
-      {product?<><button className="button primary" disabled={view==='3d'&&(!ready||!scaleKnown)} onClick={()=>{if(view==='photo'){setView('3d');setReady(false);setStatus('');}else viewer.current?.startAR();}}><ScanLine size={18}/>{view==='photo'?'Load 3D model':!scaleKnown?'Measurements needed for AR':ready?'View in your room':status?'AR unavailable':'Loading model…'}</button><button className="button secondary" disabled={!scaleKnown} onClick={()=>setChoosing(!choosing)}><FolderPlus size={17}/>Add to a layout</button></>:canGenerate?<div className="preview-model-choice"><button className="button primary" onClick={onGenerate}><ScanLine size={18}/>{failed?'Try generating again':'Generate 3D model'}</button><p>Optional. Generation runs in the background and saves this item for you.</p><button className="text-button" onClick={onClose}>Not now</button></div>:!busy&&!paused?<div className="notice"><ScanLine size={18}/><span>3D & AR need a usable product photo. You can save the item’s details now.</span></div>:null}
-      <button className="text-button save-item" onClick={onSave}>{saved?<Check size={15}/>:<Bookmark size={15}/>} {saved?'Saved to your items':'Save item'}</button>
+      {product?<><button className="button primary" disabled={view==='3d'&&(!ready||!scaleKnown)} onClick={()=>{if(view==='photo'){setView('3d');setReady(false);setStatus('');}else viewer.current?.startAR();}}><ScanLine size={18}/>{view==='photo'?'Load 3D model':!scaleKnown?'Measurements needed for AR':ready?'View in your room':status?'AR unavailable':'Loading model…'}</button><button className="button secondary" disabled={!scaleKnown} onClick={()=>setChoosing(!choosing)}><FolderPlus size={17}/>Add to a layout</button></>:canGenerate?<div className="preview-model-choice"><button className="button primary" onClick={onGenerate}><ScanLine size={18}/>{failed?'Try generating again':'Generate 3D model'}</button><p>Optional. Generation runs in the background. Follow its progress in 3D models.</p><button className="text-button" onClick={onClose}>Not now</button></div>:!busy&&!paused?<div className="notice"><ScanLine size={18}/><span>3D & AR need a usable product photo. You can still browse its details on Amazon.</span></div>:null}
       {choosing&&product&&<div className="layout-picker"><span>Choose a layout</span>{layouts.map(room=><button key={room.id} onClick={()=>onAdd(room.id)}>{room.name}<ChevronRight size={16}/></button>)}<button onClick={onNew}><Plus size={15}/>Create a new layout</button></div>}
       {status&&view==='3d'&&<p className="status-text" role="status">{status}</p>}{variants.length>1&&<p className="color-ar-note">On iPhone, choose a color before opening AR. To change it, return here.</p>}{product&&<p className="ar-footnote">{scaleKnown?'Fixed model scale · iPhone & Android':'Reference size only · Not measured from the photo'}</p>}
     </div>
