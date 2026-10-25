@@ -14,6 +14,7 @@
 		000000000000000000000031 /* RoomTrackingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000021 /* RoomTrackingStore.swift */; };
 		000000000000000000000032 /* AlignedRoomPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000022 /* AlignedRoomPreview.swift */; };
 		000000000000000000000033 /* NativeWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000023 /* NativeWorkspace.swift */; };
+		000000000000000000000034 /* PlannerReturn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000024 /* PlannerReturn.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,7 @@
 		000000000000000000000021 /* RoomTrackingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomTrackingStore.swift; sourceTree = "<group>"; };
 		000000000000000000000022 /* AlignedRoomPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlignedRoomPreview.swift; sourceTree = "<group>"; };
 		000000000000000000000023 /* NativeWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeWorkspace.swift; sourceTree = "<group>"; };
+		000000000000000000000024 /* PlannerReturn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerReturn.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,6 +59,7 @@
 				000000000000000000000021 /* RoomTrackingStore.swift */,
 				000000000000000000000022 /* AlignedRoomPreview.swift */,
 				000000000000000000000023 /* NativeWorkspace.swift */,
+				000000000000000000000024 /* PlannerReturn.swift */,
 				000000000000000000000016 /* Info.plist */,
 			);
 			path = FurnitureARScan;
@@ -135,6 +138,7 @@
 				000000000000000000000014 /* RoomDocument.swift in Sources */,
 				000000000000000000000015 /* ScannerController.swift in Sources */,
 				000000000000000000000033 /* NativeWorkspace.swift in Sources */,
+				000000000000000000000034 /* PlannerReturn.swift in Sources */,
 				000000000000000000000032 /* AlignedRoomPreview.swift in Sources */,
 				000000000000000000000031 /* RoomTrackingStore.swift in Sources */,
 				000000000000000000000030 /* RoomAlignment.swift in Sources */,

@@ -3854,6 +3854,7 @@ model-viewer[ar-status="object-placed"]:has(.ar-color-controls) .ar-coach {
 
 .scan-return-note {
   margin-bottom: 12px;
+  overflow-wrap: anywhere;
 }
 
 /* Room scan import: phone instructions */

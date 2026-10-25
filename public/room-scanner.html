@@ -237,22 +237,32 @@
     <section>
       <h2>Scan your room</h2>
       <ol>
-        <li>Open <strong>Roomify Scan</strong>, allow camera access, and tap <strong>Scan my room</strong>.</li>
+        <li>Use <strong>Open scanner</strong> below (or scan from the planner) so the app remembers this website. Allow camera access.</li>
         <li>Move slowly in good light. Include every wall, doorway, corner, and piece of furniture.</li>
         <li>Tap <strong>Finish scan</strong>. Check the outline and give the room a name.</li>
       </ol>
-      <a class="button" href="furniturear-scan://scan">Open scanner</a>
+      <a class="button" id="open-scanner">Open scanner</a>
+      <p id="scanner-address-note" style="overflow-wrap:anywhere">Open this setup page on the HTTPS website to connect the scanner.</p>
     </section>
     <section>
       <h2>Import the scan</h2>
-      <p>Tap <strong>Open in Roomify</strong> in the scanner. The completed scan creates a new layout and opens the regular planner immediately.</p>
+      <p>Tap <strong>Open in Roomify</strong> in the scanner to return to the website that launched it. The completed scan creates a new layout and opens the regular planner immediately.</p>
       <p>To use this browser, choose <strong>Save / share room file</strong>, then <strong>Save to Files</strong> or AirDrop. On this website choose <strong>New layout → Scan your room → Upload a room scan</strong> and select the JSON file. This also works with older scanners that open a different website.</p>
       <p>The main walls automatically line up with the horizontal and vertical grid. The entire room rotates together, preserving its measurements and any diagonal walls.</p>
       <p>Scanned furniture appears as shaded outlines alongside products in the same layout editor. Drag, rotate, or select an outline to correct its measurements, remove a mistaken detection, or add anything the scan missed. Changes save automatically, with Undo and Redo available.</p>
       <p>Choose <strong>3D &amp; AR → View layout in your room</strong>. The app keeps the scan’s position or tries to recognize your saved room. Check the room outline against your walls. If recognition fails, choose <strong>Match a wall</strong> and tap its two floor corners as shown.</p>
-      <p>Install the updated iPhone app and use the updated planner website. The scanner’s <strong>Planner address</strong> setting accepts an HTTPS development preview.</p>
+      <p>Rebuild and install the updated iPhone app to enable automatic return addresses. Older installed apps ignore the website address; until you update, enter the address shown above in the scanner’s <strong>Planner address</strong> setting. Publishing a website does not update the installed scanner.</p>
     </section>
   </main>
   <footer>Scans are estimates. Check the outline and important measurements; rescan if walls are missing. Tracking maps stay on your phone. The designer receives room measurements and any photos you choose. Ordinary browser AR requires manual placement. Layouts save separately in the app and browser; they do not sync between devices.</footer>
+  <script id="scanner-launch-script">
+    const planner = new URL('./', window.location.href);
+    if (planner.protocol === 'https:' && !planner.username && !planner.password && planner.href.length <= 4096) {
+      const launch = new URL('furniturear-scan://scan');
+      launch.searchParams.set('returnUrl', planner.href);
+      document.getElementById('open-scanner').href = launch.href;
+      document.getElementById('scanner-address-note').textContent = 'Planner address: ' + planner.href;
+    }
+  </script>
 </body>
 </html>
