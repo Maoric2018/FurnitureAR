@@ -1,15 +1,27 @@
 import type { DesignPhoto, DesignRequest, DesignResult, DesignProposal } from './design';
 import { parseWorkspace } from './workspace';
 
-export async function designStatus(signal?: AbortSignal): Promise<{ configured: boolean; shopping: boolean }> {
-  const response = await fetch('/api/design/room', { signal, credentials: 'same-origin', redirect: 'error' });
-  const value = await response.json();
-  if (!response.ok || typeof value?.configured !== 'boolean' || typeof value?.shopping !== 'boolean') throw new Error('Could not check room design. Try again in a moment.');
-  return value;
+export interface DesignStatus { configured: boolean; shopping: boolean; signedIn: boolean; authorized: boolean }
+export async function designStatus(signal?: AbortSignal): Promise<DesignStatus> {
+  const controller = new AbortController(), abort = () => controller.abort();
+  signal?.addEventListener('abort', abort, { once: true });
+  if (signal?.aborted) abort();
+  const timeout = setTimeout(abort, 10000);
+  try {
+    const response = await fetch('/api/design/room', { signal: controller.signal, credentials: 'same-origin', redirect: 'error', cache: 'no-store' });
+    const value = await response.json();
+    if (!response.ok || ['configured', 'shopping', 'signedIn', 'authorized'].some(key => typeof value?.[key] !== 'boolean')) throw new Error('Could not check room design. Try again in a moment.');
+    return { configured: value.configured, shopping: value.shopping, signedIn: value.signedIn, authorized: value.authorized };
+  } finally { clearTimeout(timeout); signal?.removeEventListener('abort', abort); }
 }
 const errors: Record<string, string> = {
   DESIGN_NOT_CONFIGURED: 'Room design is waiting for its Claude connection. Your brief is saved on this device.',
   DESIGN_AUTH_FAILED: 'Claude is not available with the current service configuration. Please contact the app owner.',
+  DESIGN_SIGN_IN_REQUIRED: 'Sign in to use the room designer. Your brief is saved on this device.',
+  DESIGN_ACCESS_DENIED: 'Room design is available to approved accounts. Sign in with the app owner’s account.',
+  DESIGN_CONFIG_ERROR: 'The room designer needs a service configuration update. Please contact the app owner.',
+  DESIGN_UNAVAILABLE: 'Claude is temporarily unavailable. Please try again shortly.',
+  DESIGN_INCOMPLETE: 'Claude could not finish a complete design. Please try again with a shorter brief.',
   DESIGN_RATE_LIMITED: 'The design allowance has been reached. Please try again later.',
   DESIGN_BUSY: 'Other rooms are being designed. Please try again shortly.',
   DESIGN_TIMEOUT: 'The design took too long. Your layout is unchanged; please try again.',

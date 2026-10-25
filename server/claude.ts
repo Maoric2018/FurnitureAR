@@ -1,9 +1,34 @@
 import { DesignError } from '../src/lib/design';
 import type { DesignPhoto } from '../src/lib/design';
 
-export interface ClaudeEnv { ANTHROPIC_API_KEY?: string; CLAUDE_MODEL?: string; SERPAPI_API_KEY?: string }
+export interface ClaudeEnv { ANTHROPIC_API_KEY?: string; CLAUDE_MODEL?: string; SERPAPI_API_KEY?: string; DESIGN_ALLOWED_EMAILS?: string }
 export const DEFAULT_CLAUDE_MODEL = 'claude-opus-5-5';
 export type ClaudeCall = (input: { system: string; prompt: string; schema: Record<string, unknown>; photos?: DesignPhoto[] }, env: ClaudeEnv, signal?: AbortSignal) => Promise<unknown>;
+
+const MAX_RESPONSE_BYTES = 512 * 1024;
+const incomplete = () => new DesignError('DESIGN_INCOMPLETE', 'Claude returned an incomplete design. Please try again.', 502);
+async function readClaudeResponse(response: Response): Promise<unknown> {
+  if (Number(response.headers.get('Content-Length')) > MAX_RESPONSE_BYTES) {
+    await response.body?.cancel();
+    throw incomplete();
+  }
+  const reader = response.body?.getReader();
+  if (!reader) throw incomplete();
+  const chunks: Uint8Array[] = []; let size = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_RESPONSE_BYTES) { await reader.cancel(); throw incomplete(); }
+      chunks.push(value);
+    }
+  } finally { reader.releaseLock(); }
+  const bytes = new Uint8Array(size); let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
+  catch { throw incomplete(); }
+}
 
 /** HTTP Messages API is supported in both Workers and Node; secrets never enter browser code. */
 export function createClaudeClient(fetchImpl: typeof fetch = fetch): ClaudeCall {
@@ -38,10 +63,12 @@ export function createClaudeClient(fetchImpl: typeof fetch = fetch): ClaudeCall 
         if (response.status === 429) throw new DesignError('DESIGN_RATE_LIMITED', 'Claude is busy or its allowance has been reached. Try again shortly.', 429);
         throw new DesignError('DESIGN_UNAVAILABLE', 'Claude could not finish the design. Please try again.', 502);
       }
-      const data = await response.json() as { stop_reason?: string; content?: { type: string; text?: string }[] };
-      if (data.stop_reason !== 'end_turn') throw new DesignError('DESIGN_INCOMPLETE', 'Claude did not finish a complete design. Try a shorter brief.', 502);
-      const result = data.content?.filter(b => b.type === 'text').map(b => b.text ?? '').join('');
-      if (!result || result.length > 150000) throw new DesignError('DESIGN_INCOMPLETE', 'Claude returned an incomplete design. Please try again.', 502);
+      const data = await readClaudeResponse(response) as { stop_reason?: unknown; content?: unknown } | null;
+      if (!data || data.stop_reason !== 'end_turn') throw new DesignError('DESIGN_INCOMPLETE', 'Claude did not finish a complete design. Try a shorter brief.', 502);
+      if (!Array.isArray(data.content) || data.content.some(b => !b || typeof b !== 'object' || typeof b.type !== 'string'
+        || (b.type === 'text' && typeof b.text !== 'string'))) throw incomplete();
+      const result = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+      if (!result || result.length > 150000) throw incomplete();
       try { return JSON.parse(result); } catch { throw new DesignError('DESIGN_INCOMPLETE', 'Claude returned an unreadable design. Please try again.', 502); }
     } catch (error) {
       if (error instanceof DesignError) throw error;

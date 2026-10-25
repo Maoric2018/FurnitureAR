@@ -19,7 +19,7 @@ export default function RoomEditor({layout,onChange,onBack,onUnavailable,onNotif
   const [view,setView]=useState<'plan'|'3d'>('plan'),[selectedId,setSelectedId]=useState<string|undefined>(layout.items[0]?.id);
   const [history,setHistory]=useState<RoomLayout[]>([]),[future,setFuture]=useState<RoomLayout[]>([]),[showSize,setShowSize]=useState(false);
   const [snap,setSnap]=useState(true);
-  const [designOpen,setDesignOpen]=useState(false);
+  const [designOpen,setDesignOpen]=useState(()=>{const params=new URLSearchParams(window.location.search);return params.get('layout')===layout.id&&params.get('design')==='1';});
   const [nameDraft,setNameDraft]=useState(layout.name);
   const [selectedObstacleId,setSelectedObstacleId]=useState<string|undefined>(layout.items.length?undefined:layout.survey?.obstacles[0]?.id);
   const warnings=layout.items.flatMap((item,index)=>placementWarnings(item,layout).map(message=>`Piece ${index+1}: ${message}`));

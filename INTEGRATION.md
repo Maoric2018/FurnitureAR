@@ -144,10 +144,11 @@ SAM 3D generation uses the existing Runpod GPU through the server-only `MODEL_AP
 
 ## Claude room designer
 
-- `GET /api/design/room`: `{ configured, shopping }`, booleans only; no secrets or provider details.
+- `GET /api/design/room`: `{ configured, shopping, signedIn, authorized }`, booleans only; no secrets or account identifiers. Configured requires both the API key and a nonempty allowlist.
 - `POST /api/design/room`: `{ layout, brief, style, budget, rules, photos, refinement?, previous? }`. Layout is the existing RoomLayout shape; budget is USD for additional pieces. Rules are indexed by existing item ID: `fixed`, `move`, or `remove`. Photos are `{ mediaType, data }` (base64 JPEG, PNG or WebP). Previous is a proposal's candidate placement draft; all shopping references and prices are retrieved again.
 - Response: `{ summary, observations, proposals, notices }`. Each proposal includes a complete editable layout, new-product subtotal, notes, and a draft suitable for refinement. Model-invented products and prices never become application records.
-- Server secrets: `ANTHROPIC_API_KEY`, optional `CLAUDE_MODEL` (default `claude-opus-5-5`), existing `SERPAPI_API_KEY`. No browser key field, frontend key variable, OpenAI dependency, or consumer OAuth credential.
+- Server configuration: secret `ANTHROPIC_API_KEY`, required server-only `DESIGN_ALLOWED_EMAILS` (comma-separated approved ChatGPT emails), optional `CLAUDE_MODEL` (default `claude-opus-5-5`), existing `SERPAPI_API_KEY`. No browser key field, frontend key variable, or OpenAI dependency. Runtime values must be set in Sites and applied by deployment.
+- Paid POSTs require both a Sites-authenticated user ID and an exact normalized email allowlist match. Anonymous callers receive 401; other accounts receive 403 before any provider call. The site remains public for browsing. The browser uses same-origin cookies and top-level platform sign-in; it never handles the Anthropic credential. Trust these identity headers only behind Sites dispatch, not on a directly exposed Worker origin.
 
 `server/claude.ts` uses Anthropic's Messages API with image content blocks and JSON-schema outputs. It supports configurable Opus IDs, 90-second per-call timeouts, cancellation, and sanitized provider failures. Room understanding is one call; planning is a second. At most one additional planning attempt repairs failed constraints. At most two Amazon searches and eight exact product lookups run per request. Products with missing models/prices or mismatching supplied-model dimensions are excluded. The model service reuses its existing exact-ASIN cache.
 

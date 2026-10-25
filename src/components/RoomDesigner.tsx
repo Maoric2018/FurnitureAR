@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, Camera, Check, CircleHelp, ExternalLink, LoaderC
 import type { RoomLayout } from '../lib/workspace';
 import type { DesignPhoto, DesignProposal, DesignResult, PieceRule } from '../lib/design';
 import { designStatus, prepareRoomPhoto, requestDesign } from '../lib/design-client';
+import type { DesignStatus } from '../lib/design-client';
 import Modal from './Modal';
 import FloorPlan from './FloorPlan';
 import './room-designer.css';
@@ -24,7 +25,7 @@ function readBrief(layout: RoomLayout): Brief {
 export default function RoomDesigner({ layout, onClose, onApply }: { layout: RoomLayout; onClose: () => void; onApply: (proposal: DesignProposal) => void }) {
   const [brief, setBrief] = useState(() => readBrief(layout));
   const [photos, setPhotos] = useState<DesignPhoto[]>([]), [uploading, setUploading] = useState(false);
-  const [status, setStatus] = useState<{ configured: boolean; shopping: boolean } | null>(null), [statusError, setStatusError] = useState('');
+  const [status, setStatus] = useState<DesignStatus | null>(null), [statusError, setStatusError] = useState('');
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [result, setResult] = useState<DesignResult | null>(null);
   const [selected, setSelected] = useState(0), [refinement, setRefinement] = useState(''), [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(true);
@@ -32,6 +33,8 @@ export default function RoomDesigner({ layout, onClose, onApply }: { layout: Roo
   const pending = useRef<AbortController | null>(null), mounted = useRef(true), timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const active = result?.proposals[selected];
+  const returnTo = `/?layout=${encodeURIComponent(layout.id)}&design=1`;
+  const signInPath = `${status?.signedIn ? '/signout-with-chatgpt' : '/signin-with-chatgpt'}?return_to=${encodeURIComponent(returnTo)}`;
   useEffect(() => {
     const controller = new AbortController();
     designStatus(controller.signal).then(setStatus).catch(() => { if (!controller.signal.aborted) setStatusError('Could not check the designer connection.'); });
@@ -47,6 +50,7 @@ export default function RoomDesigner({ layout, onClose, onApply }: { layout: Roo
   const change = (patch: Partial<Brief>) => setBrief(current => ({ ...current, ...patch }));
   const cancel = () => { pending.current?.abort(); pending.current = null; if (timeout.current) clearTimeout(timeout.current); setBusy(false); };
   const generate = async (previous?: DesignProposal) => {
+    if (!status?.configured || !status.authorized) { setError('Sign in with an approved account to use the room designer.'); return; }
     const budget = Number(brief.budget);
     if (!brief.brief.trim() || !brief.budget.trim() || !Number.isFinite(budget) || budget < 0 || budget > 100000) { setError('Describe what you want and enter a budget between $0 and $100,000.'); return; }
     if (previous && !refinement.trim()) { setError('Describe what you would like to change.'); return; }
@@ -73,6 +77,7 @@ export default function RoomDesigner({ layout, onClose, onApply }: { layout: Roo
     <div className="designer-shell">
       <header className="designer-header"><div><span className="overline">A ROOM THAT WORKS FOR YOU</span><h2>Design my room<span>.</span></h2><p>{showBrief ? 'A little context. A few possibilities. All yours to arrange.' : 'Different ways to make the same room feel right.'}</p></div><span className="designer-room-tag">{layout.width.toFixed(1)} × {layout.depth.toFixed(1)} m<span>{layout.roomType}</span></span></header>
       {status && !status.configured && <div className="designer-connection" role="status"><CircleHelp size={18}/><div><strong>Ready for its Claude connection</strong><span>Prepare your brief now. Design generation will be available once the service is connected.</span></div><button onClick={() => { setStatusError(''); designStatus().then(setStatus).catch(() => setStatusError('The connection could not be checked.')); }} aria-label="Recheck Claude connection"><RefreshCw size={16}/></button></div>}
+      {status?.configured && !status.authorized && <div className="designer-connection designer-access" role="status"><LockKeyhole size={18}/><div><strong>{status.signedIn ? 'This account does not have design access' : 'Sign in to design your room'}</strong><span>Use the app owner’s ChatGPT account. Your saved layout and brief will be here when you return.</span></div><a href={signInPath} target="_top" className="button secondary">{status.signedIn ? 'Sign out' : 'Sign in'}</a></div>}
       {statusError && <div className="designer-error" role="alert">{statusError}<button className="text-button" onClick={() => { setStatusError(''); designStatus().then(setStatus).catch(() => setStatusError('The connection could not be checked.')); }}>Try again</button></div>}
       {showBrief ? <form onSubmit={e => { e.preventDefault(); void generate(); }} className="designer-brief">
         <div className="designer-fields"><label className="designer-label">What would make this room better?<textarea value={brief.brief} onChange={e => change({ brief: e.target.value })} maxLength={1600} required rows={4} disabled={busy} placeholder="A cozy living room with a small workspace. Keep my sofa, add a reading corner, and leave the middle open."/></label>
@@ -88,12 +93,12 @@ export default function RoomDesigner({ layout, onClose, onApply }: { layout: Roo
           {layout.survey ? <p className="designer-context-note"><LockKeyhole size={14}/>{layout.survey.obstacles.length} scanned objects stay in place. Their labels are hidden.</p> : <p className="designer-context-note"><CircleHelp size={15}/>Manual room size. Doorways and existing furniture are not mapped. Scanning returns in the app.</p>}
           <div className="designer-how"><span><Check size={15}/>Real product references</span><span><Check size={15}/>Fit and budget checks</span><span><Move size={15}/>Fully editable layouts</span></div>
         </aside>
-        <footer className="designer-form-footer"><span>{saved ? 'Brief saved on this device' : 'Brief could not be saved on this device'}</span><div>{result && <button className="button outlined" type="button" disabled={busy} onClick={() => setEditing(false)}><ArrowLeft size={16}/>Back to designs</button>}<button className="button primary" type="submit" disabled={busy || uploading || !status?.configured || !brief.brief.trim()}>{busy ? <><LoaderCircle size={17} className="spin"/>Designing…</> : <>Find my room’s possibilities<ArrowRight size={17}/></>}</button></div></footer>
+        <footer className="designer-form-footer"><span>{saved ? 'Brief saved on this device' : 'Brief could not be saved on this device'}</span><div>{result && <button className="button outlined" type="button" disabled={busy} onClick={() => setEditing(false)}><ArrowLeft size={16}/>Back to designs</button>}<button className="button primary" type="submit" disabled={busy || uploading || !status?.configured || !status.authorized || !brief.brief.trim()}>{busy ? <><LoaderCircle size={17} className="spin"/>Designing…</> : <>Find my room’s possibilities<ArrowRight size={17}/></>}</button></div></footer>
       </form> : <div className="designer-results">
         <div className="designer-result-heading"><p>{result.summary}</p><button className="text-button" disabled={busy} onClick={() => setEditing(true)}><SlidersHorizontal size={15}/>Edit brief</button></div>
         {!!result.observations.length && <details className="designer-observations"><summary>What the room suggests</summary><ul>{result.observations.map((observation, i) => <li key={i}>{observation}</li>)}</ul></details>}
         <div className="designer-options">{result.proposals.map((proposal, i) => <button type="button" disabled={busy} className={`designer-option ${selected === i ? 'selected' : ''}`} key={proposal.id} aria-pressed={selected === i} onClick={() => { setSelected(i); setError(''); }}><div className="designer-option-number">0{i + 1}<span>{selected === i ? <Check size={16}/> : <ArrowRight size={16}/>}</span></div><div className="designer-option-plan"><FloorPlan layout={proposal.layout} compact/></div><div className="designer-option-copy"><h3>{proposal.name}</h3><p>{proposal.description}</p><div><strong>{money(proposal.total)}</strong><span>{proposal.added} new {proposal.added === 1 ? 'piece' : 'pieces'}</span></div></div></button>)}</div>
-        {active && <><div className="designer-selection"><div className="designer-shopping"><span className="overline">IN THIS DESIGN</span><ul>{active.layout.items.map(item => <li key={item.id}><span>{item.name}</span><span>{layout.items.some(i => i.id === item.id) ? 'In starting layout' : item.listing?.price ? money(item.listing.price.amount) : 'Price unavailable'}</span><a href={item.sourceUrl} target="_blank" rel="noreferrer" aria-label={`View ${item.name} on Amazon`}><ExternalLink size={14}/></a></li>)}</ul><p>{active.notes.join(' ')}</p></div><form className="designer-refine" onSubmit={e => { e.preventDefault(); void generate(active); }}><label className="designer-label">Close, but not quite?<textarea rows={3} maxLength={800} disabled={busy} value={refinement} onChange={e => setRefinement(e.target.value)} placeholder="Use a smaller desk and make it feel warmer."/></label><button className="button outlined" disabled={busy || !refinement.trim()}>Refine this direction<ArrowRight size={16}/></button></form></div>
+        {active && <><div className="designer-selection"><div className="designer-shopping"><span className="overline">IN THIS DESIGN</span><ul>{active.layout.items.map(item => <li key={item.id}><span>{item.name}</span><span>{layout.items.some(i => i.id === item.id) ? 'In starting layout' : item.listing?.price ? money(item.listing.price.amount) : 'Price unavailable'}</span><a href={item.sourceUrl} target="_blank" rel="noreferrer" aria-label={`View ${item.name} on Amazon`}><ExternalLink size={14}/></a></li>)}</ul><p>{active.notes.join(' ')}</p></div><form className="designer-refine" onSubmit={e => { e.preventDefault(); void generate(active); }}><label className="designer-label">Close, but not quite?<textarea rows={3} maxLength={800} disabled={busy} value={refinement} onChange={e => setRefinement(e.target.value)} placeholder="Use a smaller desk and make it feel warmer."/></label><button className="button outlined" disabled={busy || !status?.authorized || !refinement.trim()}>Refine this direction<ArrowRight size={16}/></button></form></div>
         {!!result.notices.length && <div className="designer-notices">{result.notices.map((notice, i) => <p key={i}>{notice}</p>)}</div>}
         <footer className="designer-form-footer"><span>Saved as a new layout. Your starting room stays available.</span><button className="button primary" disabled={busy} onClick={() => onApply(active)}>Use this design<ArrowRight size={17}/></button></footer></>}
       </div>}

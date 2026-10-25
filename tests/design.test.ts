@@ -20,6 +20,8 @@ const position = (id: string, x = 0, z = 0, rotation = 0) => ({ candidateId: id,
 const request = (value: unknown, headers = {}, method = 'POST') => new Request('https://room.example/api/design/room', {
   method, headers: { 'Content-Type': 'application/json', ...headers }, ...(method === 'GET' ? {} : { body: JSON.stringify(value) }),
 });
+const designerHeaders = { 'oai-authenticated-user-id': 'site-user-one', 'oai-authenticated-user-email': 'designer@example.test' };
+const designerEnv = { ANTHROPIC_API_KEY: 'test-secret', DESIGN_ALLOWED_EMAILS: 'designer@example.test' };
 
 test('design request rejects corrupt rooms, unsafe photos, and unbounded inputs', () => {
   const v = input(); assert.equal(parseDesignRequest(v).layout.name, v.layout.name);
@@ -104,9 +106,47 @@ test('Claude receives bounded images and structured output with the configured O
   assert.equal(sent.messages[0].content[1].source.type, 'base64'); assert.ok(!JSON.stringify(sent).includes('test-secret'));
 });
 test('Claude provider errors and truncated output never expose provider messages or secrets', async () => {
-  for (const response of [Response.json({ error: { message: 'secret-key-value' } }, { status: 401 }), Response.json({ stop_reason: 'max_tokens', content: [{ type: 'text', text: 'secret-key-value' }] })]) {
+  for (const response of [
+    ...[400, 401, 403, 404, 429, 500].map(status => Response.json({ error: { message: 'secret-key-value' } }, { status })),
+    Response.json({ stop_reason: 'max_tokens', content: [{ type: 'text', text: 'secret-key-value' }] }),
+  ]) {
     const client = createClaudeClient(async () => response);
-    await assert.rejects(client({ system: '', prompt: '', schema: {} }, { ANTHROPIC_API_KEY: 'test-secret' }), e => e instanceof Error && !e.message.includes('secret'));
+    await assert.rejects(client({ system: '', prompt: '', schema: {} }, { ANTHROPIC_API_KEY: 'test-secret' }), e => e instanceof DesignError && !e.message.includes('secret'));
+  }
+});
+test('Claude bounds declared and streamed response bytes and cancels oversized bodies', async () => {
+  for (const declared of [true, false]) {
+    let cancelled = false;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        // Two chunks cross the cap without buffering an unbounded response or requiring Content-Length.
+        controller.enqueue(new Uint8Array(256 * 1024));
+        controller.enqueue(new Uint8Array(256 * 1024 + 1));
+      },
+      cancel() { cancelled = true; },
+    });
+    const client = createClaudeClient(async () => new Response(stream, { headers: declared ? { 'Content-Length': String(512 * 1024 + 1) } : {} }));
+    await assert.rejects(client({ system: '', prompt: '', schema: {} }, designerEnv),
+      (error: unknown) => error instanceof DesignError && error.code === 'DESIGN_INCOMPLETE' && error.status === 502);
+    assert.equal(cancelled, true);
+  }
+  // Byte bounds also apply when the number of UTF-16 characters is below the cap.
+  const oversized = JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: '{"ok":true}' }], padding: 'é'.repeat(270000) });
+  assert.ok(oversized.length < 512 * 1024);
+  const client = createClaudeClient(async () => new Response(oversized));
+  await assert.rejects(client({ system: '', prompt: '', schema: {} }, designerEnv),
+    (error: unknown) => error instanceof DesignError && error.code === 'DESIGN_INCOMPLETE');
+});
+test('Claude accepts a complete response at the byte cap and rejects malformed envelopes safely', async () => {
+  const envelope = JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: '{"ok":true}' }] });
+  const accepted = envelope.padEnd(512 * 1024, ' ');
+  const client = createClaudeClient(async () => new Response(accepted, { headers: { 'Content-Length': String(accepted.length) } }));
+  assert.deepEqual(await client({ system: '', prompt: '', schema: {} }, designerEnv), { ok: true });
+  for (const malformed of ['secret-key-value', 'null', '{"stop_reason":"end_turn","content":null}',
+    '{"stop_reason":"end_turn","content":[null]}', '{"stop_reason":"end_turn","content":[{"type":"text","text":{"private":"secret-key-value"}}]}']) {
+    const invalid = createClaudeClient(async () => new Response(malformed));
+    await assert.rejects(invalid({ system: '', prompt: '', schema: {} }, designerEnv),
+      (error: unknown) => error instanceof DesignError && error.code === 'DESIGN_INCOMPLETE' && !error.message.includes('secret'));
   }
 });
 test('Claude rejects redirects without forwarding credentials and uses a Workers-supported mode', async () => {
@@ -122,18 +162,71 @@ test('Claude rejects redirects without forwarding credentials and uses a Workers
     (error: unknown) => error instanceof DesignError && error.code === 'DESIGN_UNAVAILABLE');
   assert.equal(calls, 1);
 });
-test('no API key yields an honest status and never starts a design call', async () => {
+test('missing API key or empty allowlist fails closed without design calls', async () => {
   let called = false; const handle = createDesignHandler({ design: async () => { called = true; throw Error('should not run'); } });
-  assert.deepEqual(await (await handle(request(null, {}, 'GET'))).json(), { configured: false, shopping: false });
-  const response = await handle(request(input())); assert.equal(response.status, 503); assert.equal(called, false);
+  assert.deepEqual(await (await handle(request(null, {}, 'GET'))).json(), { configured: false, shopping: false, signedIn: false, authorized: false });
+  for (const env of [{}, { DESIGN_ALLOWED_EMAILS: designerEnv.DESIGN_ALLOWED_EMAILS }, { ANTHROPIC_API_KEY: 'test-secret' },
+    { ...designerEnv, ANTHROPIC_API_KEY: '  ' }, { ...designerEnv, DESIGN_ALLOWED_EMAILS: ' , , ' }]) {
+    const status = await (await handle(request(null, designerHeaders, 'GET'), env)).json();
+    assert.equal(status.configured, false);
+    const response = await handle(request(input(), designerHeaders), env);
+    assert.equal(response.status, 503); assert.equal((await response.json()).error.code, 'DESIGN_NOT_CONFIGURED');
+  }
+  assert.equal(called, false);
+});
+test('public design status reports access without exposing the secret or allowlist', async () => {
+  const handle = createDesignHandler();
+  for (const [headers, signedIn, authorized] of [
+    [{}, false, false], [designerHeaders, true, true],
+    [{ ...designerHeaders, 'oai-authenticated-user-email': 'other@example.test' }, true, false],
+  ] as const) {
+    const response = await handle(request(null, headers, 'GET'), { ...designerEnv, SERPAPI_API_KEY: 'shopping-secret' });
+    const result = await response.json();
+    assert.deepEqual(result, { configured: true, shopping: true, signedIn, authorized });
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    assert.doesNotMatch(JSON.stringify(result), /secret|example\.test|site-user/);
+  }
+});
+test('paid design requires both Sites identity and an exact allowed email before parsing or provider use', async () => {
+  let calls = 0;
+  const result = { summary: 'A safe design', observations: [], proposals: [], notices: [] };
+  const handle = createDesignHandler({ design: async () => { calls++; return result; } });
+  const env = { ...designerEnv, DESIGN_ALLOWED_EMAILS: ' owner@example.test, DESIGNER@EXAMPLE.TEST, ' };
+  for (const headers of [{}, { 'oai-authenticated-user-email': 'designer@example.test' }, { ...designerHeaders, 'oai-authenticated-user-id': ' ' }]) {
+    const response = await handle(request(null, headers), env);
+    assert.equal(response.status, 401); assert.equal((await response.json()).error.code, 'DESIGN_SIGN_IN_REQUIRED');
+  }
+  for (const headers of [
+    { 'oai-authenticated-user-id': 'site-user-one' },
+    { ...designerHeaders, 'oai-authenticated-user-email': 'other@example.test' },
+    { ...designerHeaders, 'oai-authenticated-user-email': 'designer@example.test.attacker.test' },
+  ]) {
+    const response = await handle(request(null, headers), env);
+    assert.equal(response.status, 403); assert.equal((await response.json()).error.code, 'DESIGN_ACCESS_DENIED');
+  }
+  assert.equal(calls, 0);
+  const permitted = await handle(request(input(), { ...designerHeaders, 'oai-authenticated-user-email': '  Designer@Example.Test  ' }), env);
+  assert.equal(permitted.status, 200); assert.deepEqual(await permitted.json(), result); assert.equal(calls, 1);
+  const wildcard = await handle(request(input(), designerHeaders), { ...env, DESIGN_ALLOWED_EMAILS: '*' });
+  assert.equal(wildcard.status, 403); assert.equal(calls, 1);
+});
+test('authorized requests retain the per-user design allowance across email case changes', async () => {
+  let calls = 0, time = 1000;
+  const handle = createDesignHandler({ now: () => time, design: async () => { calls++; return { summary: '', observations: [], proposals: [], notices: [] }; } });
+  for (let i = 0; i < 12; i++) assert.equal((await handle(request(input(), designerHeaders), designerEnv)).status, 200);
+  const limited = await handle(request(input(), { ...designerHeaders, 'oai-authenticated-user-email': 'DESIGNER@EXAMPLE.TEST' }), designerEnv);
+  assert.equal(limited.status, 429); assert.equal((await limited.json()).error.code, 'DESIGN_RATE_LIMITED');
+  assert.equal(calls, 12);
+  time += 3600000;
+  assert.equal((await handle(request(input(), designerHeaders), designerEnv)).status, 200);
+  assert.equal(calls, 13);
 });
 test('design endpoint rejects cross-origin, non-JSON, huge, and corrupt requests before AI', async () => {
   let calls = 0; const handler = createDesignHandler({ design: async () => { calls++; throw new Error('unused'); } });
-  const env = { ANTHROPIC_API_KEY: 'test' };
-  assert.equal((await handler(request(input(), { Origin: 'https://evil.example' }), env)).status, 403);
-  assert.equal((await handler(request(input(), { 'Content-Type': 'text/plain' }), env)).status, 415);
-  assert.equal((await handler(request(input(), { 'Content-Length': '6000000' }), env)).status, 413);
-  assert.equal((await handler(request({ brief: 'no layout' }), env)).status, 400);
+  assert.equal((await handler(request(input(), { ...designerHeaders, Origin: 'https://evil.example' }), designerEnv)).status, 403);
+  assert.equal((await handler(request(input(), { ...designerHeaders, 'Content-Type': 'text/plain' }), designerEnv)).status, 415);
+  assert.equal((await handler(request(input(), { ...designerHeaders, 'Content-Length': '6000000' }), designerEnv)).status, 413);
+  assert.equal((await handler(request({ brief: 'no layout' }, designerHeaders), designerEnv)).status, 400);
   assert.equal(calls, 0);
 });
 test('complete service uses retrieved products, repairs invalid AI output once, and returns editable proposals', async () => {
