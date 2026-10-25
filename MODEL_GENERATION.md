@@ -22,7 +22,7 @@ Jobs are persisted in this browser under `furniture-ar:model-jobs:v1`. Reopening
 
 Only an explicit retry after a **confirmed provider failure** or unusable completed output creates a new persisted attempt ID and idempotency key. This allows **Try generating again** to submit new work even while the provider retains its failed job. A timeout or lost start response is ambiguous: a job may already have been accepted. Retrying that attempt keeps its original key, including across restarts, so the provider can return the existing job instead of duplicating it. Browsing, GET status checks, and pending-job recovery never create a new attempt.
 
-This improves browsing responsiveness and avoids unwanted generation/downloads. It does not increase GPU parallelism: the existing one-worker execution and inference lock are unchanged.
+This improves browsing responsiveness and avoids unwanted generation/downloads. The optional/background workflow does not change GPU parallelism. This hosted source retains the existing configurable worker count and GPU locking described in `services/sam3d/README.md`.
 
 ## Persistent files
 

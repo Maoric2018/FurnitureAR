@@ -141,7 +141,7 @@ export async function searchAmazonProducts(q: string, page = 1, signal?: AbortSi
   let response: Response;
   try {
     response = await fetch(import.meta.env?.VITE_PRODUCT_SEARCH_API_URL || '/api/products/search', {
-      method: 'POST', credentials: 'omit', redirect: 'error',
+      method: 'POST', credentials: 'same-origin', redirect: 'error',
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: query, page }), signal,
     });
   } catch (error) {

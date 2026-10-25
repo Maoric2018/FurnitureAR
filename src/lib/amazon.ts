@@ -159,7 +159,7 @@ export async function importAmazonProduct(url: string, signal?: AbortSignal, gen
   let response: Response;
   try {
     response = await fetch(import.meta.env?.VITE_PRODUCT_API_URL || '/api/products/import', {
-      method: 'POST', credentials: 'omit', redirect: 'error',
+      method: 'POST', credentials: 'same-origin', redirect: 'error',
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, ...(generateModel ? { generateModel: true } : {}) }), signal,
     });
   } catch (error) {
@@ -181,7 +181,7 @@ export async function getAmazonProductModel(asin: string, signal?: AbortSignal):
   const statusEndpoint = endpoint.replace(/\/import(?:\?.*)?$/, `/models/${asin}`);
   if (statusEndpoint === endpoint) throw new ImportError('The model service is not configured correctly.', 'MODEL_LOOKUP_FAILED');
   let response: Response;
-  try { response = await fetch(statusEndpoint, { method: 'GET', credentials: 'omit', redirect: 'error', signal }); }
+  try { response = await fetch(statusEndpoint, { method: 'GET', credentials: 'same-origin', redirect: 'error', signal }); }
   catch (error) {
     signal?.throwIfAborted();
     if (error instanceof Error && error.name === 'AbortError') throw error;

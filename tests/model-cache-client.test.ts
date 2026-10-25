@@ -73,12 +73,12 @@ test('Mismatched product variants and contradictory model states cannot enter th
   assert.equal(parseAmazonProductResult({ ...ready(), product: registered, model: { status: 'ready', source: 'registered' } }, asin).product?.variants.length, 2);
 });
 
-test('Checking a saved model requests only its exact ASIN status endpoint with no credentials', async t => {
+test('Checking a saved model requests its exact ASIN with same-origin Site access', async t => {
   const controller = new AbortController();
   const mock = t.mock.method(globalThis, 'fetch', async (url: unknown, init?: RequestInit) => {
     assert.equal(url, `/api/products/models/${asin}`);
     assert.equal(init?.method, 'GET');
-    assert.equal(init?.credentials, 'omit');
+    assert.equal(init?.credentials, 'same-origin');
     assert.equal(init?.redirect, 'error');
     assert.equal(init?.signal, controller.signal);
     assert.equal(init?.body, undefined);

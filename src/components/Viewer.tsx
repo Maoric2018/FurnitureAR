@@ -25,7 +25,7 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSr
   const element = useRef<ModelViewerElement>(null);
   const [state,setState] = useState<'loading'|'loaded'|'error'>('loading');
   const [attempt,setAttempt] = useState(0);
-  const [arMessage,setArMessage] = useState('Move your phone slowly to find the floor.');
+  const [arMessage,setArMessage] = useState('Move slowly to find the floor.');
   const [colorError,setColorError] = useState('');
   const hadColorError = useRef(false);
   const ready = useRef(false);
@@ -46,13 +46,13 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSr
       if (hadColorError.current) { current.onStatus?.(''); hadColorError.current=false; }
       if (current.expectedDimensions && !dimensionsMatch(viewer.getDimensions(),current.expectedDimensions)) {
         current.onReady?.(false);
-        current.onStatus?.('This model’s size doesn’t match the product dimensions. AR is unavailable until the importer supplies a correctly scaled model.');
+        current.onStatus?.('Model size doesn’t match the listed dimensions. AR needs a correctly scaled model.');
         return;
       }
       ready.current = true;
       current.onReady?.(true);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'This finish couldn’t load. Choose another finish before opening AR.';
+      const message = error instanceof Error ? error.message : 'Color couldn’t load. Choose another before opening AR.';
       setColorError(message);
       hadColorError.current = true;
       current.onReady?.(false);
@@ -76,14 +76,14 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSr
     const status = (event: Event) => {
       const value = (event as CustomEvent).detail.status;
       const onStatus = latest.current.onStatus;
-      if (value === 'session-started') onStatus?.('Move your phone slowly. Tap and drag to position your furniture.');
-      if (value === 'object-placed') { setArMessage('Placed at actual size. Drag to move; use two fingers to rotate.'); onStatus?.('Placed at actual size.'); }
-      if (value === 'failed') onStatus?.('AR couldn’t start. Check camera access and try again in Safari on iPhone or Chrome on Android.');
+      if (value === 'session-started') onStatus?.('Move slowly. Drag to position furniture.');
+      if (value === 'object-placed') { setArMessage('Actual size · Drag to move · Two fingers to rotate'); onStatus?.('Placed at actual size.'); }
+      if (value === 'failed') onStatus?.('AR couldn’t start. Allow camera access in Safari (iPhone) or Chrome (Android).');
       if (value === 'not-presenting') onStatus?.('');
     };
     const tracking = (event: Event) => {
-      if ((event as CustomEvent).detail.status === 'not-tracking') setArMessage('Tracking paused. Move slowly toward a well-lit, textured floor.');
-      else setArMessage('Drag to move; use two fingers to rotate. Size stays true to life.');
+      if ((event as CustomEvent).detail.status === 'not-tracking') setArMessage('Tracking paused. Aim at a well-lit, textured floor.');
+      else setArMessage('Actual size · Drag to move · Two fingers to rotate');
     };
     viewer.addEventListener('load',loaded); viewer.addEventListener('error',error);
     viewer.addEventListener('ar-status',status); viewer.addEventListener('ar-tracking',tracking);
@@ -97,7 +97,7 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSr
       const viewer=element.current;
       if (!viewer?.loaded || !ready.current) return;
       if (!window.isSecureContext || !viewer.canActivateAR) { latest.current.onUnavailable?.(); return; }
-      latest.current.onStatus?.('Opening your phone’s AR viewer…');
+      latest.current.onStatus?.('Opening AR…');
       // Must stay directly within the user's tap for iOS Quick Look permission.
       viewer.activateAR().catch(() => latest.current.onStatus?.('AR couldn’t start. Check camera access and try again.'));
     },
@@ -116,7 +116,7 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer({src,iosSr
       <div slot="progress-bar" />
     </model-viewer>
     {state === 'loading' && <div className="viewer-loading" aria-label="Loading 3D furniture"><span className="loading-ring"/><span>Loading 3D model</span></div>}
-    {state === 'error' && <div className="viewer-error"><Box size={28}/><p>This 3D model couldn’t load.</p><button className="text-button" onClick={() => setAttempt(v=>v+1)}><RotateCcw size={15}/> Try again</button></div>}
+    {state === 'error' && <div className="viewer-error"><Box size={28}/><p>3D model couldn’t load.</p><button className="text-button" onClick={() => setAttempt(v=>v+1)}><RotateCcw size={15}/> Try again</button></div>}
     {state === 'loaded' && colorError && <p role="alert" className="viewer-color-error">{colorError}</p>}
   </div>;
 });

@@ -1,5 +1,6 @@
 export type GenerationStatus = 'queued' | 'processing' | 'succeeded' | 'failed';
 export interface GenerationJob { ticket: string; status: GenerationStatus; stage?: string; progress?: number }
+export interface PendingGeneration extends GenerationJob { startedAt: number }
 export interface GenerationConfig { configured: boolean; signedIn: boolean }
 export class GenerationError extends Error { constructor(message: string, public code = 'REQUEST_FAILED') { super(message); } }
 export const GENERATION_STORAGE_KEY = 'furniture-ar:photo-job:v1';
@@ -31,10 +32,27 @@ export async function getGeneration(ticket: string, signal?: AbortSignal): Promi
   return parseGenerationJob(await request(`jobs/${encodeURIComponent(ticket)}`, { signal }));
 }
 export function generationModelUrl(ticket: string) { return `/api/reconstruction/jobs/${encodeURIComponent(ticket)}/model`; }
-export function readPendingGeneration(): GenerationJob | null {
-  try { const raw = sessionStorage.getItem(GENERATION_STORAGE_KEY); return raw ? parseGenerationJob(JSON.parse(raw)) : null; } catch { return null; }
+/** Keep the clock attached to the job when polling replaces its status. */
+export function trackGeneration(next: GenerationJob, previous: PendingGeneration | null = null, startedAt = Date.now()): PendingGeneration {
+  return { ...next, startedAt: previous?.ticket === next.ticket ? previous.startedAt : startedAt };
 }
-export function rememberGeneration(job: GenerationJob | null) {
+export function generationElapsedSeconds(startedAt: number | null | undefined, now = Date.now()): number {
+  if (typeof startedAt !== 'number' || !Number.isFinite(startedAt) || startedAt <= 0 || !Number.isFinite(now)) return 0;
+  return Math.max(0, Math.floor((now - startedAt) / 1000));
+}
+export function readPendingGeneration(now = Date.now()): PendingGeneration | null {
+  try {
+    const raw = sessionStorage.getItem(GENERATION_STORAGE_KEY);
+    if (!raw) return null;
+    const value = JSON.parse(raw), job = parseGenerationJob(value);
+    const startedAt = typeof value.startedAt === 'number' && Number.isSafeInteger(value.startedAt) && value.startedAt > 0 && value.startedAt <= now ? value.startedAt : now;
+    const pending = trackGeneration(job, null, startedAt);
+    // Migrate older saved jobs once, so subsequent page changes keep this clock.
+    if (value.startedAt !== startedAt) rememberGeneration(pending);
+    return pending;
+  } catch { return null; }
+}
+export function rememberGeneration(job: PendingGeneration | null) {
   try { if (job) sessionStorage.setItem(GENERATION_STORAGE_KEY, JSON.stringify(job)); else sessionStorage.removeItem(GENERATION_STORAGE_KEY); } catch { /* The active tab can continue without persistence. */ }
 }
 export function validatePhoto(file: Pick<File, 'type' | 'size'>) {

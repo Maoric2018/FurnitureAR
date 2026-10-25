@@ -58,13 +58,13 @@ test('Search parser bounds fields, prices, ratings, pages, counts, and timestamp
   ]) assert.throws(() => parseAmazonSearchResults({ ...result(), ...patch }));
 });
 
-test('Search submits a normalized query and chosen page without browser API credentials', async t => {
+test('Search includes same-origin site sign-in while keeping provider credentials server-side', async t => {
   const controller = new AbortController();
   const data = { ...result(), page: 3, nextPage: 4 };
   const mock = t.mock.method(globalThis, 'fetch', async (url: unknown, init?: RequestInit) => {
     assert.equal(url, '/api/products/search');
     assert.equal(init?.method, 'POST');
-    assert.equal(init?.credentials, 'omit');
+    assert.equal(init?.credentials, 'same-origin');
     assert.equal(init?.redirect, 'error');
     assert.deepEqual(init?.headers, { 'Content-Type': 'application/json' });
     assert.deepEqual(JSON.parse(init!.body as string), { q: 'oak table', page: 3 });
@@ -151,7 +151,7 @@ test('Aborted searches preserve cancellation before fetch, during fetch, and whi
   await assert.rejects(searchAmazonProducts('oak table', 1, reading.signal), error => error === reading.signal.reason);
 });
 
-test('Product imports omit guest cookies and credentials while preserving listing details', async t => {
+test('Product imports support private Site cookies without requiring signed-in guest requests', async t => {
   const controller = new AbortController();
   const listing = {
     asin: 'B0F2ML48Y6', title: 'Oak dining table', brand: null,
@@ -162,7 +162,7 @@ test('Product imports omit guest cookies and credentials while preserving listin
   t.mock.method(globalThis, 'fetch', async (url: unknown, init?: RequestInit) => {
     assert.equal(url, '/api/products/import');
     assert.equal(init?.method, 'POST');
-    assert.equal(init?.credentials, 'omit');
+    assert.equal(init?.credentials, 'same-origin');
     assert.equal(init?.redirect, 'error');
     assert.deepEqual(init?.headers, { 'Content-Type': 'application/json' });
     assert.deepEqual(JSON.parse(init!.body as string), { url: listing.url });

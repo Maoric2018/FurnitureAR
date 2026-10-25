@@ -219,13 +219,12 @@
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="/"><img src="/icon.svg" alt="" width="32" height="32">Roomify</a>
-    <a href="/">Back to workspace</a>
+    <a class="brand" href="/" aria-label="Back to Roomify"><img src="/icon.svg" alt="" width="32" height="32">Roomify</a>
   </header>
   <main>
     <h1>Room scanner setup</h1>
-    <p class="lead">Scan the walls and furniture already in your room with the companion iPhone app. Import the outlines into a layout, then plan the pieces you want to add around them.</p>
-    <div class="note"><strong>Works on iPhone 16 Pro and other iPhones with LiDAR.</strong> The scan uses Apple’s LiDAR room scanner through a companion iPhone app. Install it from Xcode on your Mac first; the website handles importing and arranging your room.</div>
+    <p class="lead">Scan with the Furniture AR Scan app, then upload the room file to your layout.</p>
+    <div class="note"><strong>Requires an iPhone or iPad with LiDAR.</strong> Install the scanner using Xcode on a Mac. It isn’t available in the App Store.</div>
     <section>
       <h2>Install the scanner</h2>
       <ol>
@@ -233,7 +232,7 @@
         <li>In <strong>Signing &amp; Capabilities</strong>, choose your Apple development team with automatic signing.</li>
         <li>Connect and unlock your iPhone. Select it in Xcode and press <strong>Run</strong>. Follow any prompts to trust the Mac or enable Developer Mode.</li>
       </ol>
-      <p class="hint">This is a development app, not an App Store download. The project’s README includes the installation and signing steps.</p>
+      <p class="hint">The project README includes signing help.</p>
     </section>
     <section>
       <h2>Scan your room</h2>
@@ -242,8 +241,7 @@
         <li>Move slowly in good light. Include every wall, doorway, corner, and piece of furniture.</li>
         <li>Tap <strong>Finish scan</strong>. Check the outline and give the room a name.</li>
       </ol>
-      <a class="button" href="furniturear-scan://scan">Open installed scanner</a>
-      <p class="hint">Install the companion app before using this button.</p>
+      <a class="button" href="furniturear-scan://scan">Open scanner</a>
     </section>
     <section>
       <h2>Import the scan</h2>

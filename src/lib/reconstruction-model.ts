@@ -1,7 +1,7 @@
 import { Box3, Group, Mesh, Texture, Vector3 } from 'three';
 import type { Object3D } from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { parseModelWithTextures } from './model-loader';
 export interface PreparedModel { url: string; dimensions: { width: number; height: number; depth: number } }
 export function checkEmbeddedGlb(buffer: ArrayBuffer) {
   if (buffer.byteLength < 20 || buffer.byteLength > 25 * 1024 * 1024) throw new Error('The returned model is empty or too large to preview.');
@@ -35,7 +35,7 @@ export function normalizeGeneratedScene(source: Object3D, heightMeters: number) 
 }
 export async function prepareGeneratedModel(buffer: ArrayBuffer, heightMeters: number, signal?: AbortSignal): Promise<PreparedModel> {
   checkEmbeddedGlb(buffer); signal?.throwIfAborted();
-  const model = await new GLTFLoader().parseAsync(buffer, '');
+  const model = await parseModelWithTextures(buffer, '', signal);
   try {
     signal?.throwIfAborted();
     const { scene, dimensions } = normalizeGeneratedScene(model.scene, heightMeters);
