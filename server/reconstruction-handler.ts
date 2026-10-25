@@ -73,7 +73,7 @@ export function createReconstructionHandler({ fetchImpl = fetch, now = Date.now 
       const match = url.pathname.match(/^\/api\/reconstruction\/jobs(?:\/([\w.-]+)(\/model)?)?$/);
       if (!match) throw new ServiceError(404, 'NOT_FOUND', 'Not found.');
       if (request.method !== (match[1] ? 'GET' : 'POST')) throw new ServiceError(405, 'METHOD_NOT_ALLOWED', 'This action is not supported.');
-      if (request.headers.get('Origin') && request.headers.get('Origin') !== url.origin) throw new ServiceError(403, 'ORIGIN_NOT_ALLOWED', 'Open Furniture AR to create a model.');
+      if (request.headers.get('Origin') && request.headers.get('Origin') !== url.origin) throw new ServiceError(403, 'ORIGIN_NOT_ALLOWED', 'Open Roomify to create a model.');
       if (!user) throw new ServiceError(401, 'SIGN_IN_REQUIRED', 'Sign in before sending your photo for 3D generation.');
       if (!config) throw new ServiceError(503, 'MODEL_NOT_CONFIGURED', '3D generation is not connected yet. Your photo has not been sent.');
       let id: string | undefined, body: FormData | undefined;

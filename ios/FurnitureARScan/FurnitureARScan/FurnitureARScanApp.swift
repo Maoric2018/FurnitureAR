@@ -50,7 +50,7 @@ private struct ScanHome: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    Text("FURNITURE AR").font(.caption.weight(.semibold)).tracking(3).foregroundStyle(.secondary)
+                    Text("ROOMIFY").font(.caption.weight(.semibold)).tracking(3).foregroundStyle(.secondary)
                     Text(room == nil ? "Start with\nyour real room." : "A place for\nyour next idea.")
                         .font(.system(size:40,weight:.regular,design:.serif))
                     if let current = room {
@@ -68,7 +68,7 @@ private struct ScanHome: View {
                                 save(current)
                                 guard let url=URL(string:plannerAddress),url.scheme == "https",url.host != nil,url.user == nil,url.password == nil else { error="Enter an HTTPS planner address first.";return }
                                 planner=PlannerDestination(url:url,room:current)
-                        } label: { Label("Open in Furniture AR",systemImage:"arrow.up.right").frame(maxWidth:.infinity) }
+                        } label: { Label("Open in Roomify",systemImage:"arrow.up.right").frame(maxWidth:.infinity) }
                         .buttonStyle(.borderedProminent).controlSize(.large)
                         Button {
                             do {

@@ -34,7 +34,7 @@ export default function NewLayout({ onClose, onCreate }: {
       <button type="button" className="text-button setup-back" onClick={() => setStep('choose')}><ArrowLeft size={15}/>Back</button>
       <span className="overline">IN THE IPHONE APP</span>
       <h2>Your room, captured.</h2>
-      <p>Use the Furniture AR iPhone app to capture your walls and existing furniture. On the web, enter your room’s dimensions to start arranging.</p>
+      <p>Use the Roomify iPhone app to capture your walls and existing furniture. On the web, enter your room’s dimensions to start arranging.</p>
       <button className="button primary" onClick={() => setStep('manual')}>Enter room size<ArrowRight size={16}/></button>
     </div> : <form className="modal-form room-setup" onSubmit={event => {
       event.preventDefault();

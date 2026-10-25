@@ -1,6 +1,6 @@
-# Furniture AR Scan
+# Roomify Scan
 
-Native SwiftUI companion for the Furniture AR mobile website. Uses Apple's RoomPlan and LiDAR to capture wall sections, doors, windows, openings, and supported furniture categories. Your iPhone 16 Pro is supported. Requires iOS 17 or later; capture does not work in a browser or simulator.
+Native SwiftUI companion for the Roomify mobile website. Uses Apple's RoomPlan and LiDAR to capture wall sections, doors, windows, openings, and supported furniture categories. Your iPhone 16 Pro is supported. Requires iOS 17 or later; capture does not work in a browser or simulator.
 
 ## Install on your iPhone
 
@@ -13,7 +13,7 @@ Native SwiftUI companion for the Furniture AR mobile website. Uses Apple's RoomP
 
 1. Open the app and allow camera access. Choose **Scan my room**.
 2. Slowly capture one room, including every wall, doorway, and piece of furniture. Follow the on-screen RoomPlan guidance, then choose **Finish scan**.
-3. Review the outline and name the room. **Open in Furniture AR** opens the web planner inside this app. Confirm **Create layout from scan**. Both the installed app and web deployment must include the native bridge. The **Planner address** setting accepts an updated HTTPS development preview without a native rebuild; it defaults to the existing hosted site. An older site shows an explicit connection error.
+3. Review the outline and name the room. **Open in Roomify** opens the web planner inside this app. Confirm **Create layout from scan**. Both the installed app and web deployment must include the native bridge. The **Planner address** setting accepts an updated HTTPS development preview without a native rebuild; it defaults to the existing hosted site. An older site shows an explicit connection error.
 4. You can also export the room JSON using **Save / share room file**. Files include measurements and a scan ID, but do not include the private tracking map. The ordinary browser’s new-layout scan entry remains a placeholder; the native new-layout entry opens RoomPlan directly.
 5. Existing objects appear as fixed, hatched footprints. They appear without detected category labels. Select one to correct its dimensions, position, or rotation; add missed furniture or remove a false detection. Add Amazon products and arrange around the existing objects. Collision and doorway warnings are estimates.
 

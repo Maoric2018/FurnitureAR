@@ -11,7 +11,7 @@ export function hasNativeRoomAR(): boolean {
   return typeof window !== 'undefined' && window.furnitureARNativeVersion === 1 && !!window.webkit?.messageHandlers?.furnitureAR;
 }
 export function nativeRequest(kind: 'ready' | 'scan' | 'preview', payload?: unknown): Promise<unknown> {
-  if (!hasNativeRoomAR()) return Promise.reject(new Error('Open this layout inside the Furniture AR iPhone app.'));
+  if (!hasNativeRoomAR()) return Promise.reject(new Error('Open this layout inside the Roomify iPhone app.'));
   return window.webkit!.messageHandlers!.furnitureAR!.postMessage({version:1,kind,payload});
 }
 export function nativeLayoutMetadata(layout:RoomLayout) {

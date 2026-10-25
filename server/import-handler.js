@@ -16,7 +16,7 @@ export function createImportHandler(options = {}) {
     try {
       if (request.method !== 'POST') return json({ error: { code: 'METHOD_NOT_ALLOWED', message: 'Use POST for product imports.' } }, 405, { Allow: 'POST' });
       const origin = request.headers.get('Origin');
-      if (origin && origin !== new URL(request.url).origin) throw new ApiError(403, 'ORIGIN_NOT_ALLOWED', 'Open Furniture AR to import a product.');
+      if (origin && origin !== new URL(request.url).origin) throw new ApiError(403, 'ORIGIN_NOT_ALLOWED', 'Open Roomify to import a product.');
       if (!request.headers.get('Content-Type')?.startsWith('application/json')) throw new ApiError(415, 'INVALID_REQUEST', 'Send a product link as JSON.');
       if (Number(request.headers.get('Content-Length')) > 4096) throw new ApiError(413, 'INVALID_REQUEST', 'That link is too long.');
       let bytes = 0, chunks = [], reader = request.body?.getReader();
@@ -40,7 +40,7 @@ export function createImportHandler(options = {}) {
     try {
       if (request.method !== 'GET') return json({ error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET to check a model.' } }, 405, { Allow: 'GET' });
       const origin = request.headers.get('Origin');
-      if (origin && origin !== new URL(request.url).origin) throw new ApiError(403, 'ORIGIN_NOT_ALLOWED', 'Open Furniture AR to check a model.');
+      if (origin && origin !== new URL(request.url).origin) throw new ApiError(403, 'ORIGIN_NOT_ALLOWED', 'Open Roomify to check a model.');
       return json(await service.load(status[1], env, 'status'));
     } catch (error) { return failure(error, 'MODEL_LOOKUP_FAILED'); }
   };

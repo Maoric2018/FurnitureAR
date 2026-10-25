@@ -107,11 +107,11 @@ struct NativeWorkspace:View {
     }
     var body:some View {
         NavigationStack {
-            PlannerWebView(model:model).navigationTitle("Furniture AR").navigationBarTitleDisplayMode(.inline)
+            PlannerWebView(model:model).navigationTitle("Roomify").navigationBarTitleDisplayMode(.inline)
                 .toolbar{ToolbarItem(placement:.cancellationAction){Button("Scanner"){dismiss()}};ToolbarItem(placement:.primaryAction){Button{model.webView?.reload()}label:{Image(systemName:"arrow.clockwise")}}}
                 .fullScreenCover(isPresented:$model.scanning){CaptureScreen(tracking:tracking){room in onScan(room);model.receive(room)}}
                 .fullScreenCover(item:$model.preview,onDismiss:model.cleanupPreview){AlignedRoomPreview(request:$0,tracking:tracking)}
-                .alert("Furniture AR",isPresented:Binding(get:{model.error != nil},set:{if !$0{model.error=nil}})){Button("OK",role:.cancel){model.error=nil}}message:{Text(model.error ?? "")}
+                .alert("Roomify",isPresented:Binding(get:{model.error != nil},set:{if !$0{model.error=nil}})){Button("OK",role:.cancel){model.error=nil}}message:{Text(model.error ?? "")}
         }
     }
 }

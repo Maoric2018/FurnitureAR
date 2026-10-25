@@ -33,7 +33,7 @@ export function createSearchHandler({ search, now = Date.now } = {}) {
     try {
       if (request.method !== 'POST') return json({ error: { code: 'METHOD_NOT_ALLOWED', message: 'Use POST for Amazon searches.' } }, 405, { Allow: 'POST' });
       const origin = request.headers.get('Origin');
-      if (origin && origin !== new URL(request.url).origin) throw new ApiError(403, 'ORIGIN_NOT_ALLOWED', 'Open Furniture AR to search Amazon.');
+      if (origin && origin !== new URL(request.url).origin) throw new ApiError(403, 'ORIGIN_NOT_ALLOWED', 'Open Roomify to search Amazon.');
       if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('Content-Type') || '')) throw new ApiError(415, 'INVALID_REQUEST', 'Send a search as JSON.');
       const input = parseSearchRequest(await readBody(request));
       const identity = JSON.stringify([input.q, input.page]);

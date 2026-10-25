@@ -29,7 +29,7 @@ export function createDesignHandler({ design = createDesignService(), now = Date
     let acquired = false;
     try {
       const origin = request.headers.get('Origin');
-      if (origin && origin !== new URL(request.url).origin) throw new DesignError('ORIGIN_NOT_ALLOWED', 'Open Furniture AR to design a room.', 403);
+      if (origin && origin !== new URL(request.url).origin) throw new DesignError('ORIGIN_NOT_ALLOWED', 'Open Roomify to design a room.', 403);
       if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('Content-Type') ?? '')) throw new DesignError('INVALID_REQUEST', 'Send the room brief as JSON.', 415);
       if (!env.ANTHROPIC_API_KEY?.trim()) throw new DesignError('DESIGN_NOT_CONFIGURED', 'Room design is not connected yet. You can prepare your brief and photos now.', 503);
       const input = parseDesignRequest(await body(request));

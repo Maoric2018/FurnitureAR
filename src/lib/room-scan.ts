@@ -16,7 +16,7 @@ export interface RoomSurvey {
 }
 export interface ImportedRoom { name: string; width: number; depth: number; survey: RoomSurvey }
 export const MAX_SCAN_BYTES = 512_000;
-const fail = (): never => { throw new Error('This room file is incomplete or unsupported. Export a new scan from Furniture AR Scan.'); };
+const fail = (): never => { throw new Error('This room file is incomplete or unsupported. Export a new scan from Roomify Scan.'); };
 const record = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : fail();
 const number = (v: unknown, min: number, max: number): number => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? v : fail();
 const label = (v: unknown, max = 80): string => typeof v === 'string' && v.trim().length > 0 && v.length <= max ? v.trim() : fail();
@@ -70,9 +70,9 @@ export function parseRoomScan(raw: unknown): ImportedRoom {
     obstacles: survey.obstacles.map(o => ({ ...o, ...shift(o) })) } };
 }
 export function readRoomScanText(text: string): ImportedRoom {
-  if (new TextEncoder().encode(text).length > MAX_SCAN_BYTES) throw new Error('This file is too large. Choose the room JSON exported by Furniture AR Scan.');
+  if (new TextEncoder().encode(text).length > MAX_SCAN_BYTES) throw new Error('This file is too large. Choose the room JSON exported by Roomify Scan.');
   let value: unknown;
-  try { value = JSON.parse(text); } catch { throw new Error('This isn’t a room JSON file. Choose the file exported by Furniture AR Scan.'); }
+  try { value = JSON.parse(text); } catch { throw new Error('This isn’t a room JSON file. Choose the file exported by Roomify Scan.'); }
   return parseRoomScan(value);
 }
 export function readRoomScanFragment(hash: string): ImportedRoom | undefined {

@@ -1,4 +1,4 @@
-# Furniture AR
+# Roomify
 
 A mobile web app with two ways to plan furniture:
 
@@ -67,7 +67,7 @@ Products are saved only as part of a layout. Single-product previews are tempora
 
 ## Scan your room
 
-Use the native [Furniture AR Scan companion](./ios/FurnitureARScan/README.md) on a LiDAR iPhone or iPad (including iPhone 16 Pro). It uses Apple RoomPlan, then opens the website or shares a room JSON file. **New layout → Scan your room** now shows a coming-soon placeholder with a shortcut to manual dimensions; there is no scanner-install detour in the web layout flow. The existing companion and scan handoff are retained for future integration.
+Use the native [Roomify Scan companion](./ios/FurnitureARScan/README.md) on a LiDAR iPhone or iPad (including iPhone 16 Pro). It uses Apple RoomPlan, then opens the website or shares a room JSON file. **New layout → Scan your room** now shows a coming-soon placeholder with a shortcut to manual dimensions; there is no scanner-install detour in the web layout flow. The existing companion and scan handoff are retained for future integration.
 
 Existing objects appear as fixed, hatched footprints. Select one to correct its measurements, position, or rotation; add missed objects or remove false detections. New furniture remains movable. Overlaps with other pieces or existing furniture, oversized footprints, wall crossings, and doorway access warnings appear in the editor. Corrections and scans persist with the layout and participate in Undo and duplication. Incomplete wall geometry requires rescanning. All measurements and overlap warnings are estimates.
 

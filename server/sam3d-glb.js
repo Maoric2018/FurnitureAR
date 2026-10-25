@@ -67,7 +67,7 @@ export function normalizeSamGlb(bytes, listedDimensions) {
   const factor = reference ? listedDimensions[reference] / size[axis[reference]] : 1 / size.y;
   const dimensions = { width: size.x * factor, height: size.y * factor, depth: size.z * factor };
   const root = doc.nodes.length;
-  doc.nodes.push({ name: 'Furniture AR metric origin', children: scene.nodes,
+  doc.nodes.push({ name: 'Roomify metric origin', children: scene.nodes,
     scale: [factor,factor,factor], translation: [-center.x*factor,-bounds.min.y*factor,-center.z*factor] });
   doc.scene = 0; doc.scenes = [{ ...scene, nodes: [root] }];
   const json = new TextEncoder().encode(JSON.stringify(doc)), padded = Math.ceil(json.length/4)*4;
