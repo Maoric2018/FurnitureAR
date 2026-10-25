@@ -51,7 +51,7 @@ Saved individual products form a separate library and can be reused across layou
 
 ## Scan your room
 
-Use the native [Furniture AR Scan companion](./ios/FurnitureARScan/README.md) on a LiDAR iPhone or iPad (including iPhone 16 Pro). It uses Apple RoomPlan, then opens the website or shares a room JSON file. Import it from the overview, layout list, or editor. Review the measured outline before creating the layout.
+Choose **Room scan** from the overview, layout list, or editor, then **Upload a room scan** or **Perform a room scan**. The scan option opens the existing native [Furniture AR Scan companion](./ios/FurnitureARScan/README.md) through `furniturear-scan://scan` on a LiDAR iPhone or iPad. It uses Apple RoomPlan; the website does not implement a separate scanner. After capture, use **Save / share room file**, return to the website, and upload the exported JSON. Review the measured outline before creating the layout. The installed companion’s **Open in Furniture AR** button still targets the original Eric website; file sharing is the existing way to bring the scan to this hosted site without reinstalling the app. Incoming `#room-scan` handoffs continue to open the review directly.
 
 Existing objects appear as fixed, hatched footprints. Select one to correct its measurements, name, position, or rotation; add missed objects or remove false detections. New furniture remains movable. Overlaps with existing furniture, wall crossings, and doorway access warnings appear in the editor. Corrections and scans persist with the layout and participate in Undo and duplication. Incomplete wall geometry requires rescanning. All measurements and overlap warnings are estimates.
 

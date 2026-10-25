@@ -3798,6 +3798,76 @@ model-viewer[ar-status="object-placed"]:has(.ar-color-controls) .ar-coach {
   color: var(--danger);
 }
 
+/* Room scan: reuse an exported file or open the installed LiDAR app. */
+.scan-options {
+  display: grid;
+  gap: 12px;
+}
+
+.scan-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 18px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  text-align: left;
+}
+
+.scan-option:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.scan-option > svg {
+  flex: none;
+  color: var(--accent);
+}
+
+.scan-option > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.scan-option strong,
+.scan-option small {
+  display: block;
+}
+
+.scan-option strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.scan-option small {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.scan-back {
+  align-self: flex-start;
+}
+
+.scan-import > .scan-setup-note,
+.scan-return-note {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+.scan-setup-note .text-button {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.scan-return-note {
+  margin-bottom: 12px;
+}
+
 /* Room scan import: phone instructions */
 .scan-instructions {
   display: flex;
