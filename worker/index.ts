@@ -5,7 +5,7 @@ import { createImportHandler } from '../server/import-handler.js';
 import { createSearchHandler } from '../server/search-handler.js';
 import { createDesignHandler } from '../server/design-handler';
 import { handleDemoDesign } from '../server/demo-design-handler';
-import { ROOM_DESIGN_DEMO_ENABLED } from '../src/lib/design-mode';
+import { ROOM_DESIGN_DEMO_ENABLED } from '../server/design-mode';
 const designRoom = ROOM_DESIGN_DEMO_ENABLED ? handleDemoDesign : createDesignHandler();
 const reconstruct = createReconstructionHandler();
 const importProduct = createImportHandler();

@@ -14,7 +14,7 @@ export interface DesignCandidate { id: string; item: PlacedItem; price: number |
 export interface DesignDraft { name: string; description: string; items: { candidateId: string; x: number; z: number; rotation: number }[] }
 export interface DesignProposal {
   id: string; name: string; description: string; layout: RoomLayout;
-  total: number; currency: 'USD'; added: number; notes: string[]; draft: DesignDraft;
+  total: number; currency: 'USD'; pricingAvailable?: boolean; added: number; notes: string[]; draft: DesignDraft;
 }
 export interface DesignResult { summary: string; observations: string[]; proposals: DesignProposal[]; notices: string[] }
 export class DesignError extends Error {

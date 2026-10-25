@@ -37,6 +37,7 @@ export function parseDesignResult(value: unknown): DesignResult {
     const layout = parseWorkspace({ layouts: [p.layout] }).layouts[0];
     if (!layout || layout.items.length !== p.layout.items.length || !layout.items.length || typeof p.id !== 'string'
       || typeof p.name !== 'string' || p.name.length > 80 || typeof p.description !== 'string' || p.description.length > 600
+      || (p.pricingAvailable!==undefined && typeof p.pricingAvailable!=='boolean')
       || !Number.isFinite(p.total) || p.total < 0 || p.currency !== 'USD' || !Number.isInteger(p.added) || p.added < 0
       || !strings(p.notes, 10) || !p.draft || !Array.isArray(p.draft.items) || p.draft.items.length > 30
       || p.draft.items.some(i => typeof i.candidateId !== 'string' || ![i.x, i.z, i.rotation].every(Number.isFinite))) throw new Error('The designer returned an incomplete layout. Please try again.');

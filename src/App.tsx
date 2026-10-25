@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { Armchair, ArrowRight, Wand2, Box, Camera, Check, Copy, Grid2X2, HelpCircle, Home, Layers, Link2, Plus, Search, Trash2, X } from 'lucide-react';
+import { Armchair, Box, Camera, Check, Copy, Grid2X2, HelpCircle, Home, Layers, Link2, Plus, Search, Trash2, X } from 'lucide-react';
 import type { ProductItem, RoomLayout } from './lib/workspace';
 import { createScannedLayout, duplicateLayout, placeItem, readWorkspace, relativeDate, saveWorkspace, selectItemVariant } from './lib/workspace';
 import { readUnit, writeUnit } from './lib/storage';
@@ -16,9 +16,6 @@ import type { AmazonProductResult } from './lib/amazon';
 import { resolveModelItem } from './lib/model-resolution';
 import { useModelJobs } from './lib/use-model-jobs';
 import ModelJobsPanel from './components/ModelJobsPanel';
-import { ROOM_DESIGN_DEMO_ENABLED } from './lib/design-mode';
-import { createUrbanDemoRoom, createUrbanDemoProposal, URBAN_DEMO_ROOM_ID, URBAN_DEMO_READY_ID } from './lib/urban-demo';
-import './components/urban-demo.css';
 const PreviewModal=lazy(()=>import('./components/PreviewModal'));
 const RoomEditor=lazy(()=>import('./components/RoomEditor'));
 
@@ -33,14 +30,14 @@ export default function App(){
   const [preview,setPreview]=useState<ProductItem|null>(null),[createOpen,setCreateOpen]=useState(false),[pendingItem,setPendingItem]=useState<ProductItem|null>(null);
   const [unit,setUnit]=useState<Unit>(readUnit),[help,setHelp]=useState(false),[phone,setPhone]=useState(false),[copied,setCopied]=useState(false);
   const [autoOpenCamera,setAutoOpenCamera]=useState(false);
-  const [jobsOpen,setJobsOpen]=useState(false),[designOnOpen,setDesignOnOpen]=useState(false);
+  const [jobsOpen,setJobsOpen]=useState(false);
   const openPhoto=()=>{setAutoOpenCamera(true);setPage('photo');setRoomId(null);window.scrollTo({top:0});};
   const [toast,setToast]=useState<{message:string;undo?:()=>void}|null>(null);const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
   useEffect(()=>{setPersisted(saveWorkspace(workspace));},[workspace]);
   useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current);},[]);
   const notify=useCallback((message:string,undo?:()=>void)=>{setToast({message,undo});if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>setToast(null),6000);},[]);
-  const navigate=(next:Page)=>{setAutoOpenCamera(false);setPage(next);setRoomId(null);setQuery('');setDesignOnOpen(false);window.scrollTo({top:0});};
-  const openRoom=(id:string,design=false)=>{setRoomId(id);setPage('layouts');setDesignOnOpen(design);window.scrollTo({top:0});};
+  const navigate=(next:Page)=>{setAutoOpenCamera(false);setPage(next);setRoomId(null);setQuery('');window.scrollTo({top:0});};
+  const openRoom=(id:string)=>{setRoomId(id);setPage('layouts');window.scrollTo({top:0});};
   const updateRoom=(room:RoomLayout)=>setWorkspace(current=>({...current,layouts:current.layouts.map(item=>item.id===room.id?room:item)}));
   const removeRoom=(room:RoomLayout)=>{setWorkspace(current=>({...current,layouts:current.layouts.filter(item=>item.id!==room.id)}));notify('Layout deleted.',()=>setWorkspace(current=>({...current,layouts:[room,...current.layouts]})));};
   const room=workspace.layouts.find(item=>item.id===roomId);
@@ -111,14 +108,6 @@ export default function App(){
     if(hasNativeRoomAR())void nativeRequest('ready').catch(()=>{});
     return()=>{window.removeEventListener('hashchange',receiveLink);window.removeEventListener('furniture-ar:scan',receiveNative);};
   },[finishScan]);
-  const openUrbanDemo=(ready=false)=>{
-    const id=ready?URBAN_DEMO_READY_ID:URBAN_DEMO_ROOM_ID;
-    if(!workspace.layouts.some(room=>room.id===id)){
-      const preset=ready?{...createUrbanDemoProposal().layout,id}:createUrbanDemoRoom();
-      setWorkspace(current=>({...current,layouts:[preset,...current.layouts]}));
-    }
-    openRoom(id,!ready);
-  };
   const layoutCards=(items:RoomLayout[])=><div className="layout-grid">{items.map(item=><article className="layout-card" key={item.id}><button className="layout-card-plan" onClick={()=>openRoom(item.id)} aria-label={`Open ${item.name}`}><FloorPlan layout={item} compact/><span className="tag room-type-tag">{item.roomType}</span></button><div className="layout-card-info"><button onClick={()=>openRoom(item.id)}><h3>{item.name}</h3><p>{item.items.length+(item.survey?.obstacles.length??0)} {item.items.length+(item.survey?.obstacles.length??0)===1?'piece':'pieces'} · Edited {relativeDate(item.updatedAt).toLowerCase()}</p></button><div className="card-actions"><button className="icon-button" aria-label={`Duplicate ${item.name}`} title="Duplicate" onClick={()=>{const copy=duplicateLayout(item);setWorkspace(current=>({...current,layouts:[copy,...current.layouts]}));notify('Layout duplicated.');}}><Copy size={15}/></button><button className="icon-button" aria-label={`Delete ${item.name}`} title="Delete" onClick={()=>removeRoom(item)}><Trash2 size={15}/></button></div></div></article>)}</div>;
   const brand=<a className="brand" href="#" onClick={event=>{event.preventDefault();navigate('home');}} aria-label="Roomify home"><img src="/icon.svg" alt="" width={32} height={32}/><span>Roomify</span></a>;
   return <div className="app-shell"><a href="#main-content" className="skip-link">Skip to content</a>
@@ -126,11 +115,10 @@ export default function App(){
       <div className="sidebar-footer"><button className="side-link jobs-link" title="3D models" aria-label={`Your 3D models${activeJobs?`, ${activeJobs} in progress`:''}`} onClick={()=>setJobsOpen(true)}><Box size={16}/><span>3D models</span>{activeJobs>0&&<small>{activeJobs}</small>}</button><button className="side-link" title="Help" onClick={()=>setHelp(true)}><HelpCircle size={16}/><span>Help</span></button><p className="storage-status"><span className={persisted?'status-dot':'status-dot offline'}/>{persisted?'Saved in this browser':'Browser storage unavailable'}</p></div>
     </aside>
     <div className="app-main"><header className="mobile-header">{brand}<div className="mobile-header-actions"><button className="icon-button jobs-button" aria-label={`Your 3D models${activeJobs?`, ${activeJobs} in progress`:''}`} onClick={()=>setJobsOpen(true)}><Box size={18}/>{activeJobs>0&&<small>{activeJobs}</small>}</button><button className="icon-button" aria-label="Help" onClick={()=>setHelp(true)}><HelpCircle size={18}/></button></div></header><main id="main-content" className={room?'main-content editor-content':'main-content'}>
-      {room?<Suspense fallback={<div className="workspace-loading"><span className="loading-ring"/>Opening your layout…</div>}><RoomEditor onScan={()=>{setPendingItem(null);setScanError(undefined);setScanOpen(true);}} onCreateDesign={createRoom} key={room.id} layout={room} openDesigner={designOnOpen} onChange={updateRoom} onBack={()=>navigate('layouts')} onUnavailable={()=>setPhone(true)} onNotify={notify} persisted={persisted} onPreview={openPreview}/></Suspense>:<>
+      {room?<Suspense fallback={<div className="workspace-loading"><span className="loading-ring"/>Opening your layout…</div>}><RoomEditor onScan={()=>{setPendingItem(null);setScanError(undefined);setScanOpen(true);}} onCreateDesign={createRoom} key={room.id} layout={room} onChange={updateRoom} onBack={()=>navigate('layouts')} onUnavailable={()=>setPhone(true)} onNotify={notify} persisted={persisted} onPreview={openPreview}/></Suspense>:<>
         {page==='photo'&&<Suspense fallback={<div className="workspace-loading"><span className="loading-ring"/>Opening photo studio…</div>}><PhotoStudio autoOpenCamera={autoOpenCamera}/></Suspense>}
         {page==='home'&&<><div className="page-heading"><div><h1>Overview</h1></div></div>
           <div className="start-grid"><section className="start-card"><div className="start-card-body"><h2>Find furniture</h2><LinkInput onProduct={openPreview}/></div></section><section className="start-card room-start"><div className="start-card-body"><h2>Plan a room</h2><p>Arrange furniture on a floor plan, then preview it in AR.</p><div className="start-card-actions"><button className="button primary" onClick={()=>startRoom()}><Plus size={16}/>New layout</button></div></div></section></div>
-          {ROOM_DESIGN_DEMO_ENABLED&&<section className="urban-demo-entry"><Wand2 size={24}/><div><span className="overline">CLAUDE EXPERIENCE · PREPARED DEMO</span><h2>Urban High-Rise</h2><p>Try any prompt, then choose from three arrangements of the same Amazon finds. Live AI is off.</p></div><div className="urban-demo-entry-actions"><button className="button primary" onClick={()=>openUrbanDemo()}>Try design demo<ArrowRight size={16}/></button><button className="text-button" onClick={()=>openUrbanDemo(true)}>Open furnished 3D layout<ArrowRight size={14}/></button></div></section>}
           <section className="photo-entry"><Camera size={20}/><div><h2>Photo to 3D</h2><p>Create a model from your own furniture.</p></div><button className="button secondary" onClick={openPhoto}><Camera size={16}/>Open camera</button></section>
           {workspace.layouts.length>0&&<section className="saved-layouts-section"><div className="section-heading"><h2>Recent layouts</h2>{workspace.layouts.length>0&&<button className="text-button" onClick={()=>navigate('layouts')}>View all</button>}</div>{layoutCards(layouts.slice(0,3))}</section>}
         </>}

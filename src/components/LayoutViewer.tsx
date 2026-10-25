@@ -5,13 +5,13 @@ import { exportLayout, exportNativeLayout } from '../lib/layout-model';
 import { bytesToBase64, hasNativeRoomAR, nativeLayoutMetadata, nativeRequest } from '../lib/native-room';
 import { Viewer } from './Viewer';
 import type { ViewerHandle } from './Viewer';
-import { isUrbanDemoLayout } from '../lib/urban-demo';
+import { isUrbanLayout } from '../lib/workspace';
 export default function LayoutViewer({layout,onUnavailable}:{layout:RoomLayout;onUnavailable:()=>void}){
   const [model,setModel]=useState<Awaited<ReturnType<typeof exportLayout>>|null>(null),[error,setError]=useState(''),[ready,setReady]=useState(false),[status,setStatus]=useState(''),[retry,setRetry]=useState(0);
   const viewer=useRef<ViewerHandle>(null);
   const [nativeBusy,setNativeBusy]=useState(false);
   const native=hasNativeRoomAR()&&!!layout.survey;
-  const gallery=isUrbanDemoLayout(layout)?layout.items.find(item=>item.product.placementKind==='wall'):undefined;
+  const gallery=isUrbanLayout(layout)?layout.items.find(item=>item.product.placementKind==='wall'):undefined;
   // Start inside the room, facing the artwork rather than its frame backs.
   const cameraOrbit=gallery?`${32-gallery.rotation}deg 72deg auto`:undefined;
   const nativeExport=useRef<AbortController|null>(null);

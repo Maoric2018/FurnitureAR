@@ -7,8 +7,6 @@ import type { DesignStatus } from '../lib/design-client';
 import Modal from './Modal';
 import FloorPlan from './FloorPlan';
 import './room-designer.css';
-import { ROOM_DESIGN_DEMO_ENABLED } from '../lib/design-mode';
-import DemoRoomDesigner from './DemoRoomDesigner';
 
 type Brief = { brief: string; style: string; budget: string; rules: Record<string, PieceRule> };
 const styles = ['Let the room lead', 'Warm minimal', 'Mid-century', 'Japandi', 'Colorful & playful', 'Industrial'];
@@ -24,11 +22,7 @@ function readBrief(layout: RoomLayout): Brief {
   } catch { /* A brief is optional; corrupted storage must not block the editor. */ }
   return defaults;
 }
-type Props={ layout: RoomLayout; onClose: () => void; onApply: (proposal: DesignProposal) => void };
-export default function RoomDesigner(props:Props){
-  return ROOM_DESIGN_DEMO_ENABLED?<DemoRoomDesigner {...props}/>:<LiveRoomDesigner {...props}/>;
-}
-function LiveRoomDesigner({ layout, onClose, onApply }: Props) {
+export default function RoomDesigner({ layout, onClose, onApply }: { layout: RoomLayout; onClose: () => void; onApply: (proposal: DesignProposal) => void }) {
   const [brief, setBrief] = useState(() => readBrief(layout));
   const [photos, setPhotos] = useState<DesignPhoto[]>([]), [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState<DesignStatus | null>(null), [statusError, setStatusError] = useState('');
@@ -89,7 +83,7 @@ function LiveRoomDesigner({ layout, onClose, onApply }: Props) {
           <p className="designer-hint">Budget covers additions to this layout. Set $0 to rearrange its current pieces.</p>
           <div className="designer-label">Show us the room <span>Optional · up to 4 photos</span></div>
           <div className="designer-photos">{photos.map((photo, i) => <div className="designer-photo" key={i}><img src={`data:${photo.mediaType};base64,${photo.data}`} alt={`Room reference ${i + 1}`}/><button type="button" disabled={busy || uploading} aria-label={`Remove room photo ${i + 1}`} onClick={() => setPhotos(current => current.filter((_, n) => n !== i))}><X size={14}/></button></div>)}{photos.length < 4 && <button className="designer-upload" type="button" disabled={busy || uploading} onClick={() => fileInput.current?.click()}>{uploading ? <LoaderCircle size={22} className="spin"/> : <Camera size={22}/>}<span>{uploading ? 'Preparing photo…' : 'Add photos'}</span></button>}<input ref={fileInput} className="sr-only" aria-label="Room photos" tabIndex={-1} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={e => void upload(e.target.files)}/></div>
-          <p className="designer-hint">Photos help with colors and style. They do not measure or map obstacles. They are sent to Claude only when you generate and are not saved with your layout.</p>
+          <p className="designer-hint">Photos help with colors and style. They do not measure or map obstacles. They are submitted only when you generate and are not saved with your layout.</p>
         </div>
         <aside className="designer-room-context"><div className="designer-context-title"><span>YOUR STARTING POINT</span><span>{layout.survey?.obstacles.length ? `${layout.survey.obstacles.length} existing · ${layout.items.length} added` : `${layout.items.length} pieces`}</span></div><div className="designer-context-plan"><FloorPlan layout={layout} compact/></div>
           {layout.items.length ? <div className="designer-piece-rules">{layout.items.map((item, i) => <label key={item.id}><span className="designer-piece-number">{i + 1}</span><span className="designer-rule-name">{item.name}</span><select aria-label={`Design rule for ${item.name}`} disabled={busy} value={brief.rules[item.id] ?? 'fixed'} onChange={e => change({ rules: { ...brief.rules, [item.id]: e.target.value as PieceRule } })}><option value="fixed">Keep here</option><option value="move">Can move</option><option value="remove">Leave out</option></select></label>)}</div> : <p className="designer-context-note">{layout.survey?.obstacles.length ? 'We’ll fit new pieces around the existing objects and keep doorways clear.' : 'A fresh floor plan. Tell us what you need and we’ll look for pieces that fit.'}</p>}
@@ -100,12 +94,12 @@ function LiveRoomDesigner({ layout, onClose, onApply }: Props) {
       </form> : <div className="designer-results">
         <div className="designer-result-heading"><p>{result.summary}</p><button className="text-button" disabled={busy} onClick={() => setEditing(true)}><SlidersHorizontal size={15}/>Edit brief</button></div>
         {!!result.observations.length && <details className="designer-observations"><summary>What the room suggests</summary><ul>{result.observations.map((observation, i) => <li key={i}>{observation}</li>)}</ul></details>}
-        <div className="designer-options">{result.proposals.map((proposal, i) => <button type="button" disabled={busy} className={`designer-option ${selected === i ? 'selected' : ''}`} key={proposal.id} aria-pressed={selected === i} onClick={() => { setSelected(i); setError(''); }}><div className="designer-option-number">0{i + 1}<span>{selected === i ? <Check size={16}/> : <ArrowRight size={16}/>}</span></div><div className="designer-option-plan"><FloorPlan layout={proposal.layout} compact/></div><div className="designer-option-copy"><h3>{proposal.name}</h3><p>{proposal.description}</p><div><strong>{money(proposal.total)}</strong><span>{proposal.added} new {proposal.added === 1 ? 'piece' : 'pieces'}</span></div></div></button>)}</div>
+        <div className="designer-options">{result.proposals.map((proposal, i) => <button type="button" disabled={busy} className={`designer-option ${selected === i ? 'selected' : ''}`} key={proposal.id} aria-pressed={selected === i} onClick={() => { setSelected(i); setError(''); }}><div className="designer-option-number">0{i + 1}<span>{selected === i ? <Check size={16}/> : <ArrowRight size={16}/>}</span></div><div className="designer-option-plan"><FloorPlan layout={proposal.layout} compact/></div><div className="designer-option-copy"><h3>{proposal.name}</h3><p>{proposal.description}</p><div><strong>{proposal.pricingAvailable===false?'See prices on Amazon':money(proposal.total)}</strong><span>{proposal.added} new {proposal.added === 1 ? 'piece' : 'pieces'}</span></div></div></button>)}</div>
         {active && <><div className="designer-selection"><div className="designer-shopping"><span className="overline">IN THIS DESIGN</span><ul>{active.layout.items.map(item => <li key={item.id}><span>{item.name}</span><span>{layout.items.some(i => i.id === item.id) ? 'In starting layout' : item.listing?.price ? money(item.listing.price.amount) : 'Price unavailable'}</span><a href={item.sourceUrl} target="_blank" rel="noreferrer" aria-label={`View ${item.name} on Amazon`}><ExternalLink size={14}/></a></li>)}</ul><p>{active.notes.join(' ')}</p></div><form className="designer-refine" onSubmit={e => { e.preventDefault(); void generate(active); }}><label className="designer-label">Close, but not quite?<textarea rows={3} maxLength={800} disabled={busy} value={refinement} onChange={e => setRefinement(e.target.value)} placeholder="Use a smaller desk and make it feel warmer."/></label><button className="button outlined" disabled={busy || !status?.configured || !refinement.trim()}>Refine this direction<ArrowRight size={16}/></button></form></div>
         {!!result.notices.length && <div className="designer-notices">{result.notices.map((notice, i) => <p key={i}>{notice}</p>)}</div>}
         <footer className="designer-form-footer"><span>Saved as a new layout. Your starting room stays available.</span><button className="button primary" disabled={busy} onClick={() => onApply(active)}>Use this design<ArrowRight size={17}/></button></footer></>}
       </div>}
-      {busy && <div className="designer-progress" role="status"><LoaderCircle className="spin" size={19}/><span>Reading your room, finding furniture, and checking the fit. This can take a few minutes.</span><button onClick={cancel}>Cancel</button></div>}
+      {busy && <div className="designer-progress" role="status"><LoaderCircle className="spin" size={19}/><span>Preparing your room layouts…</span><button onClick={cancel}>Cancel</button></div>}
       {error && <div className="designer-error" role="alert">{error}</div>}
     </div>
   </Modal>;

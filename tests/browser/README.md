@@ -68,6 +68,8 @@ Open `/tests/browser/ui-walkthrough.html` in the local preview. It renders the a
 
 See `docs/ui-audit-2026-10-24.md` for the audited controls and verification limits.
 
-## Prepared urban design demo
+## Room designer with server presets
 
-Open `/tests/browser/urban-demo.html` and choose **Run demo checks**. This runs the real app, checks canceling the loading sequence, three distinct arrangements using the same five products, selection-only saving, preservation of previous layouts, ready 3D/AR assets, move/Undo, and zero API calls. Use **Restore original workspace** afterward. The test validates browser rendering and AR readiness, not physical iPhone camera tracking.
+Run the development server with its Worker, open `/tests/browser/urban-demo.html`, and choose **Run designer checks**. The fixture seeds a normal starting room and a legacy saved layout, then opens the original **Design my room** form through the regular editor. It allows real same-origin `GET` and `POST /api/design/room` requests while blocking and counting other API or external fetches. Keep the server's preset provider enabled when running this fixture.
+
+Checks cover an arbitrary brief, cancellation without a late save, three distinct arrangements of the same five pieces, choosing the second option before applying it, preservation of previous rooms, five local GLBs, loaded 3D and enabled AR, normal move/Undo, and reopening the saved layout. It also checks that temporary mode labels are absent from visible text, accessibility labels, product metadata, and migrated legacy layout names/types. The fixture restores both workspace and saved brief with **Restore original workspace**. Browser checks do not measure external requests made inside the Worker or physical iPhone camera tracking; server-provider isolation is covered separately by backend tests.

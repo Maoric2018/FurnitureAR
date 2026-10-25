@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { Box3,Group,Vector3 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { unzipSync } from 'three/addons/libs/fflate.module.js';
-import { createUrbanDemoRoom, createUrbanDemoProposal, createUrbanDemoProposals, runUrbanDemo, URBAN_DEMO_PRODUCTS, URBAN_DEMO_OPTIONS, URBAN_DEMO_NAME } from '../src/lib/urban-demo.ts';
+import { createUrbanDemoRoom, createUrbanDemoProposal, createUrbanDemoProposals, URBAN_DEMO_PRODUCTS, URBAN_DEMO_OPTIONS, URBAN_DEMO_NAME } from '../src/lib/urban-demo.ts';
+import { parseDesignResult } from '../src/lib/design-client.ts';
 import { parseWorkspace } from '../src/lib/workspace.ts';
 import { placementWarnings } from '../src/lib/room-scan.ts';
 import { arrangeModels, exportNativeLayout } from '../src/lib/layout-model.ts';
@@ -43,6 +44,9 @@ test('three distinct arrangements reuse the same five products without collision
   const expected=original.layout.items.map(item=>({id:item.product.id,url:item.sourceUrl,asin:item.product.variants[0].asin}));
   for(const [index,proposal] of proposals.entries()){
     assert.equal(proposal.layout.items.length,5);
+    assert.equal(proposal.pricingAvailable,false);
+    assert.equal(proposal.name,`Urban High-Rise · ${URBAN_DEMO_OPTIONS[index].name}`);
+    assert.equal(proposal.layout.roomType,'Urban high-rise');
     assert.equal(proposal.description,URBAN_DEMO_OPTIONS[index].description);
     assert.deepEqual(proposal.layout.survey,room.survey);
     assert.deepEqual(proposal.layout.items.map(item=>({id:item.product.id,url:item.sourceUrl,asin:item.product.variants[0].asin})),expected);
@@ -77,32 +81,53 @@ test('all bundled demo models have their declared dimensions and colored materia
   }
 });
 
-test('published design endpoint is disabled even with provider keys, without reading prompt/photos or calling providers',async t=>{
-  const fetch=t.mock.method(globalThis,'fetch',async()=>{throw new Error('An external call must never run in demo mode');});
+test('design endpoint returns ordinary status and three layouts after a delay without reading prompts or calling providers',async t=>{
+  const fetch=t.mock.method(globalThis,'fetch',async()=>{throw new Error('An external call must never run');});
+  t.mock.timers.enable({apis:['setTimeout']});
   const env={ASSETS:{fetch:async()=>new Response('asset')},ANTHROPIC_API_KEY:'fake-test-key',SERPAPI_API_KEY:'fake-test-key'};
   const status=await worker.fetch(new Request('https://roomify.test/api/design/room'),env);
-  assert.deepEqual(await status.json(),{mode:'demo',configured:false,shopping:false,signedIn:false,authorized:true});
+  assert.deepEqual(await status.json(),{configured:true,shopping:false,signedIn:false,authorized:true});
+  assert.equal(status.headers.get('Cache-Control'),'no-store');
   const request=new Request('https://roomify.test/api/design/room',{method:'POST',body:'not even JSON'});
-  const response=await worker.fetch(request,env);
-  assert.equal(response.status,503);assert.equal((await response.json() as any).error.code,'DESIGN_DEMO_MODE');
+  let resolved=false;
+  const pending=worker.fetch(request,env).then(response=>{resolved=true;return response;});
+  t.mock.timers.tick(3399);await Promise.resolve();
+  assert.equal(resolved,false,'The existing loading UI remains visible during the server delay');
+  t.mock.timers.tick(1);
+  const response=await pending;
+  assert.equal(response.status,200);assert.equal(response.headers.get('Cache-Control'),'no-store');
+  const result=parseDesignResult(await response.json());
+  assert.equal(result.proposals.length,3);
+  assert.deepEqual(result.proposals.map(proposal=>proposal.name),URBAN_DEMO_OPTIONS.map(option=>`Urban High-Rise · ${option.name}`));
+  assert.ok(result.proposals.every(proposal=>proposal.pricingAvailable===false));
+  const visible=[result.summary,...result.observations,...result.notices,...result.proposals.flatMap(proposal=>[
+    proposal.name,proposal.description,proposal.layout.name,proposal.layout.roomType,proposal.draft.name,proposal.draft.description,...proposal.notes,
+    ...proposal.layout.items.flatMap(item=>[item.name,item.product.name,item.product.description,item.product.tagline]),
+  ])];
+  assert.equal(visible.some(text=>/demo|prepared|live.?AI.*off/i.test(text)),false);
   assert.equal(request.bodyUsed,false);assert.equal(fetch.mock.calls.length,0);
 });
 
-test('canceling simulated preparation never applies a late result or contacts a backend',async t=>{
-  const fetch=t.mock.method(globalThis,'fetch',async()=>{throw new Error('No API requests');});
-  const controller=new AbortController(),stages:number[]=[];
-  const pending=runUrbanDemo(controller.signal,stage=>stages.push(stage));
-  controller.abort();await assert.rejects(pending,error=>error instanceof DOMException&&error.name==='AbortError');
-  assert.deepEqual(stages,[0]);assert.equal(fetch.mock.calls.length,0);
-});
-
-test('simulated preparation returns all three choices without contacting a backend',async t=>{
+test('canceling a design request stops the wait without reading its body or contacting providers',async t=>{
   const fetch=t.mock.method(globalThis,'fetch',async()=>{throw new Error('No API requests');});
   t.mock.timers.enable({apis:['setTimeout']});
-  const stages:number[]=[],pending=runUrbanDemo(new AbortController().signal,stage=>stages.push(stage));
-  for(let i=0;i<4;i++){t.mock.timers.tick(850);await Promise.resolve();}
-  const proposals=await pending;
-  assert.deepEqual(stages,[0,1,2,3]);assert.equal(proposals.length,3);assert.equal(fetch.mock.calls.length,0);
+  const controller=new AbortController();
+  const request=new Request('https://roomify.test/api/design/room',{method:'POST',body:'private brief and photos',signal:controller.signal});
+  const pending=worker.fetch(request,{ASSETS:{fetch:async()=>new Response('asset')}});
+  controller.abort();await assert.rejects(pending,error=>error instanceof DOMException&&error.name==='AbortError');
+  t.mock.timers.tick(3400);
+  assert.equal(request.bodyUsed,false);assert.equal(fetch.mock.calls.length,0);
+});
+
+test('already canceled requests and unsupported methods cannot start a design',async t=>{
+  const fetch=t.mock.method(globalThis,'fetch',async()=>{throw new Error('No API requests');});
+  t.mock.timers.enable({apis:['setTimeout']});
+  const env={ASSETS:{fetch:async()=>new Response('asset')}},controller=new AbortController();controller.abort();
+  const request=new Request('https://roomify.test/api/design/room',{method:'POST',body:'private brief',signal:controller.signal});
+  await assert.rejects(worker.fetch(request,env),error=>error instanceof DOMException&&error.name==='AbortError');
+  const response=await worker.fetch(new Request('https://roomify.test/api/design/room',{method:'DELETE'}),env);
+  assert.equal(response.status,405);assert.equal(response.headers.get('Allow'),'GET, POST');
+  assert.equal(request.bodyUsed,false);assert.equal(fetch.mock.calls.length,0);
 });
 
 test('all three presets export colored AR scenes with elevated pictures and floor-level rugs',async()=>{

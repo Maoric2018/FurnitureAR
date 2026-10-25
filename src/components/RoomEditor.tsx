@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Armchair, Box, Check, ChevronDown, Copy, ExternalLink, Grid2X2, Maximize2, Magnet, Plus, Redo2, RotateCcw, RotateCw, Trash2, Undo2, ScanLine, TriangleAlert, Wand2 } from 'lucide-react';
 import type { PlacedItem, ProductItem, RoomLayout } from '../lib/workspace';
-import { availableItemVariants, clampPlacement, duplicatePlacedItem, placeItem, selectItemVariant, sourceLabel, placementElevationLimit } from '../lib/workspace';
+import { availableItemVariants, clampPlacement, duplicatePlacedItem, placeItem, selectItemVariant, sourceLabel, placementElevationLimit, isUrbanLayout } from '../lib/workspace';
 import FloorPlan from './FloorPlan';
 import RoomDesigner from './RoomDesigner';
 import LayoutViewer from './LayoutViewer';
@@ -14,13 +14,12 @@ import ExistingObjects from './ExistingObjects';
 import { placementWarnings } from '../lib/room-scan';
 import type { RoomObstacle } from '../lib/room-scan';
 import { hasNativeRoomAR } from '../lib/native-room';
-import { isUrbanDemoLayout } from '../lib/urban-demo';
-interface Props {layout:RoomLayout;onChange:(layout:RoomLayout)=>void;onBack:()=>void;onUnavailable:()=>void;onNotify:(message:string)=>void;persisted:boolean;onPreview:(item:ProductItem)=>void;onCreateDesign:(layout:RoomLayout)=>void;onScan:()=>void;openDesigner?:boolean}
-export default function RoomEditor({layout,onChange,onBack,onUnavailable,onNotify,persisted,onPreview,onCreateDesign,onScan,openDesigner=false}:Props){
-  const [view,setView]=useState<'plan'|'3d'>(()=>isUrbanDemoLayout(layout)&&layout.items.length?'3d':'plan'),[selectedId,setSelectedId]=useState<string|undefined>(layout.items[0]?.id);
+interface Props {layout:RoomLayout;onChange:(layout:RoomLayout)=>void;onBack:()=>void;onUnavailable:()=>void;onNotify:(message:string)=>void;persisted:boolean;onPreview:(item:ProductItem)=>void;onCreateDesign:(layout:RoomLayout)=>void;onScan:()=>void}
+export default function RoomEditor({layout,onChange,onBack,onUnavailable,onNotify,persisted,onPreview,onCreateDesign,onScan}:Props){
+  const [view,setView]=useState<'plan'|'3d'>(()=>isUrbanLayout(layout)&&layout.items.length?'3d':'plan'),[selectedId,setSelectedId]=useState<string|undefined>(layout.items[0]?.id);
   const [history,setHistory]=useState<RoomLayout[]>([]),[future,setFuture]=useState<RoomLayout[]>([]),[showSize,setShowSize]=useState(false);
   const [snap,setSnap]=useState(true);
-  const [designOpen,setDesignOpen]=useState(()=>{if(openDesigner)return true;const params=new URLSearchParams(window.location.search);return params.get('layout')===layout.id&&params.get('design')==='1';});
+  const [designOpen,setDesignOpen]=useState(()=>{const params=new URLSearchParams(window.location.search);return params.get('layout')===layout.id&&params.get('design')==='1';});
   useEffect(()=>{
     const url=new URL(window.location.href);
     if(url.searchParams.get('layout')!==layout.id)return;
@@ -89,7 +88,6 @@ export default function RoomEditor({layout,onChange,onBack,onUnavailable,onNotif
     if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='y'){event.preventDefault();redo();}
   }}>
     <div className="editor-heading"><div className="editor-title"><button className="icon-button" aria-label="Back to layouts" title="Back to layouts" onClick={onBack}><ArrowLeft size={20}/></button><div><input aria-label="Layout name" value={nameDraft} onChange={event=>setNameDraft(event.target.value)} maxLength={80} onBlur={event=>{const name=event.target.value.trim();if(name&&name!==layout.name)commit({...layout,name});else setNameDraft(layout.name);}}/><span className="editor-meta">{layout.roomType}<span className="meta-separator">·</span>{persisted?<span className="save-status" title="Saved on this device"><Check size={11}/>Saved</span>:<span className="save-warning">Not saved · storage unavailable</span>}</span></div></div><div className="editor-heading-actions"><button className="button outlined designer-trigger" onClick={()=>setDesignOpen(true)}><Wand2 size={16}/>Design my room</button><button className="button primary" disabled={!layout.items.length} onClick={()=>setView('3d')}>Preview layout</button></div></div>
-    {isUrbanDemoLayout(layout)&&<div className="urban-demo-ready"><strong>Urban High-Rise demo is ready.</strong> Five editable pieces from three Amazon listings. Tap a product’s link to shop, or View in AR to place the arrangement in your room. Models are product-inspired approximations; scanned furniture remains as outlines.</div>}
     <div className="room-scan-bar"><span><ScanLine size={16}/>{layout.survey?`Room scanned · ${layout.survey.obstacles.length} furniture outlines`:"Start with your real room"}</span>{layout.survey&&<span className="scan-paused">{hasNativeRoomAR()?'Room-aligned preview available':'Room alignment in the iPhone app'}</span>}<button className="text-button" onClick={onScan}>New layout from scan</button></div>
     <div className="editor-workspace"><section className="plan-workspace"><div className="plan-toolbar"><div className="view-tabs segmented"><button className={view==='plan'?'active':''} aria-pressed={view==='plan'} onClick={()=>setView('plan')}><Grid2X2 size={15}/>Floor plan</button><button className={view==='3d'?'active':''} aria-pressed={view==='3d'} onClick={()=>setView('3d')} disabled={!layout.items.length}><Box size={15}/>3D & AR</button></div><div className="plan-actions"><button className="icon-button" aria-label="Undo layout change" disabled={!history.length} title="Undo (⌘/Ctrl Z)" onClick={undo}><Undo2 size={17}/></button><button className="icon-button" aria-label="Redo layout change" title="Redo (⌘/Ctrl Shift Z)" disabled={!future.length} onClick={redo}><Redo2 size={17}/></button><button className="room-size-button" title={layout.survey?"Bounds from your room scan":"Edit room dimensions"} disabled={!!layout.survey} onClick={()=>setShowSize(true)}><Maximize2 size={14}/>{Number(layout.width.toFixed(2))} × {Number(layout.depth.toFixed(2))} m{!layout.survey&&<ChevronDown size={13}/>}</button></div></div>
       {layout.survey&&view==='plan'&&<div className="plan-legend"><span><i className="existing-swatch"/>Existing furniture</span><span><i className="new-piece-swatch"/>New products</span><span>Check scan measurements</span></div>}
@@ -113,7 +111,7 @@ export default function RoomEditor({layout,onChange,onBack,onUnavailable,onNotif
       {selectedObstacle&&<ExistingObjects obstacle={selectedObstacle} index={outlineIndex+1} onChange={changeObstacle} onDuplicate={layout.survey!.obstacles.length<200?duplicateSelected:undefined} onRemove={removeSelected}/>}
       <p className="inspector-note">{layout.survey?'Scanned outlines are editable. AR shows products with 3D models.':'Products need a matching 3D model for AR.'}</p>
     </aside></div>
-    {designOpen&&<RoomDesigner layout={layout} onClose={()=>setDesignOpen(false)} onApply={proposal=>{setDesignOpen(false);onCreateDesign(proposal.layout);onNotify(isUrbanDemoLayout(proposal.layout)?'Urban High-Rise demo added. Your 3D & AR preview is ready.':"Design saved as a new layout. Move any piece to make it yours.");}}/>}
+    {designOpen&&<RoomDesigner layout={layout} onClose={()=>setDesignOpen(false)} onApply={proposal=>{setDesignOpen(false);onCreateDesign(proposal.layout);onNotify("Design saved as a new layout. Move any piece to make it yours.");}}/>}
     {showSize&&<Modal label="Room dimensions" onClose={()=>setShowSize(false)} className="small-modal"><form className="modal-form" onSubmit={event=>{event.preventDefault();const data=new FormData(event.currentTarget);const width=Number(data.get('width')),depth=Number(data.get('depth'));if(![width,depth].every(value=>Number.isFinite(value)&&value>=1&&value<=20))return;const next={...layout,width,depth};commit({...next,items:layout.items.map(item=>clampPlacement(item,next))});setShowSize(false);}}><h2>Room dimensions</h2><div className="two-fields"><label className="field-label">Width (m)<input name="width" type="number" min="1" max="20" step="any" defaultValue={layout.width} required/></label><label className="field-label">Depth (m)<input name="depth" type="number" min="1" max="20" step="any" defaultValue={layout.depth} required/></label></div><button className="button primary" type="submit">Save dimensions</button></form></Modal>}
   </div>;
 }

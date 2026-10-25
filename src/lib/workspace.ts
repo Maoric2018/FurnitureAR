@@ -23,6 +23,9 @@ export interface RoomLayout {
   id: string; name: string; roomType: string; width: number; depth: number;
   items: PlacedItem[]; updatedAt: string; survey?: RoomSurvey;
 }
+export function isUrbanLayout(layout:RoomLayout):boolean {
+  return layout.roomType==='Urban high-rise'||layout.roomType==='Demo · urban high-rise';
+}
 // Keep legacy library data readable; new products are saved only within layouts.
 export interface Workspace { layouts: RoomLayout[]; items: ProductItem[] }
 export const WORKSPACE_KEY = 'furniture-ar:workspace:v2';
@@ -153,6 +156,12 @@ export function parseWorkspace(raw:unknown):Workspace {
       const listing = item.listing ? parseListing(item.listing) : undefined;
       if (item.product === null && !listing) return null;
       let product=item.product === null ? null : parseProduct(item.product);
+      if(product?.id.startsWith('urban-')){
+        product={...product,
+          tagline:product.tagline==='Urban High-Rise demo selection'?'Urban High-Rise selection':product.tagline,
+          description:product.description==='Original product-inspired 3D approximation for the prepared demonstration. Confirm measurements and availability on the Amazon listing.'
+            ?'Product-inspired 3D approximation. Confirm measurements and availability on the Amazon listing.':product.description};
+      }
       // Expand only legacy sample items, never an imported listing's reported finishes.
       if(!listing && product?.id===placeholderProduct.id && product.variants.length===1 && product.variants[0].id==='oak'
           && product.variants[0].modelSrc===placeholderProduct.variants[0].modelSrc) {
@@ -177,7 +186,11 @@ export function parseWorkspace(raw:unknown):Workspace {
         items.push(clampPlacement({...item,product:item.product,x:entry.x,z:entry.z,rotation:entry.rotation},bounds));
       }
     }
-    layouts.push({...value,items,...(survey?{survey}:{})});
+    // Migrate only app-authored labels; preserve user names, geometry and edits.
+    const roomType=value.roomType==='Demo · urban high-rise'?'Urban high-rise':value.roomType==='Demo · scanned room'?'Scanned room':value.roomType;
+    const name=/^Urban High-Rise · Demo(?: copy)*$/.test(value.name)
+      ?value.name.replace('Urban High-Rise · Demo','Urban High-Rise · Gallery Retreat'):value.name;
+    layouts.push({...value,name,roomType,items,...(survey?{survey}:{})});
   }
   return {layouts,items:Array.isArray(data.items)?data.items.map(readItem).filter((item):item is ProductItem=>!!item):[]};
 }
