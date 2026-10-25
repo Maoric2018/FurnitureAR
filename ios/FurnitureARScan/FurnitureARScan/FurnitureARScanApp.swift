@@ -16,8 +16,10 @@ private struct ScanHome: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var tracking = RoomTrackingStore()
     @State private var planner: PlannerDestination?
-    @AppStorage("plannerAddress") private var plannerAddress = "https://furniture-ar-studio-eric.ericshengyanjin.chatgpt.site/"
+    @AppStorage("plannerAddress") private var plannerAddress = ""
     @State private var scanning = false
+    @State private var openingCamera = false
+    @State private var scanReturnURL: URL?
     @State private var room: RoomDocument? = loadRoom()
     @State private var shareFile: ShareFile?
     @State private var error: String?
@@ -36,15 +38,33 @@ private struct ScanHome: View {
             try room.data().write(to: Self.savedURL, options: [.atomic,.completeFileProtection])
         } catch { self.error = "The scan is ready but could not be saved on this device. Export the room file before closing the app." }
     }
-    private func startScan() {
-        guard supported else { return }
+    private var canStartScan: Bool { supported && !scanning && !openingCamera && planner == nil && shareFile == nil }
+    private func startScan(returningTo destination: URL? = nil) {
+        guard canStartScan else { return }
+        // Freeze the route before the asynchronous permission prompt. A second
+        // launch cannot change this scan's destination while permission is open.
+        let route = destination ?? (try? PlannerReturn.address(plannerAddress))
+        openingCamera = true
         Task { @MainActor in
+            defer { openingCamera = false }
             let granted: Bool
             if AVCaptureDevice.authorizationStatus(for: .video) == .authorized { granted = true }
             else { granted = await AVCaptureDevice.requestAccess(for: .video) }
-            if granted { scanning = true }
+            if granted { scanReturnURL = route; scanning = true }
             else { permissionDenied = true; error = "Allow Camera access in Settings to scan your room." }
         }
+    }
+    private func openScan(_ url: URL) {
+        guard url.scheme?.lowercased() == "furniturear-scan" else { return }
+        guard canStartScan else {
+            error = "Finish or close the current scan or planner, then open the scanner from your website again."
+            return
+        }
+        do {
+            let destination = try PlannerReturn.launch(url, savedAddress: plannerAddress)
+            if let destination { plannerAddress = destination.absoluteString }
+            startScan(returningTo: destination)
+        } catch { self.error = error.localizedDescription }
     }
     var body: some View {
         NavigationStack {
@@ -66,8 +86,10 @@ private struct ScanHome: View {
                         Button {
                                 guard !current.name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty else { error="Give this room a name first."; return }
                                 save(current)
-                                guard let url=URL(string:plannerAddress),url.scheme == "https",url.host != nil,url.user == nil,url.password == nil else { error="Enter an HTTPS planner address first.";return }
-                                planner=PlannerDestination(url:url,room:current)
+                                do {
+                                    let url = try PlannerReturn.capturedAddress(current.plannerURL, manualAddress: plannerAddress)
+                                    planner=PlannerDestination(url:url,room:current)
+                                } catch { self.error = error.localizedDescription }
                         } label: { Label("Open in Roomify",systemImage:"arrow.up.right").frame(maxWidth:.infinity) }
                         .buttonStyle(.borderedProminent).controlSize(.large)
                         Button {
@@ -90,27 +112,39 @@ private struct ScanHome: View {
                             Label("Keep furniture and doorways in view.",systemImage:"sofa")
                         }.font(.subheadline)
                     }
-                    Button(action:startScan) { Label(room == nil ? "Scan my room" : "Scan another room",systemImage:"viewfinder").frame(maxWidth:.infinity) }
-                        .buttonStyle(.borderedProminent).controlSize(.large).disabled(!supported)
+                    Button { startScan() } label: { Label(room == nil ? "Scan my room" : "Scan another room",systemImage:"viewfinder").frame(maxWidth:.infinity) }
+                        .buttonStyle(.borderedProminent).controlSize(.large).disabled(!canStartScan)
                     if !supported { Text("Scanning needs a LiDAR-equipped iPhone or iPad. Your iPhone 16 Pro is supported; the simulator cannot scan.").font(.footnote).foregroundStyle(.secondary) }
                     if let notice=tracking.mapNotice { Text(notice).font(.footnote).foregroundStyle(.secondary) }
                     DisclosureGroup("Planner address") {
                         TextField("https://…",text:$plannerAddress).textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL).textFieldStyle(.roundedBorder)
-                        Text("Use the updated hosted website or an HTTPS development preview. Changing this address changes where your room measurements are sent.").font(.footnote).foregroundStyle(.secondary)
+                        Text("Opening the scanner from a website sets this automatically. This address is used for new standalone scans and older scans without a saved destination. A completed scan keeps the website it started from.").font(.footnote).foregroundStyle(.secondary)
                     }
                     Text("The tracking map stays on your phone. The planner receives room measurements; Design my room sends measurements and any photos you choose to Claude. Scans are estimates—confirm important dimensions.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }.padding(26)
             }.background(Color(red:0.96,green:0.97,blue:0.94))
                 .navigationTitle("Room scanner").navigationBarTitleDisplayMode(.inline)
-                .fullScreenCover(isPresented:$scanning) { CaptureScreen(tracking:tracking) { result in room=result; save(result) } }
-                .fullScreenCover(item:$planner) { NativeWorkspace(destination:$0,tracking:tracking) { result in room=result; save(result) } }
+                .fullScreenCover(isPresented:$scanning) {
+                    CaptureScreen(tracking:tracking) { result in
+                        var captured = result
+                        captured.plannerURL = scanReturnURL?.absoluteString
+                        room=captured; save(captured)
+                    }
+                }
+                .fullScreenCover(item:$planner) { destination in
+                    NativeWorkspace(destination:destination,tracking:tracking) { result in
+                        var captured = result
+                        captured.plannerURL = destination.url.absoluteString
+                        room=captured; save(captured)
+                    }
+                }
                 .sheet(item:$shareFile) { ShareSheet(url:$0.url) }
                 .alert("Room scanner",isPresented:Binding(get:{error != nil},set:{if !$0 {error=nil;permissionDenied=false}})) {
                     if permissionDenied { Button("Open Settings") { openURL(URL(string:UIApplication.openSettingsURLString)!) } }
                     Button("OK",role:.cancel) { error=nil;permissionDenied=false }
                 } message: { Text(error ?? "") }
-                .onOpenURL { url in if url.scheme == "furniturear-scan" && url.host == "scan" { startScan() } }
+                .onOpenURL(perform:openScan)
                 .onChange(of:scenePhase) { _,phase in if phase != .active { tracking.suspend() } }
         }
     }

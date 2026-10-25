@@ -25,6 +25,8 @@ struct RoomDocument: Codable {
     var capturedAt: String
     var scanId: String?
     var floorY: Float?
+    // Optional for compatibility with existing scans. Always revalidated before navigation.
+    var plannerURL: String?
     var walls: [ScanWall]
     var openings: [ScanOpening]
     var obstacles: [ScanObstacle]
@@ -102,11 +104,14 @@ struct RoomDocument: Codable {
         try data().write(to: url, options: [.atomic, .completeFileProtection])
         return url
     }
-    func webURL() throws -> URL? {
+    func webURL(destination: URL) throws -> URL? {
+        let target = try PlannerReturn.address(destination.absoluteString)
         let encoded = try data().base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
         // Large scans use a file instead of a URL that a browser might truncate.
         guard encoded.count <= 12_000 else { return nil }
-        return URL(string: "https://furniture-ar-studio-eric.ericshengyanjin.chatgpt.site/#room-scan=\(encoded)")
+        var components = URLComponents(url: target, resolvingAgainstBaseURL: false)
+        components?.fragment = "room-scan=\(encoded)"
+        return components?.url
     }
 }
 enum ScanError: LocalizedError {
