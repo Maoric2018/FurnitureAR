@@ -14,6 +14,8 @@ import SwiftUI
     private var interrupted = false
     private var epoch = UUID()
     private var normalFrames = 0
+    private var layoutToScan = matrix_identity_float4x4
+    private var markerOrigin: simd_float4x4?
     private var deadline: Task<Void,Never>?
     private let directory = URL.applicationSupportDirectory.appendingPathComponent("FurnitureARScan/rooms",isDirectory:true)
 
@@ -25,6 +27,7 @@ import SwiftUI
     }
     func beginScan() {
         alignedOrigin=nil
+        layoutToScan=matrix_identity_float4x4;markerOrigin=nil
         deadline?.cancel(); epoch = UUID(); liveScanId = nil; expectedMarker = nil; markerSeen = false; restoring = false; ready = false; normalFrames = 0; interrupted = false; mapNotice = nil
         let config = ARWorldTrackingConfiguration(); config.planeDetection = [.horizontal,.vertical]
         session.run(config,options:[.resetTracking,.removeExistingAnchors])
@@ -32,7 +35,7 @@ import SwiftUI
     func completeScan(_ room: RoomDocument) {
         guard let id = room.scanId, let origin = room.floorPlanOrigin else { return }
         liveScanId = id; expectedMarker = "furniture-room-\(id.lowercased())"; markerSeen = true; restoring = false; normalFrames = 0
-        alignedOrigin=origin
+        layoutToScan=matrix_identity_float4x4;markerOrigin=origin;alignedOrigin=origin
         session.delegate = self
         session.add(anchor:ARAnchor(name:expectedMarker!,transform:origin))
         do {
@@ -65,11 +68,14 @@ import SwiftUI
     /// Return a trusted native transform only for the scan associated with this layout.
     func prepare(_ id: String?, walls:[PlanWall]) -> simd_float4x4? {
         deadline?.cancel(); session.delegate = self
-        guard let room = document(id), let scanId = room.scanId, let transform = room.floorPlanOrigin,
-              RoomAlignment.samePlan(walls,room.normalizedWalls) else {
+        guard let room = document(id), let scanId = room.scanId, let origin = room.floorPlanOrigin,
+              let planTransform=RoomAlignment.planTransform(from:walls,to:room.normalizedWalls) else {
             startManualSession(); message = "This room has no saved tracking map on this phone. Match a wall to align it."; return nil
         }
+        layoutToScan=planTransform
         if liveScanId == scanId && !interrupted && !restoring {
+            let transform=(markerOrigin ?? origin)*layoutToScan
+            alignedOrigin=transform
             expectedMarker = "furniture-room-\(scanId.lowercased())"; markerSeen = true
             message = ready ? "Aligned with your scan" : "Hold steady while room tracking resumes."
             return transform
@@ -80,7 +86,7 @@ import SwiftUI
             startManualSession(); message = "No usable saved map. Match a wall to align this layout."; return nil
         }
         epoch = UUID(); ready = false; normalFrames = 0; markerSeen = false; restoring = true; interrupted = false; liveScanId = scanId
-        alignedOrigin=nil
+        alignedOrigin=nil;markerOrigin=nil
         expectedMarker = "furniture-room-\(scanId.lowercased())"
         message = "Recognizing your room… Slowly point at walls and furniture you scanned."
         let config = ARWorldTrackingConfiguration(); config.planeDetection = [.horizontal,.vertical]; config.initialWorldMap = map
@@ -89,10 +95,11 @@ import SwiftUI
             try? await Task.sleep(for:.seconds(25)); guard !Task.isCancelled,let self,!self.ready else { return }
             self.message = "Room not recognized yet. Look at the scanned area or choose Match a wall."
         }
-        return transform
+        return origin*layoutToScan
     }
     func startManualSession() {
         alignedOrigin=nil
+        layoutToScan=matrix_identity_float4x4;markerOrigin=nil
         deadline?.cancel(); epoch = UUID(); liveScanId = nil; expectedMarker = nil; markerSeen = false; restoring = false; interrupted = false; ready = false; normalFrames = 0
         session.delegate = self
         let config = ARWorldTrackingConfiguration(); config.planeDetection = [.horizontal,.vertical]
@@ -127,7 +134,8 @@ import SwiftUI
     nonisolated private func receive(_ anchors:[ARAnchor]) {
         Task { @MainActor [weak self] in
             guard let self,let marker=self.expectedMarker,let anchor=anchors.first(where:{$0.name == marker}) else{return}
-            self.alignedOrigin=anchor.transform;self.markerSeen=true
+            self.markerOrigin=anchor.transform
+            self.alignedOrigin=anchor.transform*self.layoutToScan;self.markerSeen=true
         }
     }
     nonisolated func sessionWasInterrupted(_ session: ARSession) { Task { @MainActor [weak self] in self?.ready=false;self?.normalFrames=0;self?.interrupted=true;self?.message="Camera interrupted. Reopen the preview to restore room alignment." } }

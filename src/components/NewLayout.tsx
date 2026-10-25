@@ -3,18 +3,17 @@ import { ArrowLeft, ArrowRight, Ruler, ScanLine } from 'lucide-react';
 import { createLayout } from '../lib/workspace';
 import type { RoomLayout } from '../lib/workspace';
 import Modal from './Modal';
-import { hasNativeRoomAR, nativeRequest } from '../lib/native-room';
 
-export default function NewLayout({ onClose, onCreate }: {
+export default function NewLayout({ onClose, onCreate, onScan }: {
   onClose: () => void;
+  onScan: () => void;
   onCreate: (layout: RoomLayout) => void;
 }) {
-  const [step, setStep] = useState<'choose' | 'manual' | 'scan'>('choose');
+  const [step, setStep] = useState<'choose' | 'manual'>('choose');
   const [name, setName] = useState('');
   const [width, setWidth] = useState('5');
   const [depth, setDepth] = useState('4');
   const [error, setError] = useState('');
-  const native=hasNativeRoomAR();
 
   return <Modal label="New layout" onClose={onClose} className="small-modal">
     {step === 'choose' ? <div className="modal-form room-setup">
@@ -25,17 +24,11 @@ export default function NewLayout({ onClose, onCreate }: {
         <button className="room-method" aria-label="Enter room size" onClick={() => setStep('manual')}>
           <Ruler size={24}/><span><strong>Enter room size</strong><small>Set the width and depth yourself.</small></span><ArrowRight size={18}/>
         </button>
-        <button className="room-method" aria-label="Scan your room" onClick={() => {if(native)void nativeRequest('scan').then(onClose).catch(e=>setError(String(e)));else setStep('scan');}}>
-          <ScanLine size={24}/><span><strong>Scan your room {!native&&<span className="coming-soon">In the iPhone app</span>}</strong><small>{native?'Capture walls and furniture with LiDAR.':'Room scanning is available inside the iPhone app.'}</small></span><ArrowRight size={18}/>
+        <button className="room-method" aria-label="Scan your room" onClick={onScan}>
+          <ScanLine size={24}/><span><strong>Scan your room</strong><small>Scan with LiDAR or import a saved room file.</small></span><ArrowRight size={18}/>
         </button>
       </div>
       {error&&<p role="alert" className="form-error">{error}</p>}
-    </div> : step === 'scan' ? <div className="modal-form room-setup">
-      <button type="button" className="text-button setup-back" onClick={() => setStep('choose')}><ArrowLeft size={15}/>Back</button>
-      <span className="overline">IN THE IPHONE APP</span>
-      <h2>Your room, captured.</h2>
-      <p>Use the Roomify iPhone app to capture your walls and existing furniture. On the web, enter your room’s dimensions to start arranging.</p>
-      <button className="button primary" onClick={() => setStep('manual')}>Enter room size<ArrowRight size={16}/></button>
     </div> : <form className="modal-form room-setup" onSubmit={event => {
       event.preventDefault();
       try { onCreate(createLayout(name, 'Room', Number(width), Number(depth))); }

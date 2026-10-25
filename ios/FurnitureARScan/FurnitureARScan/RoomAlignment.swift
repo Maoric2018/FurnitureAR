@@ -33,8 +33,8 @@ enum AlignmentError: LocalizedError {
         }
     }
 }
-/// Native RoomPlan and the editor share X/Z axes. Only the web's centering offset
-/// and the measured floor height must be restored. Never recenter the USDZ.
+/// Restore the editor's rigid floor-plan rotation and centering relative to the
+/// trusted native scan. Never rescale or independently recenter the USDZ.
 enum RoomAlignment {
     static func samePlan(_ a:[PlanWall],_ b:[PlanWall])->Bool {
         guard a.count == b.count else{return false}
@@ -42,6 +42,35 @@ enum RoomAlignment {
             abs(first.start.x-second.start.x)<0.02 && abs(first.start.z-second.start.z)<0.02 &&
             abs(first.end.x-second.end.x)<0.02 && abs(first.end.z-second.end.z)<0.02
         }
+    }
+    /// The importer keeps wall order/endpoints intact while rotating and centering.
+    /// Fit one planar rotation/translation, then verify EVERY endpoint against the
+    /// phone's saved scan. A different outline must use manual alignment instead.
+    static func planTransform(from source:[PlanWall],to target:[PlanWall])->simd_float4x4? {
+        guard source.count >= 2,source.count == target.count,source.count <= 200 else{return nil}
+        let a=source.flatMap{[SIMD2($0.start.x,$0.start.z),SIMD2($0.end.x,$0.end.z)]}
+        let b=target.flatMap{[SIMD2($0.start.x,$0.start.z),SIMD2($0.end.x,$0.end.z)]}
+        guard (a+b).allSatisfy({$0.x.isFinite && $0.y.isFinite && abs($0.x)<=100 && abs($0.y)<=100}),
+              (source+target).allSatisfy({hypot($0.end.x-$0.start.x,$0.end.z-$0.start.z)>=0.02}) else{return nil}
+        let centerA=a.reduce(SIMD2<Float>.zero,+)/Float(a.count)
+        let centerB=b.reduce(SIMD2<Float>.zero,+)/Float(b.count)
+        var dot:Float=0,cross:Float=0,spreadA:Float=0,spreadB:Float=0
+        for (first,second) in zip(a,b) {
+            let p=first-centerA,q=second-centerB
+            dot += simd_dot(p,q);cross += p.x*q.y-p.y*q.x
+            spreadA=max(spreadA,simd_length(p));spreadB=max(spreadB,simd_length(q))
+        }
+        guard spreadA>=0.25,spreadB>=0.25,hypot(dot,cross)>0.000001 else{return nil}
+        // SVG's positive X/Z rotation has the opposite sign from a +Y rotation.
+        let yaw = -atan2(cross,dot)
+        var result=simd_float4x4(simd_quatf(angle:yaw,axis:SIMD3(0,1,0)))
+        let rotated=result*SIMD4(centerA.x,0,centerA.y,1)
+        result.columns.3=SIMD4(centerB.x-rotated.x,0,centerB.y-rotated.z,1)
+        guard zip(a,b).allSatisfy({p,q in
+            let mapped=result*SIMD4(p.x,0,p.y,1)
+            return simd_length(SIMD2(mapped.x,mapped.z)-q)<0.02
+        }) else{return nil}
+        return result
     }
     static func translation(x: Float, y: Float, z: Float) -> simd_float4x4 {
         var result = matrix_identity_float4x4

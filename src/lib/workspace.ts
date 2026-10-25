@@ -3,7 +3,7 @@ import type { FurnitureProduct, FurnitureVariant } from './products';
 import { parseListing } from './amazon';
 import type { AmazonListing } from './amazon';
 import { parseSurvey, placementWarnings } from './room-scan';
-import type { RoomSurvey } from './room-scan';
+import type { ImportedRoom, RoomSurvey } from './room-scan';
 
 export interface ProductItem {
   id: string;
@@ -87,6 +87,10 @@ export function createLayout(name: string, roomType='Living room', width=5, dept
   if(!name.trim()) throw new Error('Give your layout a name.');
   if(![width,depth].every(n=>Number.isFinite(n)&&n>=1&&n<=20)) throw new Error('Room dimensions must be between 1 and 20 meters.');
   return {id:crypto.randomUUID(),name:name.trim().slice(0,80),roomType,width,depth,items:[],updatedAt:new Date().toISOString()};
+}
+/** A scan is a normal saved layout; keep an independent copy of its measured outline. */
+export function createScannedLayout(scan:ImportedRoom):RoomLayout {
+  return {...createLayout(scan.name,'Scanned room',scan.width,scan.depth),survey:structuredClone(scan.survey)};
 }
 export function clampPlacement(item: PlacedItem, room: Pick<RoomLayout,'width'|'depth'>): PlacedItem {
   const rotation=((item.rotation%360)+360)%360, radians=rotation*Math.PI/180;

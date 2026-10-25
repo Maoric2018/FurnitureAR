@@ -50,3 +50,14 @@ seven green upholstery pieces and four wood feet with the original color factors
 checks their UV-addressed corner and interpolated colors. It also covers a shared
 material on differently colored geometries, atlas reuse, material tint, and
 preservation of the original preview geometry and material.
+
+# Room scan workflow
+
+Open `/tests/browser/room-scan-workflow.html` and click **Run workflow checks**.
+The production app runs in StrictMode with a synthetic room rotated 32 degrees.
+Checks cover invalid and valid file imports, immediate normal-editor handoff,
+axis alignment, outline keyboard movement/rotation and undo/redo, preserving
+an existing layout when scanning another room, duplicate native deliveries,
+fragment consumption, and reopening saved scans. All API requests are blocked.
+The file-input test uses a synthetic File/DataTransfer; it does not exercise the
+operating system's file picker. Use **Restore original workspace** afterward.

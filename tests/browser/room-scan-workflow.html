@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Room scan workflow regression</title>
+  <style>
+    #scan-fixture{position:relative;z-index:9;margin-left:225px;padding:14px 24px;border-bottom:2px solid #a95829;background:#fff5df;color:#352e24;font:12px/1.5 system-ui,sans-serif}
+    #scan-fixture h1{font:600 16px/1.4 system-ui,sans-serif;margin:0 0 6px}
+    #scan-fixture p{margin:0 0 8px}
+    #scan-fixture button{border:1px solid #b4a28a;background:white;border-radius:4px;padding:8px 10px;margin-right:8px;font:inherit}
+    #scan-fixture pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0;font:11px/1.5 ui-monospace,monospace}
+    #scan-fixture [data-status="failed"]{color:#a71d24;font-weight:600}
+    #scan-fixture [data-status="passed"]{color:#22594a;font-weight:600}
+    @media(max-width:650px){#scan-fixture{margin-left:0;padding:12px 16px}}
+  </style>
+</head>
+<body>
+  <section id="scan-fixture" aria-label="Room scan regression controls">
+    <h1>Room scan workflow — synthetic QA fixture</h1>
+    <p>Runs the production app in StrictMode with a room rotated 32°. API requests are blocked. Restore your original workspace when finished.</p>
+    <button id="run-scan-checks">Run workflow checks</button>
+    <button id="restore-scan-workspace">Restore original workspace</button>
+    <pre id="scan-workflow-report" aria-label="Room scan regression report" data-status="idle">Ready. Your saved workspace has not been changed.</pre>
+  </section>
+  <div id="root"></div>
+  <script type="module" src="./room-scan-workflow.tsx"></script>
+</body>
+</html>

@@ -123,3 +123,19 @@ test('Supplied oak table preserves meter dimensions, floor alignment and embedde
   assert.ok(Math.abs(placed.min.y)<.0001);
   assert.ok(Math.abs(placed.getSize(new Vector3()).x-size.x)<.001);
 });
+
+// A scan must be an independent regular layout, not a temporary editor state.
+test('scanned layouts have new identities, independent geometry, and normal persistence', async()=>{
+  const {createScannedLayout,parseWorkspace}=await import('../src/lib/workspace.ts');
+  const {parseRoomScan}=await import('../src/lib/room-scan.ts');
+  const {readFileSync}=await import('node:fs');
+  const scan=parseRoomScan(JSON.parse(readFileSync(new URL('./fixtures/room-scan.json',import.meta.url),'utf8')));
+  const first=createScannedLayout(scan),second=createScannedLayout(scan);
+  assert.notEqual(first.id,second.id);
+  assert.equal(first.name,scan.name);
+  assert.deepEqual(first.survey,scan.survey);
+  first.survey!.obstacles[0].x+=.5;
+  assert.notEqual(first.survey!.obstacles[0].x,second.survey!.obstacles[0].x);
+  assert.deepEqual(second.survey,scan.survey);
+  assert.deepEqual(parseWorkspace(JSON.parse(JSON.stringify({layouts:[first,second],items:[]}))).layouts,[first,second]);
+});
