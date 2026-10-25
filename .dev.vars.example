@@ -3,9 +3,6 @@ SERPAPI_API_KEY=
 
 # Server-only Claude room designer. Never use a VITE_ prefix for this key.
 ANTHROPIC_API_KEY=
-# Required: comma-separated approved ChatGPT sign-in emails (server-only).
-# Production trusts only identity headers supplied by Sites dispatch.
-DESIGN_ALLOWED_EMAILS=
 # Optional: an Opus model available to your Anthropic account.
 CLAUDE_MODEL=claude-opus-5-5
 

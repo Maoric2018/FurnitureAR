@@ -1,7 +1,7 @@
 import { DesignError } from '../src/lib/design';
 import type { DesignPhoto } from '../src/lib/design';
 
-export interface ClaudeEnv { ANTHROPIC_API_KEY?: string; CLAUDE_MODEL?: string; SERPAPI_API_KEY?: string; DESIGN_ALLOWED_EMAILS?: string }
+export interface ClaudeEnv { ANTHROPIC_API_KEY?: string; CLAUDE_MODEL?: string; SERPAPI_API_KEY?: string }
 export const DEFAULT_CLAUDE_MODEL = 'claude-opus-5-5';
 export type ClaudeCall = (input: { system: string; prompt: string; schema: Record<string, unknown>; photos?: DesignPhoto[] }, env: ClaudeEnv, signal?: AbortSignal) => Promise<unknown>;
 

@@ -21,7 +21,7 @@ const request = (value: unknown, headers = {}, method = 'POST') => new Request('
   method, headers: { 'Content-Type': 'application/json', ...headers }, ...(method === 'GET' ? {} : { body: JSON.stringify(value) }),
 });
 const designerHeaders = { 'oai-authenticated-user-id': 'site-user-one', 'oai-authenticated-user-email': 'designer@example.test' };
-const designerEnv = { ANTHROPIC_API_KEY: 'test-secret', DESIGN_ALLOWED_EMAILS: 'designer@example.test' };
+const designerEnv = { ANTHROPIC_API_KEY: 'test-secret' };
 
 test('design request rejects corrupt rooms, unsafe photos, and unbounded inputs', () => {
   const v = input(); assert.equal(parseDesignRequest(v).layout.name, v.layout.name);
@@ -162,72 +162,111 @@ test('Claude rejects redirects without forwarding credentials and uses a Workers
     (error: unknown) => error instanceof DesignError && error.code === 'DESIGN_UNAVAILABLE');
   assert.equal(calls, 1);
 });
-test('missing API key or empty allowlist fails closed without design calls', async () => {
+test('missing API key fails closed for guests and signed-in visitors without design calls', async () => {
   let called = false; const handle = createDesignHandler({ design: async () => { called = true; throw Error('should not run'); } });
   assert.deepEqual(await (await handle(request(null, {}, 'GET'))).json(), { configured: false, shopping: false, signedIn: false, authorized: false });
-  for (const env of [{}, { DESIGN_ALLOWED_EMAILS: designerEnv.DESIGN_ALLOWED_EMAILS }, { ANTHROPIC_API_KEY: 'test-secret' },
-    { ...designerEnv, ANTHROPIC_API_KEY: '  ' }, { ...designerEnv, DESIGN_ALLOWED_EMAILS: ' , , ' }]) {
-    const status = await (await handle(request(null, designerHeaders, 'GET'), env)).json();
-    assert.equal(status.configured, false);
-    const response = await handle(request(input(), designerHeaders), env);
-    assert.equal(response.status, 503); assert.equal((await response.json()).error.code, 'DESIGN_NOT_CONFIGURED');
+  for (const env of [{}, { ANTHROPIC_API_KEY: '  ' }]) {
+    for (const headers of [{}, designerHeaders]) {
+      const status = await (await handle(request(null, headers, 'GET'), env)).json();
+      assert.equal(status.configured, false); assert.equal(status.authorized, false);
+      const response = await handle(request(input(), headers), env);
+      assert.equal(response.status, 503); assert.equal((await response.json()).error.code, 'DESIGN_NOT_CONFIGURED');
+    }
   }
   assert.equal(called, false);
 });
-test('public design status reports access without exposing the secret or allowlist', async () => {
+test('configured design status grants guest access without exposing secrets or account details', async () => {
   const handle = createDesignHandler();
-  for (const [headers, signedIn, authorized] of [
-    [{}, false, false], [designerHeaders, true, true],
-    [{ ...designerHeaders, 'oai-authenticated-user-email': 'other@example.test' }, true, false],
+  for (const [headers, signedIn] of [
+    [{}, false], [designerHeaders, true],
+    [{ ...designerHeaders, 'oai-authenticated-user-email': 'other@example.test' }, true],
   ] as const) {
     const response = await handle(request(null, headers, 'GET'), { ...designerEnv, SERPAPI_API_KEY: 'shopping-secret' });
     const result = await response.json();
-    assert.deepEqual(result, { configured: true, shopping: true, signedIn, authorized });
+    assert.deepEqual(result, { configured: true, shopping: true, signedIn, authorized: true });
     assert.equal(response.headers.get('Cache-Control'), 'no-store');
     assert.doesNotMatch(JSON.stringify(result), /secret|example\.test|site-user/);
   }
 });
-test('paid design requires both Sites identity and an exact allowed email before parsing or provider use', async () => {
+test('guests and other signed-in accounts can design without an allowlist', async () => {
   let calls = 0;
-  const result = { summary: 'A safe design', observations: [], proposals: [], notices: [] };
-  const handle = createDesignHandler({ design: async () => { calls++; return result; } });
-  const env = { ...designerEnv, DESIGN_ALLOWED_EMAILS: ' owner@example.test, DESIGNER@EXAMPLE.TEST, ' };
-  for (const headers of [{}, { 'oai-authenticated-user-email': 'designer@example.test' }, { ...designerHeaders, 'oai-authenticated-user-id': ' ' }]) {
-    const response = await handle(request(null, headers), env);
-    assert.equal(response.status, 401); assert.equal((await response.json()).error.code, 'DESIGN_SIGN_IN_REQUIRED');
-  }
+  const v = input(), c = candidate(), proposal = buildProposal(draft([position(c.id)]), v, [c]);
+  const result = { summary: 'A safe design', observations: [], proposals: [proposal], notices: [] };
+  const handle = createDesignHandler({ design: async value => { calls++; assert.equal(value.layout.id, v.layout.id); return result; } });
+  const guest = request(v);
+  for (const header of ['Cookie', 'Authorization', 'oai-authenticated-user-id', 'oai-authenticated-user-email']) assert.equal(guest.headers.has(header), false);
+  const response = await handle(guest, designerEnv);
+  assert.equal(response.status, 200); assert.deepEqual(parseDesignResult(await response.json()), result);
   for (const headers of [
-    { 'oai-authenticated-user-id': 'site-user-one' },
-    { ...designerHeaders, 'oai-authenticated-user-email': 'other@example.test' },
-    { ...designerHeaders, 'oai-authenticated-user-email': 'designer@example.test.attacker.test' },
-  ]) {
-    const response = await handle(request(null, headers), env);
-    assert.equal(response.status, 403); assert.equal((await response.json()).error.code, 'DESIGN_ACCESS_DENIED');
-  }
-  assert.equal(calls, 0);
-  const permitted = await handle(request(input(), { ...designerHeaders, 'oai-authenticated-user-email': '  Designer@Example.Test  ' }), env);
-  assert.equal(permitted.status, 200); assert.deepEqual(await permitted.json(), result); assert.equal(calls, 1);
-  const wildcard = await handle(request(input(), designerHeaders), { ...env, DESIGN_ALLOWED_EMAILS: '*' });
-  assert.equal(wildcard.status, 403); assert.equal(calls, 1);
+    { 'oai-authenticated-user-id': 'another-site-user' },
+    { 'oai-authenticated-user-id': 'another-site-user', 'oai-authenticated-user-email': 'other@example.test' },
+  ]) assert.equal((await handle(request(v, headers), designerEnv)).status, 200);
+  assert.equal(calls, 3);
 });
-test('authorized requests retain the per-user design allowance across email case changes', async () => {
+test('signed-in requests retain the per-user design allowance across email and IP changes', async () => {
   let calls = 0, time = 1000;
   const handle = createDesignHandler({ now: () => time, design: async () => { calls++; return { summary: '', observations: [], proposals: [], notices: [] }; } });
   for (let i = 0; i < 12; i++) assert.equal((await handle(request(input(), designerHeaders), designerEnv)).status, 200);
-  const limited = await handle(request(input(), { ...designerHeaders, 'oai-authenticated-user-email': 'DESIGNER@EXAMPLE.TEST' }), designerEnv);
+  const limited = await handle(request(input(), { ...designerHeaders, 'oai-authenticated-user-email': 'other@example.test', 'CF-Connecting-IP': '192.0.2.3' }), designerEnv);
   assert.equal(limited.status, 429); assert.equal((await limited.json()).error.code, 'DESIGN_RATE_LIMITED');
   assert.equal(calls, 12);
   time += 3600000;
   assert.equal((await handle(request(input(), designerHeaders), designerEnv)).status, 200);
   assert.equal(calls, 13);
 });
+test('guest allowances are per trusted IP and separate from signed-in users and unknown guests', async () => {
+  let calls = 0;
+  const handle = createDesignHandler({ now: () => 1000, design: async () => { calls++; return { summary: '', observations: [], proposals: [], notices: [] }; } });
+  const headers = { 'CF-Connecting-IP': '192.0.2.1' };
+  for (let i = 0; i < 12; i++) assert.equal((await handle(request(input(), headers), designerEnv)).status, 200);
+  const limited = await handle(request(input(), { ...headers, 'X-Forwarded-For': '192.0.2.2' }), designerEnv);
+  assert.equal(limited.status, 429); assert.equal((await limited.json()).error.code, 'DESIGN_RATE_LIMITED');
+  assert.equal(calls, 12);
+  assert.equal((await handle(request(input(), { 'CF-Connecting-IP': '192.0.2.2' }), designerEnv)).status, 200);
+  // A user ID with the same text as an IP must not share that guest's counter.
+  assert.equal((await handle(request(input(), { ...headers, 'oai-authenticated-user-id': '192.0.2.1' }), designerEnv)).status, 200);
+  assert.equal((await handle(request(input()), designerEnv)).status, 200);
+  assert.equal(calls, 15);
+});
+test('unknown guests share one allowance and cannot rotate it through forwarding headers', async () => {
+  let calls = 0;
+  const handle = createDesignHandler({ now: () => 1000, design: async () => { calls++; return { summary: '', observations: [], proposals: [], notices: [] }; } });
+  for (let i = 0; i < 12; i++) assert.equal((await handle(request(input(), { 'X-Forwarded-For': `192.0.2.${i}` }), designerEnv)).status, 200);
+  const limited = await handle(request(input(), { 'X-Forwarded-For': '198.51.100.1', 'CF-Connecting-IP': '  ' }), designerEnv);
+  assert.equal(limited.status, 429); assert.equal(calls, 12);
+});
+test('guest design concurrency remains capped at two and releases capacity after completion', async () => {
+  let ready!: () => void;
+  let hold = true;
+  const started = new Promise<void>(resolve => { ready = resolve; }), releases: (() => void)[] = [];
+  const handle = createDesignHandler({ design: async () => {
+    if (hold) await new Promise<void>(resolve => { releases.push(resolve); if (releases.length === 2) ready(); });
+    return { summary: '', observations: [], proposals: [], notices: [] };
+  } });
+  const running = [handle(request(input()), designerEnv), handle(request(input()), designerEnv)];
+  await started;
+  const busy = await handle(request(input()), designerEnv);
+  assert.equal(busy.status, 429); assert.equal((await busy.json()).error.code, 'DESIGN_BUSY');
+  releases.forEach(release => release());
+  assert.ok((await Promise.all(running)).every(response => response.status === 200));
+  hold = false;
+  assert.equal((await handle(request(input()), designerEnv)).status, 200);
+});
 test('design endpoint rejects cross-origin, non-JSON, huge, and corrupt requests before AI', async () => {
   let calls = 0; const handler = createDesignHandler({ design: async () => { calls++; throw new Error('unused'); } });
-  assert.equal((await handler(request(input(), { ...designerHeaders, Origin: 'https://evil.example' }), designerEnv)).status, 403);
-  assert.equal((await handler(request(input(), { ...designerHeaders, 'Content-Type': 'text/plain' }), designerEnv)).status, 415);
-  assert.equal((await handler(request(input(), { ...designerHeaders, 'Content-Length': '6000000' }), designerEnv)).status, 413);
-  assert.equal((await handler(request({ brief: 'no layout' }, designerHeaders), designerEnv)).status, 400);
+  assert.equal((await handler(request(input(), { Origin: 'https://evil.example' }), designerEnv)).status, 403);
+  assert.equal((await handler(request(input(), { 'Content-Type': 'text/plain' }), designerEnv)).status, 415);
+  assert.equal((await handler(request(input(), { 'Content-Length': '6000000' }), designerEnv)).status, 413);
+  assert.equal((await handler(request({ brief: 'no layout' }), designerEnv)).status, 400);
   assert.equal(calls, 0);
+});
+test('guest endpoint sanitizes unexpected service failures', async () => {
+  const handle = createDesignHandler({ design: async () => { throw new Error('private provider secret-key-value'); } });
+  const response = await handle(request(input()), designerEnv);
+  assert.equal(response.status, 500);
+  const result = await response.json();
+  assert.equal(result.error.code, 'DESIGN_FAILED');
+  assert.doesNotMatch(JSON.stringify(result), /private|secret-key-value/);
 });
 test('complete service uses retrieved products, repairs invalid AI output once, and returns editable proposals', async () => {
   const v = input(), model = candidate().item.product; let calls = 0;

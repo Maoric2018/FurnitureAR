@@ -8,7 +8,7 @@ const designRoom = createDesignHandler();
 const reconstruct = createReconstructionHandler();
 const importProduct = createImportHandler();
 const searchProducts = createSearchHandler();
-interface Env { ASSETS: { fetch(request: Request): Promise<Response> }; SERPAPI_API_KEY?: string; ANTHROPIC_API_KEY?: string; DESIGN_ALLOWED_EMAILS?: string; CLAUDE_MODEL?: string; MODEL_API_URL?: string; MODEL_API_KEY?: string; MODEL_BUCKET?: R2Bucket }
+interface Env { ASSETS: { fetch(request: Request): Promise<Response> }; SERPAPI_API_KEY?: string; ANTHROPIC_API_KEY?: string; CLAUDE_MODEL?: string; MODEL_API_URL?: string; MODEL_API_KEY?: string; MODEL_BUCKET?: R2Bucket }
 export default {
   async fetch(request: Request, env: Env) {
     const url = new URL(request.url);

@@ -17,8 +17,6 @@ export async function designStatus(signal?: AbortSignal): Promise<DesignStatus> 
 const errors: Record<string, string> = {
   DESIGN_NOT_CONFIGURED: 'Room design is waiting for its Claude connection. Your brief is saved on this device.',
   DESIGN_AUTH_FAILED: 'Claude is not available with the current service configuration. Please contact the app owner.',
-  DESIGN_SIGN_IN_REQUIRED: 'Sign in to use the room designer. Your brief is saved on this device.',
-  DESIGN_ACCESS_DENIED: 'Room design is available to approved accounts. Sign in with the app owner’s account.',
   DESIGN_CONFIG_ERROR: 'The room designer needs a service configuration update. Please contact the app owner.',
   DESIGN_UNAVAILABLE: 'Claude is temporarily unavailable. Please try again shortly.',
   DESIGN_INCOMPLETE: 'Claude could not finish a complete design. Please try again with a shorter brief.',

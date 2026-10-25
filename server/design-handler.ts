@@ -24,13 +24,9 @@ export function createDesignHandler({ design = createDesignService(), now = Date
   let running = 0;
   const visitors = new Map<string, { count: number; expires: number }>();
   return async (request: Request, env: ClaudeEnv = {}) => {
-    // Sites dispatch owns these identity headers. Never accept identity from the request body or browser storage.
-    const identity = request.headers.get('oai-authenticated-user-id')?.trim();
-    const email = request.headers.get('oai-authenticated-user-email')?.trim().toLowerCase();
-    const allowed = new Set((env.DESIGN_ALLOWED_EMAILS ?? '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean));
-    const configured = !!env.ANTHROPIC_API_KEY?.trim() && allowed.size > 0;
-    const authorized = !!identity && !!email && allowed.has(email);
-    if (request.method === 'GET') return json({ configured, shopping: !!env.SERPAPI_API_KEY, signedIn: !!identity, authorized });
+    const userId = request.headers.get('oai-authenticated-user-id')?.trim();
+    const configured = !!env.ANTHROPIC_API_KEY?.trim();
+    if (request.method === 'GET') return json({ configured, shopping: !!env.SERPAPI_API_KEY, signedIn: !!userId, authorized: configured });
     if (request.method !== 'POST') return json({ error: { code: 'METHOD_NOT_ALLOWED', message: 'Use POST to design a room.' } }, 405, { Allow: 'GET, POST' });
     let acquired = false;
     try {
@@ -38,10 +34,12 @@ export function createDesignHandler({ design = createDesignService(), now = Date
       if (origin && origin !== new URL(request.url).origin) throw new DesignError('ORIGIN_NOT_ALLOWED', 'Open Roomify to design a room.', 403);
       if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('Content-Type') ?? '')) throw new DesignError('INVALID_REQUEST', 'Send the room brief as JSON.', 415);
       if (!configured) throw new DesignError('DESIGN_NOT_CONFIGURED', 'Room design is not connected yet. You can prepare your brief and photos now.', 503);
-      if (!identity) throw new DesignError('DESIGN_SIGN_IN_REQUIRED', 'Sign in with ChatGPT to check access to room design.', 401);
-      if (!authorized) throw new DesignError('DESIGN_ACCESS_DENIED', 'Room design is not enabled for this account.', 403);
       const input = parseDesignRequest(await body(request));
       if (running >= 2) throw new DesignError('DESIGN_BUSY', 'Two rooms are being designed. Please try again shortly.', 429);
+      // Use only platform-provided identity/IP headers, never caller-controlled forwarding chains.
+      // These in-memory allowances apply per Worker instance, not across the deployment.
+      const ip = request.headers.get('CF-Connecting-IP')?.trim();
+      const identity = userId ? `user:${userId}` : ip ? `ip:${ip}` : 'guest:unknown';
       const timestamp = now();
       for (const [key, entry] of visitors) if (entry.expires <= timestamp) visitors.delete(key);
       const entry = visitors.get(identity) ?? { count: 0, expires: timestamp + 3600000 };
