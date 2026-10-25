@@ -11,6 +11,10 @@ They do not call Amazon or any model-generation service.
   exported material factors, real decoded albedo pixels, normal-map references,
   GLB vertex-color values, and textures embedded in the browser's USDZ export.
   Source and exported models render through the production `Viewer` component.
+  Each rendered layout also calls model-viewer's actual automatic Quick Look
+  conversion and verifies its material/shader targets remain under `/Root`.
+  This checks the Vite exporter alias reaches the iPhone AR path. A download link
+  for each automatic USDZ result enables native USD or physical-device checks.
 - **Run texture fallback check** temporarily fails `createImageBitmap`, disables
   the Three.js image cache, and verifies the HTML-image fallback retains the oak
   texture pixels and maps. Browser globals are restored afterward.
@@ -24,3 +28,12 @@ BoxGeometry plus a `color` Float32BufferAttribute and a vertex-colored material.
 
 The USDZ checks verify the generated files, shaders, and image bytes. They do
 not verify native Quick Look display, camera tracking, or physical-device AR.
+
+`npm test` also runs `tests/quick-look-model.test.ts`. On hosts with `usdcat` and
+`usdchecker`, it imports the exported USDZ's default prim into another USD stage
+and verifies that mesh material bindings and surface shader connections survive.
+This catches materials authored outside the imported subtree: such files can
+contain the correct colors and textures and even pass `usdchecker --arkit`, yet
+lose their materials when an AR consumer imports the asset. Archive alignment and
+material-path checks run on every host; the native composition check is skipped
+when those tools are unavailable.

@@ -1,11 +1,12 @@
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { USDZExporter } from 'three/addons/exporters/USDZExporter.js';
+import type { ModelViewerElement } from '@google/model-viewer';
 import { unzipSync } from 'three/addons/libs/fflate.module.js';
 import { Cache } from 'three';
 import type { Mesh, Material, Texture } from 'three';
 import { exportLayout } from '../../src/lib/layout-model';
+import { exportQuickLookModel } from '../../src/lib/quick-look-model';
 import { Viewer } from '../../src/components/Viewer';
 import { placeholderProduct, createProductItem } from '../../src/lib/workspace';
 import type { RoomLayout } from '../../src/lib/workspace';
@@ -69,10 +70,13 @@ function vertexColors(doc:Document):number[] {
     });
   }));
 }
-async function checkUsdz(target:Document,name:string) {
-  const loaded=await new GLTFLoader().parseAsync(target.bytes,location.href);
-  const bytes=await new USDZExporter().parseAsync(loaded.scene);
+async function checkUsdzBytes(target:Document,name:string,bytes:Uint8Array,route:string) {
   const files=unzipSync(bytes);
+  const stage=new TextDecoder().decode(files['model.usda']);
+  const bindings=[...stage.matchAll(/rel material:binding = <([^>]+)>/g)].map(match=>match[1]);
+  assert(bindings.length>0,'USDZ has no bound mesh materials');
+  assert(bindings.every(path=>path.startsWith('/Root/Materials/')),'USDZ material bindings leave the imported default prim');
+  assert(!stage.includes('</Materials/'),'USDZ shader connections leave the imported default prim');
   const text=Object.entries(files).filter(([name])=>/\.usda?$/.test(name)).map(([,bytes])=>new TextDecoder().decode(bytes)).join('\n');
   assert(text.includes('UsdPreviewSurface'),'USDZ has no surface shader');
   const textures=Object.keys(files).filter(name=>name.startsWith('textures/'));
@@ -88,7 +92,42 @@ async function checkUsdz(target:Document,name:string) {
     const sample=await pixels(new Blob([files[entry!]],{type:'image/png'}));
     log({case:name,usdzDiffuseTexture:entry,pixels:sample});
   }
-  log({case:name,usdzBytes:bytes.byteLength,usdzTextures:textures.length,usdzDiffuseConnections:diffuseIds.length,usdzDisplayColor:text.includes('primvars:displayColor')});
+  log({case:name,route,usdzBytes:bytes.byteLength,usdzTextures:textures.length,usdzDiffuseConnections:diffuseIds.length,usdzDisplayColor:text.includes('primvars:displayColor'),scopedMaterialBindings:bindings.length});
+}
+async function checkUsdz(target:Document,name:string) {
+  const loaded=await new GLTFLoader().parseAsync(target.bytes,location.href);
+  await checkUsdzBytes(target,name,await exportQuickLookModel(loaded.scene),'direct Quick Look exporter');
+}
+async function checkViewerQuickLook(host:HTMLElement,target:Document,name:string) {
+  await customElements.whenDefined('model-viewer');
+  // React rendering is asynchronous. Wait for the actual exported-layout Viewer,
+  // then exercise model-viewer's own conversion instead of a parallel exporter.
+  let viewer:ModelViewerElement|undefined;
+  const deadline=performance.now()+20000;
+  while(!viewer){
+    viewer=host.querySelectorAll<ModelViewerElement>('model-viewer')[1];
+    assert(performance.now()<deadline,'Production layout Viewer did not mount');
+    if(!viewer)await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
+  }
+  if(!viewer.loaded)await new Promise<void>((resolve,reject)=>{
+    const timer=setTimeout(()=>{cleanup();reject(new Error('Production layout Viewer did not load'));},20000);
+    const cleanup=()=>{clearTimeout(timer);viewer!.removeEventListener('load',loaded);viewer!.removeEventListener('error',failed);};
+    const loaded=()=>{cleanup();resolve();};
+    const failed=()=>{cleanup();reject(new Error('Production layout Viewer failed to load'));};
+    viewer!.addEventListener('load',loaded,{once:true});viewer!.addEventListener('error',failed,{once:true});
+  });
+  // Test-only access to the same runtime method activateAR calls for iOS. This
+  // must prove the Vite exporter alias reaches model-viewer's automatic route.
+  const quickLook=viewer as ModelViewerElement&{prepareUSDZ:()=>Promise<string>};
+  assert(typeof quickLook.prepareUSDZ==='function','model-viewer Quick Look conversion method is unavailable');
+  const url=await quickLook.prepareUSDZ();urls.push(url);
+  assert(url,'Automatic Quick Look conversion returned no model');
+  await checkUsdzBytes(target,name,new Uint8Array(await (await fetch(url)).arrayBuffer()),'production Viewer automatic Quick Look');
+  const download=document.createElement('a');download.href=url;
+  download.download=`${name.toLowerCase().replace(/[^a-z0-9]+/g,'-')}-quick-look.usdz`;
+  download.textContent=`Download ${name} Quick Look USDZ`;
+  host.querySelector('.qa-downloads')!.append(download);
+  log(`PASS: production Viewer automatic Quick Look export: ${name}`);
 }
 function layout(product:FurnitureProduct,variant:FurnitureVariant):RoomLayout {
   const item=createProductItem('https://www.amazon.com/dp/B0F2ML48Y6',product);
@@ -97,7 +136,8 @@ function layout(product:FurnitureProduct,variant:FurnitureVariant):RoomLayout {
 function view(name:string,source:string,exported:string,product:FurnitureProduct,variant:FurnitureVariant,dimensions:FurnitureProduct['dimensions']) {
   const host=document.createElement('section');host.className='case';previews.append(host);
   const root=createRoot(host);roots.push(root);
-  root.render(<><h2>{name}</h2><div className="pair"><div><h3>Source through product Viewer</h3><Viewer src={source} name={`${name} source`} interactive expectedDimensions={product.dimensions} materialOverrides={variant.materialOverrides}/></div><div><h3>Export through layout Viewer</h3><Viewer src={exported} name={`${name} layout`} interactive expectedDimensions={dimensions}/></div></div></>);
+  root.render(<><h2>{name}</h2><div className="pair"><div><h3>Source through product Viewer</h3><Viewer src={source} name={`${name} source`} interactive expectedDimensions={product.dimensions} materialOverrides={variant.materialOverrides}/></div><div><h3>Export through layout Viewer</h3><Viewer src={exported} name={`${name} layout`} interactive ar expectedDimensions={dimensions}/></div></div><p className="qa-downloads"/></>);
+  return host;
 }
 async function cases() {
   const catalog=await (await fetch('/models/catalog/catalog.json')).json();
@@ -127,7 +167,7 @@ async function run() {
       const loadedMaps:Array<{name:string;map:boolean;normalMap:boolean;vertexColors:boolean;image:string}>=[];
       loaded.scene.traverse(node=>{const mesh=node as Mesh;if(!mesh.isMesh)return;for(const candidate of Array.isArray(mesh.material)?mesh.material:[mesh.material]){const m=candidate as Material&{map?:Texture;normalMap?:Texture;vertexColors?:boolean};loadedMaps.push({name:m.name,map:!!m.map,normalMap:!!m.normalMap,vertexColors:!!m.vertexColors,image:m.map?.image?.constructor?.name??''});}});
       const exported=await exportLayout(layout(entry.product,entry.variant));urls.push(exported.url);
-      view(entry.name,entry.variant.modelSrc,exported.url,entry.product,entry.variant,exported.dimensions);
+      const preview=view(entry.name,entry.variant.modelSrc,exported.url,entry.product,entry.variant,exported.dimensions);
       const target=glb(await (await fetch(exported.url)).arrayBuffer());
       const targetMaterials=materials(target);
       log({case:entry.name,sourceMaterials,loadedMaps,exportedMaterials:targetMaterials,exportedImages:target.json.images?.length??0});
@@ -155,6 +195,7 @@ async function run() {
         log({case:entry.name,vertexColorComponents:sourceColors.length,vertexColorsPreserved:true});
       }
       await checkUsdz(target,entry.name);
+      await checkViewerQuickLook(preview,target,entry.name);
       log(`PASS: ${entry.name}`);
     }catch(error){failures++;log(`FAIL: ${entry.name}: ${(error as Error).message}`);}
   }
