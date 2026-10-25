@@ -1,4 +1,4 @@
-import type { Object3D } from 'three';
+import type { Mesh, Object3D } from 'three';
 // Keep the addons import: Vite redirects model-viewer's examples/jsm import to
 // this wrapper, while this specifier continues to resolve the upstream exporter.
 import { USDZExporter as ThreeUSDZExporter } from 'three/addons/exporters/USDZExporter.js';
@@ -7,13 +7,35 @@ import { strToU8, unzipSync, zipSync } from 'three/addons/libs/fflate.module.js'
 import type { Zippable } from 'three/addons/libs/fflate.module.js';
 import { bakeVertexColorsIntoUsd, collectVertexColorGeometry } from './quick-look-vertex-colors';
 
+function missingNormalGeometry(scene: Object3D, onlyVisible: boolean) {
+  const ids = new Set<number>();
+  const visit = (object: Object3D) => {
+    if (onlyVisible && !object.visible) return;
+    const mesh = object as Mesh;
+    if (mesh.isMesh && !mesh.geometry.getAttribute('normal')) ids.add(mesh.geometry.id);
+    for (const child of object.children) visit(child);
+  };
+  visit(scene);
+  return ids;
+}
+
 /** Keep materials inside the active scene, not just the file's default prim.
  * Object view can read /Root while AR imports /Root/Scenes/Scene separately.
  * References outside that scene are discarded and become white surfaces.
  * https://developer.apple.com/documentation/usd/scenelibrary */
-export function scopeQuickLookMaterials(archive: Uint8Array<ArrayBuffer>, vertexColors?: ReturnType<typeof collectVertexColorGeometry>): Uint8Array<ArrayBuffer> {
+export function scopeQuickLookMaterials(archive: Uint8Array<ArrayBuffer>, vertexColors?: ReturnType<typeof collectVertexColorGeometry>, missingNormals = new Set<number>()): Uint8Array<ArrayBuffer> {
   const files = unzipSync(archive);
   if (!files['model.usda']) throw new Error('The AR export is missing its model.');
+  for (const id of missingNormals) {
+    const path = `geometries/Geometry_${id}.usda`;
+    if (!files[path]) continue;
+    // Three exports absent glTF normals as zero vectors, which cannot light a
+    // surface. USD polygonal meshes with omitted normals use faceted shading,
+    // matching GLTFLoader's flatShading fallback without changing source data.
+    // https://openusd.org/release/api/class_usd_geom_mesh.html
+    const geometry = new TextDecoder().decode(files[path]);
+    files[path] = strToU8(geometry.replace(/\s*normal3f\[\] normals = \[[^\]]*\]\s*\(\s*interpolation = "vertex"\s*\)/, ''));
+  }
   if (vertexColors?.size) bakeVertexColorsIntoUsd(files, vertexColors);
   const stage = new TextDecoder().decode(files['model.usda']);
   const marker = '\n\ndef "Materials"';
@@ -57,7 +79,8 @@ export function scopeQuickLookMaterials(archive: Uint8Array<ArrayBuffer>, vertex
 export class USDZExporter extends ThreeUSDZExporter {
   override async parseAsync(scene: Object3D, options?: USDZExporterOptions): Promise<Uint8Array<ArrayBuffer>> {
     const vertexColors = collectVertexColorGeometry(scene, options?.onlyVisible ?? true);
-    return scopeQuickLookMaterials(await super.parseAsync(scene, options), vertexColors);
+    const missingNormals = missingNormalGeometry(scene, options?.onlyVisible ?? true);
+    return scopeQuickLookMaterials(await super.parseAsync(scene, options), vertexColors, missingNormals);
   }
 }
 

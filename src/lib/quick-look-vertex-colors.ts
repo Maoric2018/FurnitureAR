@@ -8,6 +8,9 @@ type ColoredMaterial = MeshStandardMaterial & { id: number };
 interface ColoredGeometry { geometry: BufferGeometry; materials: Map<number, ColoredMaterial> }
 interface Tile { colors: number[]; large: boolean; x: number; y: number }
 const MAX_ATLAS = 4096;
+const SMALL_TILE = 4;
+const LARGE_TILE = 12;
+const PACKED_LIMIT = Math.floor(MAX_ATLAS / LARGE_TILE) * LARGE_TILE;
 const UV_NAME = 'vertexColorUV';
 const decoder = new TextDecoder();
 const fail = (message: string): never => { throw new Error(`This model’s AR colors could not be prepared: ${message}`); };
@@ -102,25 +105,29 @@ function makeAtlas(geometry: BufferGeometry) {
       tiles.push({ colors: ordered, large, x: 0, y: 0 });
       unique.set(key, id);
       // Include padding and stop before allocating unbounded texture memory.
-      if ((tiles.length - largeCount) * 36 + largeCount * 144 > 4092 * 4092) fail('this mesh needs a smaller, textured model for phone AR.');
+      if ((tiles.length - largeCount) * SMALL_TILE ** 2 + largeCount * LARGE_TILE ** 2 > PACKED_LIMIT ** 2) fail('this mesh needs a smaller, textured model for phone AR.');
     }
     faceTiles[face] = id;
   }
   unique.clear();
   const smallCount = tiles.length - largeCount;
-  const area = smallCount * 36 + largeCount * 144;
-  let width = Math.min(4092, Math.max(12, Math.ceil(Math.sqrt(area) / 12) * 12));
-  const heightFor = (w: number) => Math.ceil(largeCount / Math.floor(w / 12)) * 12 + Math.ceil(smallCount / Math.floor(w / 6)) * 6;
-  while (heightFor(width) > 4092 && width < 4092) width += 12;
-  if (heightFor(width) > 4092) fail('this mesh needs a smaller, textured model for phone AR.');
-  const largeRows = Math.ceil(largeCount / Math.floor(width / 12));
+  // An affine gradient needs only a 2x2 bilinear patch, with one padding pixel
+  // on each edge. A 4x4 tile retains those exact colors and fits dense SAM
+  // meshes without increasing the mobile texture-memory limit. Complex
+  // gradients retain their larger patch to bound clipping error.
+  const area = smallCount * SMALL_TILE ** 2 + largeCount * LARGE_TILE ** 2;
+  let width = Math.min(PACKED_LIMIT, Math.max(LARGE_TILE, Math.ceil(Math.sqrt(area) / LARGE_TILE) * LARGE_TILE));
+  const heightFor = (w: number) => Math.ceil(largeCount / Math.floor(w / LARGE_TILE)) * LARGE_TILE + Math.ceil(smallCount / Math.floor(w / SMALL_TILE)) * SMALL_TILE;
+  while (heightFor(width) > PACKED_LIMIT && width < PACKED_LIMIT) width += LARGE_TILE;
+  if (heightFor(width) > PACKED_LIMIT) fail('this mesh needs a smaller, textured model for phone AR.');
+  const largeRows = Math.ceil(largeCount / Math.floor(width / LARGE_TILE));
   let small = 0, large = 0;
   for (const tile of tiles) {
-    const size = tile.large ? 12 : 6;
+    const size = tile.large ? LARGE_TILE : SMALL_TILE;
     const index = tile.large ? large++ : small++;
     const columns = Math.floor(width / size);
     tile.x = (index % columns) * size;
-    tile.y = Math.floor(index / columns) * size + (tile.large ? 0 : largeRows * 12);
+    tile.y = Math.floor(index / columns) * size + (tile.large ? 0 : largeRows * LARGE_TILE);
   }
   const height = powerOfTwo(heightFor(width));
   width = powerOfTwo(width);
@@ -130,7 +137,7 @@ function makeAtlas(geometry: BufferGeometry) {
   const stride = width * 4 + 1;
   const pixels = new Uint8Array(stride * height);
   for (const tile of tiles) {
-    const size = tile.large ? 12 : 6, span = size - 3;
+    const size = tile.large ? LARGE_TILE : SMALL_TILE, span = size - 3;
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
       const u = Math.max(0, Math.min(1, (x - 1) / span));
       const v = Math.max(0, Math.min(1, (y - 1) / span));
@@ -149,7 +156,7 @@ function makeAtlas(geometry: BufferGeometry) {
   const chunks: string[] = [];
   let chunk: string[] = [];
   for (let face = 0; face < faceTiles.length; face++) {
-    const tile = tiles[faceTiles[face]], span = (tile.large ? 12 : 6) - 3;
+    const tile = tiles[faceTiles[face]], span = (tile.large ? LARGE_TILE : SMALL_TILE) - 3;
     for (let corner = 0; corner < 3; corner++) {
       const which = tile.colors.indexOf(vertex(face * 3 + corner));
       const u = (tile.x + 1.5 + (which === 1 ? span : 0)) / width;
