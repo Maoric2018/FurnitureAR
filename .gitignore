@@ -1,0 +1,25 @@
+node_modules/
+dist/
+*.local
+.DS_Store
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+
+.dev.vars*
+!.dev.vars.example
+.wrangler/
+.sites/
+
+.sites-runtime/
+*.zip
+
+# Local iPhone builds and developer signing state
+ios/**/build/
+ios/**/DerivedData/
+ios/**/xcuserdata/
+*.xcuserstate
+
+# Local live-generation evidence; cached models live in R2, not Git.
+verification/

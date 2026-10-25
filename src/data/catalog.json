@@ -1,0 +1,44 @@
+[
+  {
+    "id": "arc-chair", "name": "The Arc Chair", "category": "Seating", "tagline": "A soft spot for slow mornings.",
+    "description": "An enveloping lounge chair with softly rounded arms, a generous seat, and warm walnut legs. A comfortable little statement for your favorite corner.",
+    "dimensions": { "width": 0.78, "height": 0.81, "depth": 0.82 },
+    "material": "Textured upholstery · walnut legs", "badge": "A good place to start", "background": "#e9ede5", "kind": "chair",
+    "variants": [{"id":"sage","name":"Sage","color":"#8c9b7d","modelSrc":"/models/arc-chair-sage.glb"},{"id":"oat","name":"Oat","color":"#d3c4aa","modelSrc":"/models/arc-chair-oat.glb"},{"id":"clay","name":"Clay","color":"#b17860","modelSrc":"/models/arc-chair-clay.glb"}]
+  },
+  {
+    "id": "sunday-sofa", "name": "The Sunday Sofa", "category": "Seating", "tagline": "Stay a little longer.",
+    "description": "A relaxed two-seater with deep cushions and a low, quiet silhouette. Try it along a wall or let it define the center of your living room.",
+    "dimensions": { "width": 1.86, "height": 0.79, "depth": 0.90 },
+    "material": "Woven upholstery · solid wood base", "badge": "Room to unwind", "background": "#eee9df", "kind": "sofa",
+    "variants": [{"id":"linen","name":"Linen","color":"#d7cbb6","modelSrc":"/models/sunday-sofa-linen.glb"},{"id":"moss","name":"Moss","color":"#7d886c","modelSrc":"/models/sunday-sofa-moss.glb"},{"id":"slate","name":"Slate","color":"#727f86","modelSrc":"/models/sunday-sofa-slate.glb"}]
+  },
+  {
+    "id": "orbit-table", "name": "The Orbit Table", "category": "Tables", "tagline": "Bring it all together.",
+    "description": "A circular coffee table with a sculptural cross base and rounded edges. Leave space around it for easy movement and a well-earned stretch.",
+    "dimensions": { "width": 0.90, "height": 0.38, "depth": 0.90 },
+    "material": "Solid wood · matte finish", "badge": "Naturally grounded", "background": "#eee5da", "kind": "table",
+    "variants": [{"id":"walnut","name":"Walnut","color":"#795539","modelSrc":"/models/orbit-table-walnut.glb"},{"id":"oak","name":"Oak","color":"#bc9364","modelSrc":"/models/orbit-table-oak.glb"},{"id":"espresso","name":"Espresso","color":"#493a31","modelSrc":"/models/orbit-table-espresso.glb"}]
+  },
+  {
+    "id": "beam-lamp", "name": "The Beam Lamp", "category": "Lighting", "tagline": "A warmer kind of corner.",
+    "description": "A slender standing lamp with a softly tapered shade and weighted circular base. Pair it with an armchair to make a reading nook feel complete.",
+    "dimensions": { "width": 0.42, "height": 1.52, "depth": 0.42 },
+    "material": "Linen shade · powder-coated steel", "badge": "A little atmosphere", "background": "#eeebe3", "kind": "lamp",
+    "variants": [{"id":"ivory","name":"Ivory","color":"#e6ddc9","modelSrc":"/models/beam-lamp-ivory.glb"},{"id":"ochre","name":"Ochre","color":"#c69b5d","modelSrc":"/models/beam-lamp-ochre.glb"},{"id":"olive","name":"Olive","color":"#8e9475","modelSrc":"/models/beam-lamp-olive.glb"}]
+  },
+  {
+    "id": "line-sideboard", "name": "The Line Sideboard", "category": "Storage", "tagline": "Everything in its own place.",
+    "description": "Clean-lined storage with a warm wood finish, three cabinet doors, and a slim raised base. A useful anchor for your dining room or hallway.",
+    "dimensions": { "width": 1.40, "height": 0.75, "depth": 0.40 },
+    "material": "Wood veneer · brushed metal pulls", "badge": "Beautifully useful", "background": "#e9e5dc", "kind": "sideboard",
+    "variants": [{"id":"oak","name":"Oak","color":"#b99260","modelSrc":"/models/line-sideboard-oak.glb"},{"id":"walnut","name":"Walnut","color":"#7b5940","modelSrc":"/models/line-sideboard-walnut.glb"},{"id":"sand","name":"Sand","color":"#c5b89d","modelSrc":"/models/line-sideboard-sand.glb"}]
+  },
+  {
+    "id": "pebble-stool", "name": "The Pebble Ottoman", "category": "Seating", "tagline": "Put your feet up.",
+    "description": "A softly upholstered ottoman on a recessed wooden base. Use it as a footrest, an extra seat, or the finishing touch in a cozy corner.",
+    "dimensions": { "width": 0.60, "height": 0.42, "depth": 0.60 },
+    "material": "Textured upholstery · oak plinth", "badge": "Small space, big comfort", "background": "#efe4dd", "kind": "ottoman",
+    "variants": [{"id":"clay","name":"Clay","color":"#b5836c","modelSrc":"/models/pebble-stool-clay.glb"},{"id":"cream","name":"Cream","color":"#ded3bd","modelSrc":"/models/pebble-stool-cream.glb"},{"id":"sage","name":"Sage","color":"#919a80","modelSrc":"/models/pebble-stool-sage.glb"}]
+  }
+]

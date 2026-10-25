@@ -1,0 +1,19 @@
+{
+  "format":"furniture-ar-room","version":1,"units":"meters","source":"apple-roomplan",
+  "name":"Room scan QA — synthetic fixture","capturedAt":"2026-10-24T21:00:00Z",
+  "walls":[
+    {"id":"wall-n","start":{"x":8,"z":18},"end":{"x":13,"z":18},"height":2.7,"confidence":"high"},
+    {"id":"wall-e","start":{"x":13,"z":18},"end":{"x":13,"z":22},"height":2.7,"confidence":"high"},
+    {"id":"wall-s","start":{"x":13,"z":22},"end":{"x":8,"z":22},"height":2.7,"confidence":"high"},
+    {"id":"wall-w","start":{"x":8,"z":22},"end":{"x":8,"z":18},"height":2.7,"confidence":"high"}
+  ],
+  "openings":[
+    {"id":"door-s","kind":"door","start":{"x":10,"z":22},"end":{"x":11,"z":22},"height":2.1,"confidence":"high"},
+    {"id":"window-n","kind":"window","start":{"x":9,"z":18},"end":{"x":11,"z":18},"height":1.2,"confidence":"medium"}
+  ],
+  "obstacles":[
+    {"id":"sofa","name":"Existing sofa","category":"sofa","x":9.4,"z":18.65,"width":2.1,"depth":0.9,"height":0.85,"rotation":0,"confidence":"high"},
+    {"id":"cabinet","name":"Cabinet","category":"storage","x":12.55,"z":19.2,"width":1.4,"depth":0.6,"height":1.2,"rotation":90,"confidence":"medium"},
+    {"id":"chair","name":"Reading chair","category":"chair","x":8.7,"z":21.2,"width":0.8,"depth":0.8,"height":0.9,"rotation":-25,"confidence":"low"}
+  ]
+}

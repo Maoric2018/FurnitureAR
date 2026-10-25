@@ -1,0 +1,24 @@
+{
+  "export_seconds": 262.0,
+  "model": "preview.glb",
+  "decode_device": "cpu",
+  "vertices": 16468,
+  "triangles": 20000,
+  "bytes": 1876964,
+  "bounds": [
+    [
+      -0.5005930066108704,
+      -0.3923995792865753,
+      -0.48371395468711853
+    ],
+    [
+      0.49988847970962524,
+      0.38900551199913025,
+      0.48438236117362976
+    ]
+  ],
+  "texture_size": 1024,
+  "texture_views": 24,
+  "scale_verified": false,
+  "source": "Saved SAM 3D latent from repository side-table example, mask 20.png"
+}
