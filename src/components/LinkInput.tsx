@@ -35,16 +35,16 @@ export default function LinkInput({ onProduct, buttonLabel = 'Preview product', 
     {mode === 'search' ? <form className={`product-link-form ${compact ? 'compact' : ''}`} onSubmit={event => {
       event.preventDefault();
       const value = query.trim();
-      if (value.length < 2) { setError('Enter at least two characters, such as a lamp or dining table.'); return; }
+      if (value.length < 2) { setError('Enter at least 2 characters.'); return; }
       setError(''); setSearchQuery(value);
     }} noValidate>
-      <div className={`product-link-field ${error ? 'invalid' : ''}`}><Search size={17}/><input id={fieldId} type="search" aria-label="Search Amazon products" placeholder="Lamps, dining tables, sofas…" value={query} maxLength={200} onChange={event => { setQuery(event.target.value); setError(''); }} aria-invalid={!!error} aria-describedby={error ? errorId : undefined}/>{compact && <button aria-label="Search Amazon products" type="submit"><Search size={18}/></button>}</div>
+      <div className={`product-link-field ${error ? 'invalid' : ''}`}><Search size={17}/><input id={fieldId} type="search" aria-label="Search Amazon products" placeholder="Lamps, dining tables, sofas…" value={query} maxLength={200} onChange={event => { setQuery(event.target.value); setError(''); }} aria-invalid={!!error} aria-describedby={error ? errorId : undefined}/>{compact && <button aria-label="Search Amazon products" title="Search Amazon" type="submit"><Search size={18}/></button>}</div>
       {!compact && <button type="submit" className="button primary">Search</button>}
       {error && <p id={errorId} className="form-error" role="alert">{error}</p>}
     </form> : <form className={`product-link-form ${compact ? 'compact' : ''}`} onSubmit={async event => {
       event.preventDefault(); setError('');
       const url = link.trim();
-      if (!url) { setError('Paste an Amazon product link first.'); return; }
+      if (!url) { setError('Enter an Amazon product link.'); return; }
       request.current?.abort();
       const controller = new AbortController();
       request.current = controller;
@@ -59,14 +59,14 @@ export default function LinkInput({ onProduct, buttonLabel = 'Preview product', 
         onProduct(item);
       } catch (caught) {
         if (request.current !== controller) return;
-        setError(timedOut ? 'Amazon is taking longer than expected. Try again shortly.' : caught instanceof Error ? caught.message : 'We couldn’t open this product. Please try again.');
+        setError(timedOut ? 'Amazon timed out. Try again.' : caught instanceof Error ? caught.message : 'Couldn’t open this product. Try again.');
       } finally {
         clearTimeout(timeout);
         if (request.current === controller) { request.current = null; setBusy(false); }
       }
     }} noValidate>
-      <div className={`product-link-field ${error ? 'invalid' : ''}`}><Link2 size={17}/><input id={fieldId} type="url" aria-label="Product link" placeholder="Paste an Amazon.com link" value={link} onChange={event => { setLink(event.target.value); setError(''); }} disabled={busy} aria-invalid={!!error} aria-describedby={error ? errorId : undefined}/>{compact && <button aria-label={buttonLabel} disabled={busy} type="submit">{busy ? <LoaderCircle size={16} className="spin"/> : <ArrowRight size={16}/>}</button>}</div>
-      {!compact && <button type="submit" className="button primary" disabled={busy}>{busy && <LoaderCircle size={16} className="spin"/>}{busy ? 'Loading product…' : buttonLabel}</button>}
+      <div className={`product-link-field ${error ? 'invalid' : ''}`}><Link2 size={17}/><input id={fieldId} type="url" aria-label="Product link" placeholder="Paste an Amazon.com link" value={link} onChange={event => { setLink(event.target.value); setError(''); }} disabled={busy} aria-invalid={!!error} aria-describedby={error ? errorId : undefined}/>{compact && <button aria-label={buttonLabel} title={buttonLabel} disabled={busy} type="submit">{busy ? <LoaderCircle size={16} className="spin"/> : <ArrowRight size={16}/>}</button>}</div>
+      {!compact && <button type="submit" className="button primary" disabled={busy}>{busy && <LoaderCircle size={16} className="spin"/>}{busy ? 'Loading…' : buttonLabel}</button>}
       {busy && <button className="text-button cancel-product-import" type="button" onClick={cancelImport}>Cancel</button>}
       {error && <p id={errorId} className="form-error" role="alert">{error}</p>}
     </form>}

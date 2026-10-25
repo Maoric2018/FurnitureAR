@@ -218,13 +218,12 @@
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="/"><img src="/icon.svg" alt="" width="24" height="24">Furniture AR</a>
-    <a href="/">Back to workspace</a>
+    <a class="brand" href="/" aria-label="Back to Furniture AR"><img src="/icon.svg" alt="" width="24" height="24">Furniture AR</a>
   </header>
   <main>
     <h1>Room scanner setup</h1>
-    <p class="lead">Scan the walls and furniture already in your room with the companion iPhone app. Import the outlines into a layout, then plan the pieces you want to add around them.</p>
-    <div class="note"><strong>Works on iPhone 16 Pro and other iPhones with LiDAR.</strong> The scan uses Apple’s LiDAR room scanner through a companion iPhone app. Install it from Xcode on your Mac first; the website handles importing and arranging your room.</div>
+    <p class="lead">Scan with the Furniture AR Scan app, then upload the room file to your layout.</p>
+    <div class="note"><strong>Requires an iPhone or iPad with LiDAR.</strong> Install the scanner using Xcode on a Mac. It isn’t available in the App Store.</div>
     <section>
       <h2>Install the scanner</h2>
       <ol>
@@ -232,25 +231,24 @@
         <li>In <strong>Signing &amp; Capabilities</strong>, choose your Apple development team with automatic signing.</li>
         <li>Connect and unlock your iPhone. Select it in Xcode and press <strong>Run</strong>. Follow any prompts to trust the Mac or enable Developer Mode.</li>
       </ol>
-      <p class="hint">This is a development app, not an App Store download. The project’s README includes the installation and signing steps.</p>
+      <p class="hint">The project README includes signing help.</p>
     </section>
     <section>
       <h2>Scan your room</h2>
       <ol>
         <li>Open <strong>Furniture AR Scan</strong>, allow camera access, and tap <strong>Scan my room</strong>.</li>
-        <li>Move slowly in good light. Include every wall, doorway, corner, and piece of furniture.</li>
+        <li>Move slowly in good light. Include every wall, doorway, and piece of furniture.</li>
         <li>Tap <strong>Finish scan</strong>. Check the outline and give the room a name.</li>
       </ol>
-      <a class="button" href="furniturear-scan://scan">Open installed scanner</a>
-      <p class="hint">Install the companion app before using this button.</p>
+      <a class="button" href="furniturear-scan://scan">Open scanner</a>
     </section>
     <section>
       <h2>Import the scan</h2>
-      <p>After scanning, choose <strong>Save / share room file</strong>, then <strong>Save to Files</strong> or AirDrop the file to your Mac. Return to this website, choose <strong>Room scan → Upload a room scan</strong>, and select the saved JSON file.</p>
-      <p>Review the outline and existing furniture, then choose <strong>Create layout from scan</strong>. The installed app’s <strong>Open in Furniture AR</strong> button still opens its original website; use the room file to continue on this site.</p>
-      <p>Existing objects appear as fixed, shaded outlines. Select them to correct the measurements, remove a mistaken detection, or add anything the scan missed. New products remain movable, with warnings when they overlap obstacles or doorways.</p>
+      <p>Choose <strong>Save / share room file → Save to Files</strong>. Return here, choose <strong>Room scan → Upload a room scan</strong>, and select the JSON file. You can also AirDrop it to your Mac.</p>
+      <p>Review the outline, then choose <strong>Create layout from scan</strong>. The app’s <strong>Open in Furniture AR</strong> button still opens the earlier Eric site; use the saved file to continue here.</p>
+      <p>Adjust existing objects in the layout to correct any missed or inaccurate scans. Added products show warnings when they overlap furniture or doorways.</p>
     </section>
   </main>
-  <footer>Scans are estimates. Check the outline and important measurements; rescan if walls are missing. AR previews show your new products and require manual alignment. Camera images stay on your phone. Layouts save in each browser and do not sync across devices.</footer>
+  <footer>Check scan measurements before planning. AR shows added products and needs manual alignment. Camera images stay on your device; layouts stay in this browser.</footer>
 </body>
 </html>

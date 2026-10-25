@@ -26,6 +26,7 @@ export default function FloorPlan({layout,selectedId,onSelect,onMove,onMoveStart
     const p=point(event);onMove(clampPlacement({...item,x:p.x-drag.current.offsetX,z:p.y-drag.current.offsetZ},layout));
   };
   const keyMove=(event:KeyboardEvent,item:PlacedItem)=>{
+    if(event.key==='Enter'||event.key===' '){event.preventDefault();onSelect?.(item.id);return;}
     if(!onMove)return;
     const step=event.shiftKey?.25:.05;
     const delta:Record<string,[number,number]>={ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step],ArrowDown:[0,step]};
@@ -38,7 +39,7 @@ export default function FloorPlan({layout,selectedId,onSelect,onMove,onMoveStart
     <rect x={-w/2} y={-h/2} width={w} height={h} fill={`url(#${pattern})`} stroke={layout.survey?'#c8ccc8':'#4f5551'} strokeWidth=".045" strokeDasharray={layout.survey?'.08 .08':undefined}/>
     {layout.survey?.walls.flatMap(wall=>solidWallSegments(wall,layout.survey!.openings).map((segment,i)=><line key={`${wall.id}-${i}`} x1={segment.start.x} y1={segment.start.z} x2={segment.end.x} y2={segment.end.z} stroke="#2c312e" strokeWidth=".075" strokeLinecap="square"/>))}
     {layout.survey?.openings.map(o=><g key={o.id}><line x1={o.start.x} y1={o.start.z} x2={o.end.x} y2={o.end.z} stroke={o.kind==='window'?'#6f93a8':'#8aa596'} strokeWidth={o.kind==='window'?'.045':'.025'} strokeDasharray={o.kind==='window'?undefined:'.08 .04'}/><title>{o.kind==='window'?'Window':'Doorway — keep clear'}</title></g>)}
-    {layout.survey?.obstacles.map(o=><g key={o.id} transform={`translate(${o.x} ${o.z}) rotate(${o.rotation})`} role={onSelectObstacle&&!compact?'button':undefined} tabIndex={onSelectObstacle&&!compact?0:undefined} aria-label={`Existing ${o.name}, ${o.width.toFixed(2)} by ${o.depth.toFixed(2)} metres`} onClick={()=>onSelectObstacle?.(o.id)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onSelectObstacle?.(o.id);}}} className={onSelectObstacle?'existing-footprint selectable':'existing-footprint'}>
+    {layout.survey?.obstacles.map(o=><g key={o.id} transform={`translate(${o.x} ${o.z}) rotate(${o.rotation})`} role={onSelectObstacle&&!compact?'button':undefined} tabIndex={onSelectObstacle&&!compact?0:undefined} aria-pressed={onSelectObstacle&&!compact?selectedObstacleId===o.id:undefined} aria-label={`Existing ${o.name}, ${o.width.toFixed(2)} by ${o.depth.toFixed(2)} metres`} onClick={()=>onSelectObstacle?.(o.id)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onSelectObstacle?.(o.id);}}} className={onSelectObstacle?'existing-footprint selectable':'existing-footprint'}>
       <rect x={-o.width/2} y={-o.depth/2} width={o.width} height={o.depth} rx=".035" fill={`url(#${pattern}-existing)`} stroke={selectedObstacleId===o.id?'#22594a':'#9aa09b'} strokeWidth={selectedObstacleId===o.id?'.035':'.018'}/>
       {!compact&&<text x="0" y=".04" textAnchor="middle" fontSize=".115" fill="#4f5551" transform={`rotate(${-o.rotation})`} paintOrder="stroke" stroke="#e8eae8" strokeWidth=".025">{o.name.length>18?`${o.name.slice(0,17)}…`:o.name}</text>}
     </g>)}
@@ -56,6 +57,6 @@ export default function FloorPlan({layout,selectedId,onSelect,onMove,onMoveStart
       </>}
       {!compact&&<text x="0" y=".1" textAnchor="middle" fontSize=".16" fill={labelColor} transform={`rotate(${-item.rotation})`}>{index+1}</text>}
     </g>;})}
-    {!layout.items.length&&!layout.survey&&<><path d="M -.18 -.18 h .36 v .36 h -.36 z M -.45 0 h -.17 m 1.07 0 h .17 M 0 -.45 v -.17 M 0 .45 v .17" fill="none" stroke="#c8ccc8" strokeWidth=".018"/>{!compact&&<text x="0" y=".92" textAnchor="middle" fontSize=".14" fill="#676d68">Add a product to start arranging</text>}</>}
+    {!layout.items.length&&!layout.survey&&<><path d="M -.18 -.18 h .36 v .36 h -.36 z M -.45 0 h -.17 m 1.07 0 h .17 M 0 -.45 v -.17 M 0 .45 v .17" fill="none" stroke="#c8ccc8" strokeWidth=".018"/>{!compact&&<text x="0" y=".92" textAnchor="middle" fontSize=".14" fill="#676d68">Add a product</text>}</>}
   </svg>;
 }

@@ -50,3 +50,9 @@ seven green upholstery pieces and four wood feet with the original color factors
 checks their UV-addressed corner and interpolated colors. It also covers a shared
 material on differently colored geometries, atlas reuse, material tint, and
 preservation of the original preview geometry and material.
+
+## Full UI walkthrough
+
+Open `/tests/browser/ui-walkthrough.html` in the local preview. It renders the actual app with synthetic camera frames, mock Amazon/photo-generation APIs, and sample or empty workspaces. All API calls are simulated or blocked; no GPU request is sent. Banner controls choose errors, slow responses, denied camera access, and job states. External product links and native scanner launches are intercepted and reported. Use **Restore original data** before leaving to restore the local/session storage backed up by the fixture. The fixture is not a production entry point.
+
+See `docs/ui-audit-2026-10-24.md` for the audited controls and verification limits.
